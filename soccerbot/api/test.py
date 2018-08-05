@@ -14,6 +14,7 @@ def printResults(results):
 
 #get all confederations
 x = requests.get(fifa_api+"confederations")
+print(x.url)
 results = json.loads(x.content.decode())["Results"]
 #printResults(results)
 
@@ -26,7 +27,8 @@ payload = {
     'count':500,
     'footballType':0
 }
-x = requests.get(fifa_api+"competitions/all")
+x = requests.get(fifa_api+"competitions/all",params=payload)
+print(x.url)
 results = json.loads(x.content.decode())["Results"]
 #printResults(results)
 
@@ -40,7 +42,7 @@ payload = {
     'count':500
 }
 x = requests.get(fifa_api+"seasons",params=payload)
-
+print(x.url)
 results = json.loads(x.content.decode())["Results"]
 #printResults(results)
 
@@ -59,6 +61,7 @@ results = json.loads(x.content.decode())["Results"]
 
 #get all teams
 x = requests.get(fifa_api+"teams/all",params=payload)
+print(x.url)
 results = json.loads(x.content.decode())["Results"]
 #printResults(results)
 
