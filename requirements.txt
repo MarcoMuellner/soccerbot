@@ -1,5 +1,6 @@
-sqlalchemy
+django
 discord.py
 pytest
+pytest-django
 requests
 python-dateutil

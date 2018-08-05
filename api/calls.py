@@ -2,6 +2,7 @@ import requests
 import json
 from typing import Dict, List, Callable, Union
 from dateutil import parser
+from database.models import *
 
 
 class ApiCalls:
@@ -27,22 +28,22 @@ def makeCall(keyword: str, payload: Dict = {}) -> List:
     return json.loads(req.content.decode())['Results']
 
 
-def getFederations(**kwargs) -> Union[List, Dict]:
+def getFederations(**kwargs) -> Union[List, Federation]:
     if len(kwargs.keys()) == 0:
         reqDict = makeCall(ApiCalls.federations)
         return loop(getFederations, reqDict)
 
     elif 'resDict' in kwargs.keys() and len(kwargs.keys()) == 1:
         apiResults = kwargs['resDict']
-        return {
-            "id": apiResults['IdConfederation'],
-            "clear_name": apiResults['Name'][0]['Description']
-        }
+        return Federation(
+            id=apiResults['IdConfederation'],
+            clear_name=apiResults['Name'][0]['Description']
+        )
     else:
         raise AttributeError('Wrong parameters for call getFederations')
 
 
-def getCompetitions(**kwargs) -> Union[List, Dict]:
+def getCompetitions(**kwargs) -> Union[List, Competition]:
     if 'idFederation' in kwargs.keys() and len(kwargs.keys()) == 1:
         payload = {
             'owner': kwargs['idFederation'],
@@ -54,16 +55,17 @@ def getCompetitions(**kwargs) -> Union[List, Dict]:
 
     elif 'resDict' in kwargs.keys() and len(kwargs.keys()) == 1:
         apiResults = kwargs['resDict']
-        return {
-            "id": int(apiResults['IdCompetition']),
-            "federations_id": apiResults["IdOwner"],
-            "clear_name": apiResults['Name'][0]["Description"]
-        }
+        comp = Competition(
+            id=int(apiResults['IdCompetition']),
+            clear_name=apiResults['Name'][0]["Description"]
+        )
+        comp.federation_id = apiResults["IdOwner"]
+        return comp
     else:
         raise AttributeError('Wrong parameters for call getCompetitions')
 
 
-def getSeasons(**kwargs) -> Union[List, Dict]:
+def getSeasons(**kwargs) -> Union[List, Season]:
     if 'idCompetitions' in kwargs.keys() and len(kwargs.keys()) == 1:
         payload = {
             'idCompetition': kwargs['idCompetitions'],
@@ -73,34 +75,34 @@ def getSeasons(**kwargs) -> Union[List, Dict]:
         return loop(getSeasons, reqDict)
     elif 'resDict' in kwargs.keys() and len(kwargs.keys()) == 1:
         apiResults = kwargs['resDict']
-        return {
-            "id": int(apiResults['IdSeason']),
-            "federations_id": apiResults['IdConfederation'][0],
-            "competitions_id": int(apiResults['IdCompetition']),
-            "clear_name": apiResults['Name'][0]['Description'],
-            "start_date": parser.parse(apiResults['StartDate']),
-            "end_date": parser.parse(apiResults['EndDate'])
-        }
+        return Season(
+            id=int(apiResults['IdSeason']),
+            federation_id=apiResults['IdConfederation'][0],
+            competition_id=int(apiResults['IdCompetition']),
+            clear_name=apiResults['Name'][0]['Description'],
+            start_date=parser.parse(apiResults['StartDate']),
+            end_date=parser.parse(apiResults['EndDate'])
+        )
     else:
         raise AttributeError('Wrong parameters for call getSeasons')
 
 
-def getTeams(**kwargs) -> Union[List, Dict]:
+def getTeams(**kwargs) -> Union[List, Team]:
     if len(kwargs.keys()) == 0:
         reqDict = makeCall(ApiCalls.teams)
         return loop(getTeams, reqDict)
     elif 'resDict' in kwargs.keys() and len(kwargs.keys()) == 1:
         apiResults = kwargs['resDict']
-        return {
-            "id": int(apiResults['IdTeam']),
-            "clear_name": apiResults['Name'][0]['Description'],
-            "short_name": apiResults['ShortClubName']
-        }
+        Team(
+            id=int(apiResults['IdTeam']),
+            clear_name=apiResults['Name'][0]['Description'],
+            short_name=apiResults['ShortClubName']
+        )
     else:
         raise AttributeError('Wrong parameters for call getTeams')
 
 
-def getMatches(**kwargs) -> Union[List, Dict]:
+def getMatches(**kwargs) -> Union[List, Match]:
     if 'idCompetitions' in kwargs.keys() and 'idSeason' in kwargs.keys() and len(kwargs.keys()) == 2:
         payload = {
             'idCompetition': kwargs['idCompetitions'],
@@ -111,18 +113,21 @@ def getMatches(**kwargs) -> Union[List, Dict]:
         return loop(getMatches, reqDict)
     elif 'resDict' in kwargs.keys() and len(kwargs.keys()) == 1:
         apiResults = kwargs['resDict']
-        return {
-            "id": int(apiResults['IdMatch']),
-            "competitions_id": int(apiResults['IdCompetition']),
-            "seasons_id": int(apiResults['IdSeason']),
-            "home_team_id": int(apiResults['Home']['IdTeam']),
-            "away_team_id": int(apiResults['Away']['IdTeam']),
-            "matchday": int(apiResults['MatchDay']),
-            "date": parser.parse(apiResults['Date']),
-            "score_home_team": None if apiResults['HomeTeamScore'] == None else int(
+        match = Match(
+            id=int(apiResults['IdMatch']),
+            matchday=int(apiResults['MatchDay']),
+            date=parser.parse(apiResults['Date']),
+            score_home_team=None if apiResults['HomeTeamScore'] == None else int(
                 apiResults['HomeTeamScore']),
-            "score_away_team": None if apiResults['AwayTeamScore'] == None else int(
+            score_away_team=None if apiResults['AwayTeamScore'] == None else int(
                 apiResults['AwayTeamScore'])
-        }
+        )
+
+        match.competition_id = int(apiResults['IdCompetition'])
+        match.season_id = int(apiResults['IdSeason'])
+        match.home_team_id = int(apiResults['Home']['IdTeam'])
+        match.away_team_id = int(apiResults['Away']['IdTeam'])
+
+        return match
     else:
         raise AttributeError('Wrong parameters for call getMatches')
