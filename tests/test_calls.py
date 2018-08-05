@@ -27,7 +27,7 @@ def testGetFederations():
     result = getFederations(resDict = resDict)
     assert isinstance(result,dict)
     assert "id" in result.keys()
-    assert "name" in result.keys()
+    assert "clear_name" in result.keys()
 
 @pytest.mark.parametrize("value",federationKeys)
 def testGetCompetitions(value):
