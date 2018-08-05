@@ -44,10 +44,10 @@ class Match(models.Model):
     competition = models.ForeignKey(Competition, on_delete=models.CASCADE, verbose_name="Competition ID")
     season = models.ForeignKey(Season, on_delete=models.CASCADE, verbose_name="Seasons ID")
     home_team = models.ForeignKey(Team, on_delete=models.CASCADE, verbose_name="Home Team ID",
-                                  related_name="home_team")
+                                  related_name="home_team",null=True)
     away_team = models.ForeignKey(Team, on_delete=models.CASCADE, verbose_name="Away team ID",
-                                  related_name="away_team")
-    matchday = models.IntegerField(verbose_name="Matchday count for given league")
+                                  related_name="away_team",null=True)
+    matchday = models.IntegerField(verbose_name="Matchday count for given league",null=True)
     date = models.DateTimeField(verbose_name="Date of the match")
     score_home_team = models.IntegerField(verbose_name="Score for the home team", null=True)
     score_away_team = models.IntegerField(verbose_name="Score for the away team", null=True)

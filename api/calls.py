@@ -93,11 +93,12 @@ def getTeams(**kwargs) -> Union[List, Team]:
         return loop(getTeams, reqDict)
     elif 'resDict' in kwargs.keys() and len(kwargs.keys()) == 1:
         apiResults = kwargs['resDict']
-        Team(
+        return Team(
             id=int(apiResults['IdTeam']),
             clear_name=apiResults['Name'][0]['Description'],
             short_name=apiResults['ShortClubName']
         )
+
     else:
         raise AttributeError('Wrong parameters for call getTeams')
 
@@ -115,7 +116,7 @@ def getMatches(**kwargs) -> Union[List, Match]:
         apiResults = kwargs['resDict']
         match = Match(
             id=int(apiResults['IdMatch']),
-            matchday=int(apiResults['MatchDay']),
+            matchday=None if apiResults['MatchDay'] == None else int(apiResults['MatchDay']),
             date=parser.parse(apiResults['Date']),
             score_home_team=None if apiResults['HomeTeamScore'] == None else int(
                 apiResults['HomeTeamScore']),
@@ -125,8 +126,15 @@ def getMatches(**kwargs) -> Union[List, Match]:
 
         match.competition_id = int(apiResults['IdCompetition'])
         match.season_id = int(apiResults['IdSeason'])
-        match.home_team_id = int(apiResults['Home']['IdTeam'])
-        match.away_team_id = int(apiResults['Away']['IdTeam'])
+        try:
+            match.home_team_id = int(apiResults['Home']['IdTeam'])
+        except TypeError:
+            match.home_team_id = None
+
+        try:
+            match.away_team_id = int(apiResults['Away']['IdTeam'])
+        except TypeError:
+            match.away_team_id = None
 
         return match
     else:

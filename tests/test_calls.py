@@ -31,18 +31,26 @@ def testGetFederations():
 def testGetCompetitions(value):
     result = getCompetitions(idFederation=value)
     assert isinstance(result, list)
+    for i in result:
+        assert isinstance(i,Competition)
 
 @pytest.mark.parametrize("value",sampleCompetitionsKeys)
 def testGetSeasons(value):
     result = getSeasons(idCompetitions = value)
     assert isinstance(result, list)
+    for i in result:
+        assert isinstance(i,Season)
 
 
 def testGetTeams():
     result = getTeams()
     assert isinstance(result, list)
+    for i in result:
+        assert isinstance(i,Team)
 
 @pytest.mark.parametrize("value",sampleCompSeasonKeys)
 def testGetMatches(value):
     result = getMatches(idCompetitions = value[0],idSeason = value[1])
     assert isinstance(result, list)
+    for i in result:
+        assert isinstance(i,Match)
