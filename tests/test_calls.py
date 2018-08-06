@@ -17,6 +17,8 @@ sampleCompetitionsKeys = [2000000019,#Bundesliga
 
 sampleCompSeasonKeys = [(2000000019,2000011119)]
 
+sampleTeamKeys = []
+
 def testGetFederations():
     result = getFederations()
     assert isinstance(result,list)

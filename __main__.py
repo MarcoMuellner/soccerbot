@@ -20,14 +20,11 @@ async def on_ready():
 
 @client.event
 async def on_message(message : discord.Message):
-    answer = cmdHandler(message.content)
-    print(f"Answer is {answer}")
+    try:
+        await client.send_message(message.channel, cmdHandler(message))
+    except discord.errors.HTTPException:
+        pass
 
-    client.send_message(message.channel, answer)
-
-@client.event
-async def on_ready():
-    pass
 
 
 client.run('NDc0MjA5MTg0NzA4MTY1NjQy.DkNbcg.tphF6_RxXzRlylHn4mSPlIe49Zw')
