@@ -7,9 +7,8 @@ from django.core.wsgi import get_wsgi_application
 application = get_wsgi_application()
 
 import discord
-from discord_handler.handler import cmdHandler
-
-client = discord.Client()
+from discord_handler.handler import cmdHandler,client
+from discord_handler.scheduler import schedulerInit
 
 @client.event
 async def on_ready():
@@ -17,6 +16,8 @@ async def on_ready():
     print(client.user.name)
     print(client.user.id)
     print('------')
+    await schedulerInit()
+
 
 @client.event
 async def on_message(message : discord.Message):
@@ -26,5 +27,5 @@ async def on_message(message : discord.Message):
         pass
 
 
-
+client.loop.create_task(schedulerInit())
 client.run('NDc0MjA5MTg0NzA4MTY1NjQy.DkNbcg.tphF6_RxXzRlylHn4mSPlIe49Zw')

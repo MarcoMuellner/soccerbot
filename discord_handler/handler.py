@@ -1,16 +1,17 @@
 from database.models import *
-from discord import Message, Server
+from discord import Message, Server,Client
 
+client = Client()
 
 class DiscordCmds:
     addComp = "!addCompetition"
 
 
-def createChannel(match: Match):
+def createChannel(server: Server, channelName : str):
     pass
 
 
-def deleteChannel(match: Match):
+def deleteChannel(server: Server, channelName: str):
     pass
 
 
