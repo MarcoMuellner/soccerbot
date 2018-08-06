@@ -13,6 +13,7 @@ class Competition(models.Model):
     id = models.IntegerField(primary_key=True, verbose_name="Id of the competitions, according to API")
     federation = models.ForeignKey(Federation, on_delete=models.CASCADE, verbose_name="Federation ID")
     clear_name = models.CharField(max_length=255, verbose_name="Full name of the competition")
+    association = models.CharField(max_length=255,verbose_name="Country Code of competition",default="")
 
     def __str__(self):
         return f"ID: {self.id}, Clear_Name: {self.clear_name}"

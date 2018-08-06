@@ -61,7 +61,8 @@ def getCompetitions(**kwargs) -> Union[List, Competition]:
         apiResults = kwargs['resDict']
         comp = Competition(
             id=int(apiResults['IdCompetition']),
-            clear_name=apiResults['Name'][0]["Description"]
+            clear_name=apiResults['Name'][0]["Description"],
+            association=apiResults['IdMemberAssociation'][0]
         )
         comp.federation_id = apiResults["IdOwner"]
         return comp

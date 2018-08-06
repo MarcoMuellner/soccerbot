@@ -1,8 +1,10 @@
 from database.models import *
-from discord import Message,Server
+from discord import Message, Server
+
 
 class DiscordCmds:
     addComp = "!addCompetition"
+
 
 def createChannel(match: Match):
     pass
@@ -12,33 +14,53 @@ def deleteChannel(match: Match):
     pass
 
 
-def watchCompetition(competition,server):
-    seasons = Season.objects.filter(competition=competition).order_by('start_date')
-    compWatcher = CompetitionWatcher(competition,seasons[0],server.name)
+def watchCompetition(competition, serverName):
+    seasons = Season.objects.filter(competition=competition).order_by('start_date').first()
+    server = DiscordServer(name=serverName)
+    server.save()
+    compWatcher = CompetitionWatcher(competition=competition,
+                                     current_season=seasons, applicable_server=server, current_matchday=1)
     compWatcher.save()
 
 
 def cmdHandler(msg: Message):
     if msg.content.startswith(DiscordCmds.addComp):
-        data = msg.content.split(" ")
-        if len(data) != 2:
+        parameterSplit = msg.content.split("-")
+        data = parameterSplit[0].split(" ")
+        competition_string = ""
+        for i in data[1:]:
+            if competition_string == "":
+                competition_string += i
+            else:
+                competition_string += " " + i
+
+        if len(data) < 2:
             return "Add competition needs the competition as a Parameter!"
 
-        comp = Competition.objects.filter(clear_name=data[1])
-        watcher = CompetitionWatcher.objects.filter(competition__in=comp)
-
-        if len(watcher) != 0:
-            return f"Allready watching {data[1]}"
+        comp = Competition.objects.filter(clear_name=competition_string)
 
         if len(comp) == 0:
-            return f"Can't find competition {data[1]}"
+            return f"Can't find competition {competition_string}"
 
         if len(comp) != 1:
-            names = set(existing_com.clear_name for existing_com in comp)
-            return f"Found competitions {names} with that name. Please be more specific"
+            if len(parameterSplit) == 1:
+                names = [existing_com.clear_name for existing_com in comp]
+                countryCodes = [existing_com.association for existing_com in comp]
+                name_code = list(zip(names, countryCodes))
+                return f"Found competitions {name_code} with that name. Please be more specific (add -ENG for example)."
+            else:
+                comp = Competition.objects.filter(clear_name=competition_string,association=parameterSplit[1])
+                if len(comp) != 1:
+                    names = [existing_com.clear_name for existing_com in comp]
+                    countryCodes = [existing_com.association for existing_com in comp]
+                    name_code = list(zip(names,countryCodes))
+                    return f"Found competitions {name_code} with that name. Please be more specific (add -ENG for example)."
 
-        watchCompetition(comp,msg.server)
+        watcher = CompetitionWatcher.objects.filter(competition=comp.first())
 
-        return(f"Start watching competition {data[1]}")
+        if len(watcher) != 0:
+            return f"Allready watching {competition_string}"
 
+        watchCompetition(comp.first(), msg.server)
 
+        return (f"Start watching competition {competition_string}")
