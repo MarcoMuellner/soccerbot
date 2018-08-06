@@ -1,4 +1,3 @@
-from database.models import *
 from api.calls import *
 
 def getAndSaveData(func,**kwargs):

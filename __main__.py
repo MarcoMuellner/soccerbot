@@ -1,5 +1,13 @@
+# Django specific settings
+import os
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
+
+# Ensure settings are read
+from django.core.wsgi import get_wsgi_application
+application = get_wsgi_application()
+
 import discord
-import asyncio
+from discord_handler.handler import cmdHandler
 
 client = discord.Client()
 
@@ -11,27 +19,15 @@ async def on_ready():
     print('------')
 
 @client.event
-async def on_message(message):
-    if message.content.startswith('!test'):
-        counter = 0
-        tmp = await client.send_message(message.channel, 'Calculating messages...')
-        async for log in client.logs_from(message.channel, limit=100):
-            if log.author == message.author:
-                counter += 1
+async def on_message(message : discord.Message):
+    answer = cmdHandler(message.content)
+    print(f"Answer is {answer}")
 
-        await client.edit_message(tmp, 'You have {} messages.'.format(counter))
-    elif message.content.startswith('!sleep'):
-        await asyncio.sleep(5)
-        await client.send_message(message.channel, 'Done sleeping')
+    client.send_message(message.channel, answer)
 
 @client.event
 async def on_ready():
-    channels = client.get_all_channels()
-    for i in channels:
-        print(i)
-
-    for i in client.servers:
-        print(i)
+    pass
 
 
 client.run('NDc0MjA5MTg0NzA4MTY1NjQy.DkNbcg.tphF6_RxXzRlylHn4mSPlIe49Zw')
