@@ -1,21 +1,30 @@
 from database.models import *
 from discord import Message, Server,Client
+import logging
 
+logger = logging.getLogger(__name__)
 client = Client()
 
 class DiscordCmds:
     addComp = "!addCompetition"
 
+def log_return(func):
+    def func_wrapper(*args):
+        answer = func(*args)
+        logger.debug(f"Answer: {answer}")
+        return answer
+    return func_wrapper
+
 
 def createChannel(server: Server, channelName : str):
-    pass
+    client.create_channel(server,channelName)
 
 
 def deleteChannel(server: Server, channelName: str):
-    pass
-
+    client.delete_channel(channelName)
 
 def watchCompetition(competition, serverName):
+    logger.info(f"Start watching competition {competition} on {serverName}")
     seasons = Season.objects.filter(competition=competition).order_by('start_date').first()
     server = DiscordServer(name=serverName)
     server.save()
@@ -24,21 +33,29 @@ def watchCompetition(competition, serverName):
     compWatcher.save()
 
 
+@log_return
 def cmdHandler(msg: Message):
     if msg.content.startswith(DiscordCmds.addComp):
+        logger.info(f"Handling {DiscordCmds.addComp}")
+
         parameterSplit = msg.content.split("-")
         data = parameterSplit[0].split(" ")
         competition_string = ""
+
         for i in data[1:]:
             if competition_string == "":
                 competition_string += i
             else:
                 competition_string += " " + i
 
+        logger.debug(f"Competition: {competition_string}, full: {parameterSplit}")
+
         if len(data) < 2:
             return "Add competition needs the competition as a Parameter!"
 
         comp = Competition.objects.filter(clear_name=competition_string)
+
+        logger.debug(f"Available competitions: {comp}")
 
         if len(comp) == 0:
             return f"Can't find competition {competition_string}"
@@ -58,6 +75,8 @@ def cmdHandler(msg: Message):
                     return f"Found competitions {name_code} with that name. Please be more specific (add -ENG for example)."
 
         watcher = CompetitionWatcher.objects.filter(competition=comp.first())
+
+        logger.debug(f"Watcher objects: {watcher}")
 
         if len(watcher) != 0:
             return f"Allready watching {competition_string}"
