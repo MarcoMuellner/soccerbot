@@ -11,3 +11,6 @@ def testCalculateSleepTime():
     diff = (now-later).total_seconds()
 
     assert diff == calculateSleepTime(later,now)
+
+def testTimerTask():
+    pass

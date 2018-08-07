@@ -2,5 +2,6 @@ django
 discord.py
 pytest
 pytest-django
+pytest-asyncio
 requests
 python-dateutil
