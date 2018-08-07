@@ -1,16 +1,16 @@
-# Django specific settings
 import os
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
-
-# Ensure settings are read
+import logging
 from django.core.wsgi import get_wsgi_application
+import discord
+# Django specific settings
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
+# Ensure settings are read
 application = get_wsgi_application()
 
-import discord
 from discord_handler.handler import cmdHandler,client
 from discord_handler.scheduler import schedulerInit
 from loghandler.loghandler import setup_logging
-import logging
+
 
 setup_logging()
 logger = logging.getLogger(__name__)

@@ -12,7 +12,7 @@ async def schedulerInit():
     while(True):
         logger.info("Initializing schedule for tomorrow")
         targetTime = datetime.datetime.now().replace(hour=0,minute=0,second=0)+timedelta(days=1)
-        updateDB()
+        #updateDB()
         for i in getNextMatchDays():
             logger.info(f"Initializing task for {i.matchdayString} from {i.startTime} to {i.endTime}")
             await asyncCreateChannel(calculateSleepTime(i.startTime),i.matchdayString)

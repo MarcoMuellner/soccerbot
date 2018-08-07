@@ -1,20 +1,14 @@
+import logging
 from database.models import *
 from discord import Message, Server,Client
-import logging
+from support.helper import log_return
 
 logger = logging.getLogger(__name__)
+
 client = Client()
 
 class DiscordCmds:
     addComp = "!addCompetition"
-
-def log_return(func):
-    def func_wrapper(*args):
-        answer = func(*args)
-        logger.debug(f"Answer: {answer}")
-        return answer
-    return func_wrapper
-
 
 def createChannel(server: Server, channelName : str):
     client.create_channel(server,channelName)
