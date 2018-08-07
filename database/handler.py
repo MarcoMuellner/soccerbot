@@ -65,9 +65,9 @@ def getNextMatchDays() -> List[MatchDayObject]:
         query = Match.objects.filter(competition=i.competition).filter(date__lte=tomorrow).filter(date__gte=today).order_by('date')
 
         if len(query) != 0:
-            startTime = query.first() - timedelta(hours=1)
-            endTime = query.first() - timedelta(hours = 1)
-            matchDayString = f"{i.clear_name} Matchday {query.first().matchday}"
+            startTime = query.first().date - timedelta(hours=3)
+            endTime = query.last().date + timedelta(hours = 5)
+            matchDayString = f"{i.competition.clear_name} Matchday {query.first().matchday}"
             retList.append(MatchDayObject(startTime,endTime,matchDayString))
 
     return retList

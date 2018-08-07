@@ -1,7 +1,9 @@
 import logging
 from database.models import *
-from discord import Message, Server,Client
+from discord import Message, Server,Client,Channel
+
 from support.helper import log_return
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -10,12 +12,27 @@ client = Client()
 class DiscordCmds:
     addComp = "!addCompetition"
 
-def createChannel(server: Server, channelName : str):
-    client.create_channel(server,channelName)
+def toDiscordName(name:str)->str:
+    return name.lower().replace(" ","-")
+    pass
 
 
-def deleteChannel(server: Server, channelName: str):
-    client.delete_channel(channelName)
+async def createChannel(server: Server, channelName : str):
+    for i in client.get_all_channels():
+        if i.name == toDiscordName(channelName) and i.server == server:
+            logger.info(f"Channel {channelName} already available ")
+            return
+    logger.info(f"Creating channel {channelName} on {server.name}")
+    await client.create_channel(server,channelName)
+
+
+async def deleteChannel(server: Server, channelName: str):
+    for i in client.get_all_channels():
+        if i.name == toDiscordName(channelName) and i.server == server:
+            logger.info(f"Deleting channel {toDiscordName(channelName)} on {server.name}")
+            await client.delete_channel(i)
+            break
+
 
 def watchCompetition(competition, serverName):
     logger.info(f"Start watching competition {competition} on {serverName}")
@@ -32,7 +49,7 @@ def cmdHandler(msg: Message):
     if msg.content.startswith(DiscordCmds.addComp):
         logger.info(f"Handling {DiscordCmds.addComp}")
 
-        parameterSplit = msg.content.split("-")
+        parameterSplit = msg.content.split("#")
         data = parameterSplit[0].split(" ")
         competition_string = ""
 
