@@ -2,11 +2,12 @@ import os
 import logging
 from django.core.wsgi import get_wsgi_application
 import discord
+import sys
 # Django specific settings
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
 # Ensure settings are read
 application = get_wsgi_application()
-
+sys.setdefaultencoding('utf8')
 from discord_handler.handler import cmdHandler,client
 from discord_handler.scheduler import schedulerInit
 from loghandler.loghandler import setup_logging
