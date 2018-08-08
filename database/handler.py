@@ -5,6 +5,7 @@ from api.calls import getSpecificTeam
 import datetime
 from datetime import timedelta
 import logging
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -39,23 +40,26 @@ def getAndSaveData(func : callable, **kwargs):
             else:
                 raise IntegrityError(f"Foreign Key constraint failed for {i._meta.label}")
 
-
-def updateDB():
-    logger.info("Start updating database")
+def updateCompetitions():
+    logger.info("Updating competitions")
     getAndSaveData(getFederations)
     for federation in Federation.objects.all():
         getAndSaveData(getCompetitions, idFederation=federation.id)
 
-    for competition in Competition.objects.all():
-        getAndSaveData(getSeasons, idCompetitions=competition.id)
+    for watcher in CompetitionWatcher.objects.all():
+        getAndSaveData(getSeasons, idCompetitions=watcher.competition.id)
 
-    getAndSaveData(getTeams)
+def updateMatches():
+    logger.info("Updating matches")
+    for watcher in CompetitionWatcher.objects.all():
+        for season in Season.objects.filter(competition=watcher.competition):
+            logger.debug(f"Competition: {str(watcher.competition.clear_name.encode('utf-8'))}"
+                         f",Season: {season.clear_name.encode('utf-8')}")
+            updateMatchesSingleCompetition(competition=watcher.competition, season=season)
 
-    for competition in Competition.objects.all():
-        for season in Season.objects.filter(competition=competition):
-            logger.debug(f"Competition: {str(competition.clear_name.encode('utf-8'))},Season: {season.clear_name.encode('utf-8')}")
-            getAndSaveData(getMatches, idCompetitions=competition.id, idSeason=season.id)
-
+def updateMatchesSingleCompetition(competition : Competition, season : Season):
+    logger.info(f"Updating {competition.clear_name}, season {season.clear_name}")
+    getAndSaveData(getMatches, idCompetitions=competition.id, idSeason=season.id)
 
 def getNextMatchDays() -> List[MatchDayObject]:
     today = datetime.datetime.now().today()

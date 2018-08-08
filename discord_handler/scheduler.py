@@ -1,6 +1,6 @@
 import asyncio
 from discord_handler.handler import client,createChannel,deleteChannel
-from database.handler import updateDB,getNextMatchDays
+from database.handler import updateCompetitions,getNextMatchDays
 import datetime
 import logging
 from datetime import timedelta,timezone
@@ -12,7 +12,7 @@ async def schedulerInit():
     while(True):
         logger.info("Initializing schedule for tomorrow")
         targetTime = datetime.datetime.now(timezone.utc).replace(hour=0,minute=0,second=0)+timedelta(days=1)
-        updateDB()
+        updateCompetitions()
         for i in getNextMatchDays():
             logger.info(f"Initializing task for {i.matchdayString} from {i.startTime} to {i.endTime}")
             await asyncCreateChannel(calculateSleepTime(i.startTime),i.matchdayString)

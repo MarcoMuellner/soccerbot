@@ -1,6 +1,7 @@
 import logging
 from database.models import *
 from discord import Message, Server,Client,Channel
+from database.handler import updateMatchesSingleCompetition
 
 from support.helper import log_return
 import asyncio
@@ -36,11 +37,14 @@ async def deleteChannel(server: Server, channelName: str):
 
 def watchCompetition(competition, serverName):
     logger.info(f"Start watching competition {competition} on {serverName}")
-    seasons = Season.objects.filter(competition=competition).order_by('start_date').first()
+    season = Season.objects.filter(competition=competition).order_by('start_date').first()
     server = DiscordServer(name=serverName)
     server.save()
+
+    updateMatchesSingleCompetition(competition=competition,season=season)
+
     compWatcher = CompetitionWatcher(competition=competition,
-                                     current_season=seasons, applicable_server=server, current_matchday=1)
+                                     current_season=season, applicable_server=server, current_matchday=1)
     compWatcher.save()
 
 

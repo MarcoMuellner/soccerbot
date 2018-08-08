@@ -10,6 +10,7 @@ application = get_wsgi_application()
 from discord_handler.handler import cmdHandler,client
 from discord_handler.scheduler import schedulerInit
 from loghandler.loghandler import setup_logging
+from database.handler import updateCompetitions,updateMatches
 
 
 setup_logging()
@@ -18,7 +19,10 @@ logger = logging.getLogger(__name__)
 @client.event
 async def on_ready():
     logger.info(f"Logged in as {client.user.name} with id {client.user.id}")
-    await schedulerInit()
+    updateCompetitions()
+    updateMatches()
+    logger.info("Update complete")
+
 
 @client.event
 async def on_message(message : discord.Message):
@@ -28,5 +32,4 @@ async def on_message(message : discord.Message):
         pass
 
 logger.info("------------------Soccerbot is starting-----------------------")
-client.loop.create_task(schedulerInit())
 client.run('NDc0MjA5MTg0NzA4MTY1NjQy.DkNbcg.tphF6_RxXzRlylHn4mSPlIe49Zw')
