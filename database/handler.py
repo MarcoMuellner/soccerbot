@@ -53,7 +53,7 @@ def updateDB():
 
     for competition in Competition.objects.all():
         for season in Season.objects.filter(competition=competition):
-            logger.debug(f"Competition: {competition.clear_name},Season: {season.clear_name}")
+            logger.debug(f"Competition: {str(competition.clear_name.encode('utf-8'))},Season: {season.clear_name.encode('utf-8')}")
             getAndSaveData(getMatches, idCompetitions=competition.id, idSeason=season.id)
 
 

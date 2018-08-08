@@ -28,4 +28,5 @@ async def on_message(message : discord.Message):
         pass
 
 logger.info("------------------Soccerbot is starting-----------------------")
+client.loop.create_task(schedulerInit())
 client.run('NDc0MjA5MTg0NzA4MTY1NjQy.DkNbcg.tphF6_RxXzRlylHn4mSPlIe49Zw')

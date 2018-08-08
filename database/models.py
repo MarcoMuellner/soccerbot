@@ -6,7 +6,7 @@ class Federation(models.Model):
     clear_name = models.CharField(max_length=255, verbose_name="Full name of the federation")
 
     def __str__(self):
-        return f"ID: {self.id}, Clear_Name: {self.clear_name}"
+        return f"ID: {self.id}, Clear_Name: {self.clear_name.encode('utf-8')}"
 
 
 class Competition(models.Model):
@@ -16,7 +16,7 @@ class Competition(models.Model):
     association = models.CharField(max_length=255,verbose_name="Country Code of competition",default="")
 
     def __str__(self):
-        return f"ID: {self.id}, Clear_Name: {self.clear_name}"
+        return f"ID: {self.id}, Clear_Name: {self.clear_name.encode('utf-8')}"
 
 
 class Season(models.Model):
@@ -28,7 +28,7 @@ class Season(models.Model):
     end_date = models.DateTimeField(verbose_name="End date of the season")
 
     def __str__(self):
-        return f"ID: {self.id}, Clear_Name: {self.clear_name}"
+        return f"ID: {self.id}, Clear_Name: {self.clear_name.encode('utf-8')}"
 
 
 class Team(models.Model):
@@ -37,7 +37,7 @@ class Team(models.Model):
     short_name = models.CharField(max_length=50, verbose_name="Short name of the team",null=True)
 
     def __str__(self):
-        return f"ID: {self.id}, Clear_Name: {self.clear_name}"
+        return f"ID: {self.id}, Clear_Name: {self.clear_name.encode('utf-8')}"
 
 
 class Match(models.Model):
