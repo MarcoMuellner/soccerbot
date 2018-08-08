@@ -49,6 +49,7 @@ class Match(models.Model):
     away_team = models.ForeignKey(Team, on_delete=models.CASCADE, verbose_name="Away team ID",
                                   related_name="away_team", null=True)
     matchday = models.IntegerField(verbose_name="Matchday count for given league", null=True)
+    match_status = models.IntegerField(verbose_name="Status of the match",null=True)
     date = models.DateTimeField(verbose_name="Date of the match")
     score_home_team = models.IntegerField(verbose_name="Score for the home team", null=True)
     score_away_team = models.IntegerField(verbose_name="Score for the away team", null=True)

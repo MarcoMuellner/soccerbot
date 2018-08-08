@@ -1,14 +1,16 @@
 import logging
 from database.models import *
-from discord import Message, Server,Client,Channel
-from database.handler import updateMatchesSingleCompetition
+from discord import Message, Server,Client
+from database.handler import updateMatchesSingleCompetition,getSeasons,getAndSaveData
+from database.handler import updateCompetitions,updateMatches,getNextMatchDays
+import datetime
+from datetime import timedelta,timezone
 
+client = Client()
 from support.helper import log_return
 import asyncio
 
 logger = logging.getLogger(__name__)
-
-client = Client()
 
 class DiscordCmds:
     addComp = "!addCompetition"
@@ -35,9 +37,14 @@ async def deleteChannel(server: Server, channelName: str):
             break
 
 
-def watchCompetition(competition, serverName):
+async def watchCompetition(competition, serverName):
     logger.info(f"Start watching competition {competition} on {serverName}")
-    season = Season.objects.filter(competition=competition).order_by('start_date').first()
+
+    season = None
+    while season == None:
+        season = Season.objects.filter(competition=competition).order_by('start_date').first()
+        if season == None:
+            getAndSaveData(getSeasons, idCompetitions=competition.id)
     server = DiscordServer(name=serverName)
     server.save()
 
@@ -46,10 +53,11 @@ def watchCompetition(competition, serverName):
     compWatcher = CompetitionWatcher(competition=competition,
                                      current_season=season, applicable_server=server, current_matchday=1)
     compWatcher.save()
+    await updateMatchScheduler()
 
 
 @log_return
-def cmdHandler(msg: Message):
+async def cmdHandler(msg: Message):
     if msg.content.startswith(DiscordCmds.addComp):
         logger.info(f"Handling {DiscordCmds.addComp}")
 
@@ -80,14 +88,14 @@ def cmdHandler(msg: Message):
                 names = [existing_com.clear_name for existing_com in comp]
                 countryCodes = [existing_com.association for existing_com in comp]
                 name_code = list(zip(names, countryCodes))
-                return f"Found competitions {name_code} with that name. Please be more specific (add -ENG for example)."
+                return f"Found competitions {name_code} with that name. Please be more specific (add #ENG for example)."
             else:
                 comp = Competition.objects.filter(clear_name=competition_string,association=parameterSplit[1])
                 if len(comp) != 1:
                     names = [existing_com.clear_name for existing_com in comp]
                     countryCodes = [existing_com.association for existing_com in comp]
                     name_code = list(zip(names,countryCodes))
-                    return f"Found competitions {name_code} with that name. Please be more specific (add -ENG for example)."
+                    return f"Found competitions {name_code} with that name. Please be more specific (add #ENG for example)."
 
         watcher = CompetitionWatcher.objects.filter(competition=comp.first())
 
@@ -96,6 +104,38 @@ def cmdHandler(msg: Message):
         if len(watcher) != 0:
             return f"Allready watching {competition_string}"
 
-        watchCompetition(comp.first(), msg.server)
+        await watchCompetition(comp.first(), msg.server)
 
         return (f"Start watching competition {competition_string}")
+
+
+async def schedulerInit():
+    while(True):
+        targetTime = datetime.datetime.now(timezone.utc).replace(hour=0, minute=0, second=0) + timedelta(days=1)
+        logger.info("Initializing schedule for tomorrow")
+        updateCompetitions()
+        updateMatches()
+        await updateMatchScheduler()
+        await asyncio.sleep(calculateSleepTime(targetTime))
+
+
+async def updateMatchScheduler():
+    logger.info("Updating match schedule")
+    tasksCreate = [asyncCreateChannel(calculateSleepTime(i.startTime),i.matchdayString) for i in getNextMatchDays()]
+    tasksDelete = [asyncDeleteChannel(calculateSleepTime(i.endTime), i.matchdayString) for i in getNextMatchDays()]
+    await asyncio.wait(tasksCreate)
+    await asyncio.wait(tasksDelete) #this doesnt work yet, waits for createTasks to complete
+    logger.info("End update schedule")
+
+def calculateSleepTime(targetTime:datetime,nowTime :datetime = datetime.datetime.now(timezone.utc)):
+    return (targetTime-nowTime).total_seconds()
+
+async def asyncCreateChannel(sleepPeriod:float, channelName:str):
+    logger.info(f"Initializing create Channel task for {channelName} in {sleepPeriod}")
+    await asyncio.sleep(sleepPeriod)
+    await createChannel(list(client.servers)[0],channelName)
+
+async def asyncDeleteChannel(sleepPeriod:float, channelName:str):
+    logger.info(f"Initializing delete Channel task for {channelName} in {sleepPeriod}")
+    await asyncio.sleep(sleepPeriod)
+    await deleteChannel(list(client.servers)[0],channelName)

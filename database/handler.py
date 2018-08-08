@@ -6,6 +6,7 @@ import datetime
 from datetime import timedelta
 import logging
 import asyncio
+import enum
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +16,16 @@ class MatchDayObject:
         self.startTime = startTime
         self.endTime = endTime
         self.matchdayString = matchdayString
+
+class MatchStatus(enum.Enum):
+    Played = 0
+    ToBePlayed = 1
+    Live = 3
+    LineUps = 12
+    Abandoned = 4
+    Postponed = 7
+    Cancelled = 8
+    Suspended = 99
 
 
 def getAndSaveData(func : callable, **kwargs):
@@ -61,6 +72,13 @@ def updateMatchesSingleCompetition(competition : Competition, season : Season):
     logger.info(f"Updating {competition.clear_name}, season {season.clear_name}")
     getAndSaveData(getMatches, idCompetitions=competition.id, idSeason=season.id)
 
+def createMatchDayObject(query,watcher):
+    return MatchDayObject(
+        startTime=query.first().date - timedelta(hours=3),
+        endTime=query.last().date + timedelta(hours=5),
+        matchdayString = f"{watcher.competition.clear_name} Matchday {query.first().matchday}"
+    )
+
 def getNextMatchDays() -> List[MatchDayObject]:
     today = datetime.datetime.now().today()
     tomorrow = today + timedelta(days=1)
@@ -69,9 +87,10 @@ def getNextMatchDays() -> List[MatchDayObject]:
         query = Match.objects.filter(competition=i.competition).filter(date__lte=tomorrow).filter(date__gte=today).order_by('date')
 
         if len(query) != 0:
-            startTime = query.first().date - timedelta(hours=3)
-            endTime = query.last().date + timedelta(hours = 5)
-            matchDayString = f"{i.competition.clear_name} Matchday {query.first().matchday}"
-            retList.append(MatchDayObject(startTime,endTime,matchDayString))
+            retList.append(createMatchDayObject(query,i))
 
+        query = Match.objects.filter(competition=i.competition).filter(match_status=MatchStatus.Live.value)
+
+        if len(query) != 0:
+            retList.append(createMatchDayObject(query,i))
     return retList

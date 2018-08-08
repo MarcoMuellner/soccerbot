@@ -200,7 +200,8 @@ def getMatches(**kwargs) -> Union[List, Match]:
             score_home_team=None if apiResults['HomeTeamScore'] == None else int(
                 apiResults['HomeTeamScore']),
             score_away_team=None if apiResults['AwayTeamScore'] == None else int(
-                apiResults['AwayTeamScore'])
+                apiResults['AwayTeamScore']),
+            match_status=apiResults['MatchStatus']
         )
 
         match.competition_id = int(apiResults['IdCompetition'])
