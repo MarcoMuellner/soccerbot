@@ -17,7 +17,7 @@ class LiveMatch:
                        }
                   }
 
-    def loop(self):
+    def loop(self,matchID):
         while True:
             data = None #getData from somewhere
             eventList = []
@@ -36,21 +36,14 @@ class LiveMatch:
 
         parseList = [
             ("Goals",self.parseGoals),
-            ("Bookings", self.parseGoals),
-            ("Substitutions", self.parseGoals),
+            ("Bookings", self.parseCards),
+            ("Substitutions", self.parseSubstitions),
         ]
 
         for eventKeyword,func in parseList:
-            eventList + self.parseEvent(contentDict,teamKeyWord,eventKeyword,func)
+            eventList += self.parseEvent(contentDict,teamKeyWord,eventKeyword,func)
 
-    def parseGoals(self,eventSet):
-        pass
-
-    def parseCards(self,eventSet):
-        pass
-
-    def parseSubstitions(self,eventSet):
-        pass
+        return eventList
 
     def getPlayerName(self,id):
         pass
@@ -62,6 +55,18 @@ class LiveMatch:
             returnList = []
             for i in differential:
                 returnList.append(func(i))
+
+            self.events[teamKeyWord][EventKeyword] += differential
+
             return returnList
         else:
             return []
+
+    def parseGoals(self,eventSet):
+        return f"{eventSet['Minute']}:{eventSet['IdPlayer']} scored a goal!"
+
+    def parseCards(self,eventSet):
+        return f"{eventSet['Minute']}:{eventSet['Card']} card for {eventSet['IdPlayer']}"
+
+    def parseSubstitions(self,eventSet):
+        return f"{eventSet['Minute']}: Substitution. {eventSet['IdPlayerOff']} is going off for {eventSet['IdPlayerOn']}"
