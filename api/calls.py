@@ -24,6 +24,8 @@ class ApiCalls:
     matches = 'calendar/matches'
     teams = 'teams/all'
     specificTeam = 'teams/'
+    liveMatch = 'live/football'
+    playerInfo = 'players'
 
 
 def loop(func: Callable, reqList : List) -> List:
@@ -54,7 +56,7 @@ def makeCall(keyword: str, payload: Dict = None) -> Union[List,Dict]:
     req = requests.get(ApiCalls.api_home + keyword, params=params)
     try:
         return json.loads(req.content.decode())['Results']
-    except KeyError:
+    except (KeyError,TypeError) as e:
         return json.loads(req.content.decode())
 
 

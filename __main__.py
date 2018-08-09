@@ -9,7 +9,8 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
 application = get_wsgi_application()
 from discord_handler.handler import cmdHandler,client,schedulerInit
 from loghandler.loghandler import setup_logging
-from database.handler import updateCompetitions,updateMatches
+from support.helper import parseCommandoFunctions
+from discord_handler import cdos
 
 
 setup_logging()
@@ -18,6 +19,7 @@ logger = logging.getLogger(__name__)
 @client.event
 async def on_ready():
     logger.info(f"Logged in as {client.user.name} with id {client.user.id}")
+    parseCommandoFunctions(cdos)
     await schedulerInit()
     logger.info("Update complete")
 
