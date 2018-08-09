@@ -1,0 +1,1236 @@
+{
+  "ContinuationToken": "eyJ0b2tlbiI6IitSSUQ6YVJNQkFOSThWZ2N6QUFBQUFBQUFBQT09I1JUOjEjVFJDOjUwIiwicmFuZ2UiOnsibWluIjoiIiwibWF4IjoiRkYifX0=",
+  "ContinuationHash": "1724518150",
+  "Results": [
+    {
+      "IdCompetition": "2000000027",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "A Lyga"
+        }
+      ],
+      "IdConfederation": [
+        "UEFA"
+      ],
+      "IdMemberAssociation": [
+        "LTU"
+      ],
+      "IdOwner": "UEFA",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 0,
+      "CompetitionType": 2,
+      "Properties": {
+        "IdCBS": "2000000027",
+        "IdInfostrada": "146"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "502",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "Continental Final"
+        }
+      ],
+      "IdConfederation": [
+        "CONCACAF"
+      ],
+      "IdMemberAssociation": [
+        ""
+      ],
+      "IdOwner": "CONCACAF",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 1,
+      "CompetitionType": 1,
+      "Properties": {
+        "IdCBS": "502",
+        "IdInfostrada": "107"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "2000000078",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "Série A"
+        }
+      ],
+      "IdConfederation": [
+        "CONMEBOL"
+      ],
+      "IdMemberAssociation": [
+        "BRA"
+      ],
+      "IdOwner": "CONMEBOL",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 0,
+      "CompetitionType": 2,
+      "Properties": {
+        "IdCBS": "2000000078",
+        "IdInfostrada": "199"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "2000000023",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "Arany Ászok Liga"
+        }
+      ],
+      "IdConfederation": [
+        "UEFA"
+      ],
+      "IdMemberAssociation": [
+        "HUN"
+      ],
+      "IdOwner": "UEFA",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 0,
+      "CompetitionType": 2,
+      "Properties": {
+        "IdCBS": "2000000023",
+        "IdInfostrada": "141"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "17",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "FIFA World Cup™"
+        }
+      ],
+      "IdConfederation": [],
+      "IdMemberAssociation": [],
+      "IdOwner": "FIFA",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 1,
+      "CompetitionType": 3,
+      "Properties": {
+        "IdCBS": "17",
+        "IdIFES": "FWC"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "2000000006",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "Bardzraguyn Khumb"
+        }
+      ],
+      "IdConfederation": [
+        "UEFA"
+      ],
+      "IdMemberAssociation": [
+        "ARM"
+      ],
+      "IdOwner": "UEFA",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 0,
+      "CompetitionType": 2,
+      "Properties": {
+        "IdCBS": "2000000006",
+        "IdInfostrada": "249"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "2000000138",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "Ligue 1 Orange"
+        }
+      ],
+      "IdConfederation": [
+        "CAF"
+      ],
+      "IdMemberAssociation": [
+        "CIV"
+      ],
+      "IdOwner": "CAF",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 0,
+      "CompetitionType": 2,
+      "Properties": {
+        "IdCBS": "2000000138",
+        "IdInfostrada": "207"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "520",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "FIFA World Cup Qualifier"
+        }
+      ],
+      "IdConfederation": [],
+      "IdMemberAssociation": [],
+      "IdOwner": "FIFA",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 1,
+      "CompetitionType": 3,
+      "Properties": {
+        "IdCBS": "520",
+        "IdIFES": "FWC_Q"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "102",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "FIFA U-17 World Cup"
+        }
+      ],
+      "IdConfederation": [],
+      "IdMemberAssociation": [],
+      "IdOwner": "FIFA",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 1,
+      "CompetitionType": 3,
+      "Properties": {
+        "IdCBS": "102",
+        "IdIFES": "FU17WC"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "2000000069",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "Primera División"
+        }
+      ],
+      "IdConfederation": [
+        "CONMEBOL"
+      ],
+      "IdMemberAssociation": [
+        "CHI"
+      ],
+      "IdOwner": "CONMEBOL",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 0,
+      "CompetitionType": 2,
+      "Properties": {
+        "IdCBS": "2000000069",
+        "IdInfostrada": "260"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "2000000111",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "Trinidad and Tobago Professional League"
+        }
+      ],
+      "IdConfederation": [
+        "CONCACAF"
+      ],
+      "IdMemberAssociation": [
+        "TRI"
+      ],
+      "IdOwner": "CONCACAF",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 0,
+      "CompetitionType": 2,
+      "Properties": {
+        "IdCBS": "2000000111",
+        "IdInfostrada": "637"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "101",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "FIFA Confederations Cup"
+        }
+      ],
+      "IdConfederation": [],
+      "IdMemberAssociation": [],
+      "IdOwner": "FIFA",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 1,
+      "CompetitionType": 3,
+      "Properties": {
+        "IdCBS": "101",
+        "IdIFES": "FCC"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "2000000088",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "K-League"
+        }
+      ],
+      "IdConfederation": [
+        "AFC"
+      ],
+      "IdMemberAssociation": [
+        "KOR"
+      ],
+      "IdOwner": "AFC",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 0,
+      "CompetitionType": 2,
+      "Properties": {
+        "IdCBS": "2000000088",
+        "IdInfostrada": "504"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "2000000047",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "Latvijas C'empionats"
+        }
+      ],
+      "IdConfederation": [
+        "UEFA"
+      ],
+      "IdMemberAssociation": [
+        "LVA"
+      ],
+      "IdOwner": "UEFA",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 0,
+      "CompetitionType": 2,
+      "Properties": {
+        "IdCBS": "2000000047",
+        "IdInfostrada": "252"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "2000000132",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "Superdivision"
+        }
+      ],
+      "IdConfederation": [
+        "CAF"
+      ],
+      "IdMemberAssociation": [
+        "BFA"
+      ],
+      "IdOwner": "CAF",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 0,
+      "CompetitionType": 2,
+      "Properties": {
+        "IdCBS": "2000000132",
+        "IdInfostrada": "265"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "107",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "FIFA Club World Cup"
+        }
+      ],
+      "IdConfederation": [],
+      "IdMemberAssociation": [],
+      "IdOwner": "FIFA",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 0,
+      "CompetitionType": 3,
+      "Properties": {
+        "IdCBS": "107",
+        "IdIFES": "FCWC"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "2000000062",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "Cameroon League"
+        }
+      ],
+      "IdConfederation": [
+        "CAF"
+      ],
+      "IdMemberAssociation": [
+        "CMR"
+      ],
+      "IdOwner": "CAF",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 0,
+      "CompetitionType": 2,
+      "Properties": {
+        "IdCBS": "2000000062",
+        "IdInfostrada": "663"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "2000000114",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "Torneo ANAPROF"
+        }
+      ],
+      "IdConfederation": [
+        "CONCACAF"
+      ],
+      "IdMemberAssociation": [
+        "PAN"
+      ],
+      "IdOwner": "CONCACAF",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 0,
+      "CompetitionType": 2,
+      "Properties": {
+        "IdCBS": "2000000114",
+        "IdInfostrada": "670"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "2000000161",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "League Division 1"
+        }
+      ],
+      "IdConfederation": [
+        "CAF"
+      ],
+      "IdMemberAssociation": [
+        "LBY"
+      ],
+      "IdOwner": "CAF",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 0,
+      "CompetitionType": 2,
+      "Properties": {
+        "IdCBS": "2000000161",
+        "IdInfostrada": "678"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "2000001003",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "Ethiopian Premier League"
+        }
+      ],
+      "IdConfederation": [
+        "CAF"
+      ],
+      "IdMemberAssociation": [
+        "ETH"
+      ],
+      "IdOwner": "CAF",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 0,
+      "CompetitionType": 2,
+      "Properties": {
+        "IdCBS": "2000001003",
+        "IdInfostrada": "679"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "2000000164",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "Syrian League"
+        }
+      ],
+      "IdConfederation": [
+        "AFC"
+      ],
+      "IdMemberAssociation": [
+        "SYR"
+      ],
+      "IdOwner": "AFC",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 0,
+      "CompetitionType": 2,
+      "Properties": {
+        "IdCBS": "2000000164",
+        "IdInfostrada": "685"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "2000000058",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "Premier Soccer League"
+        }
+      ],
+      "IdConfederation": [
+        "CAF"
+      ],
+      "IdMemberAssociation": [
+        "ZIM"
+      ],
+      "IdOwner": "CAF",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 0,
+      "CompetitionType": 2,
+      "Properties": {
+        "IdCBS": "2000000058",
+        "IdInfostrada": "671"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "2000001032",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "UEFA Champions League"
+        }
+      ],
+      "IdConfederation": [
+        "UEFA"
+      ],
+      "IdMemberAssociation": [
+        ""
+      ],
+      "IdOwner": "UEFA",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 0,
+      "CompetitionType": 1,
+      "Properties": {
+        "IdCBS": "2000001032",
+        "IdInfostrada": "41"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "2000000123",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "NZ Football Championship"
+        }
+      ],
+      "IdConfederation": [
+        "OFC"
+      ],
+      "IdMemberAssociation": [
+        "NZL"
+      ],
+      "IdOwner": "OFC",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 0,
+      "CompetitionType": 2,
+      "Properties": {
+        "IdCBS": "2000000123",
+        "IdInfostrada": "697"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "2000000163",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "Hoofdklasse SVB"
+        }
+      ],
+      "IdConfederation": [
+        "CONCACAF"
+      ],
+      "IdMemberAssociation": [
+        "SUR"
+      ],
+      "IdOwner": "CONCACAF",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 0,
+      "CompetitionType": 2,
+      "Properties": {
+        "IdCBS": "2000000163",
+        "IdInfostrada": "682"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "2000000153",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "Digicel Première Division"
+        }
+      ],
+      "IdConfederation": [
+        "CONCACAF"
+      ],
+      "IdMemberAssociation": [
+        "HAI"
+      ],
+      "IdOwner": "CONCACAF",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 0,
+      "CompetitionType": 2,
+      "Properties": {
+        "IdCBS": "2000000153",
+        "IdInfostrada": "689"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "2000000177",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "MTN Premier League"
+        }
+      ],
+      "IdConfederation": [
+        "CAF"
+      ],
+      "IdMemberAssociation": [
+        "SWZ"
+      ],
+      "IdOwner": "CAF",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 0,
+      "CompetitionType": 2,
+      "Properties": {
+        "IdCBS": "2000000177",
+        "IdInfostrada": "705"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "2000000171",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "Première Division"
+        }
+      ],
+      "IdConfederation": [
+        "CAF"
+      ],
+      "IdMemberAssociation": [
+        "MTN"
+      ],
+      "IdOwner": "CAF",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 0,
+      "CompetitionType": 2,
+      "Properties": {
+        "IdCBS": "2000000171",
+        "IdInfostrada": "698"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "2000000147",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "Vysshaja Liga"
+        }
+      ],
+      "IdConfederation": [
+        "AFC"
+      ],
+      "IdMemberAssociation": [
+        "KGZ"
+      ],
+      "IdOwner": "AFC",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 0,
+      "CompetitionType": 2,
+      "Properties": {
+        "IdCBS": "2000000147",
+        "IdInfostrada": "739"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "2000000136",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "Ligina"
+        }
+      ],
+      "IdConfederation": [
+        "AFC"
+      ],
+      "IdMemberAssociation": [
+        "IDN"
+      ],
+      "IdOwner": "AFC",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 0,
+      "CompetitionType": 2,
+      "Properties": {
+        "IdCBS": "2000000136",
+        "IdInfostrada": "702"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "2000000019",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "Bundesliga"
+        }
+      ],
+      "IdConfederation": [
+        "UEFA"
+      ],
+      "IdMemberAssociation": [
+        "GER"
+      ],
+      "IdOwner": "UEFA",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 0,
+      "CompetitionType": 2,
+      "Properties": {
+        "IdCBS": "2000000019",
+        "IdInfostrada": "56"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "2000000152",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "Türkmenistan 1. Toparlar"
+        }
+      ],
+      "IdConfederation": [
+        "AFC"
+      ],
+      "IdMemberAssociation": [
+        "TKM"
+      ],
+      "IdOwner": "AFC",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 0,
+      "CompetitionType": 2,
+      "Properties": {
+        "IdCBS": "2000000152",
+        "IdInfostrada": "738"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "2000000176",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "Pakistan Premier League"
+        }
+      ],
+      "IdConfederation": [
+        "AFC"
+      ],
+      "IdMemberAssociation": [
+        "PAK"
+      ],
+      "IdOwner": "AFC",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 0,
+      "CompetitionType": 2,
+      "Properties": {
+        "IdCBS": "2000000176",
+        "IdInfostrada": "730"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "2000000073",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "Primera Division"
+        }
+      ],
+      "IdConfederation": [
+        "CONMEBOL"
+      ],
+      "IdMemberAssociation": [
+        "VEN"
+      ],
+      "IdOwner": "CONMEBOL",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 0,
+      "CompetitionType": 2,
+      "Properties": {
+        "IdCBS": "2000000073",
+        "IdInfostrada": "568"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "2000000148",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "Campeonato da 1ª Divisão do Futebol"
+        }
+      ],
+      "IdConfederation": [
+        "AFC"
+      ],
+      "IdMemberAssociation": [
+        "MAC"
+      ],
+      "IdOwner": "AFC",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 0,
+      "CompetitionType": 2,
+      "Properties": {
+        "IdCBS": "2000000148",
+        "IdInfostrada": "720"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "2000000121",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "Liga Mayor"
+        }
+      ],
+      "IdConfederation": [
+        "CONCACAF"
+      ],
+      "IdMemberAssociation": [
+        "DOM"
+      ],
+      "IdOwner": "CONCACAF",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 0,
+      "CompetitionType": 2,
+      "Properties": {
+        "IdCBS": "2000000121",
+        "IdInfostrada": "735"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "2000001007",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "ASFA Men's Senior Competition"
+        }
+      ],
+      "IdConfederation": [
+        "OFC"
+      ],
+      "IdMemberAssociation": [
+        "ASA"
+      ],
+      "IdOwner": "OFC",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 0,
+      "CompetitionType": 2,
+      "Properties": {
+        "IdCBS": "2000001007",
+        "IdInfostrada": "749"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "2000000095",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "Oliy Liga"
+        }
+      ],
+      "IdConfederation": [
+        "AFC"
+      ],
+      "IdMemberAssociation": [
+        "UZB"
+      ],
+      "IdOwner": "AFC",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 0,
+      "CompetitionType": 2,
+      "Properties": {
+        "IdCBS": "2000000095",
+        "IdInfostrada": "665"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "2000001017",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "Cambodian Premier League"
+        }
+      ],
+      "IdConfederation": [
+        "AFC"
+      ],
+      "IdMemberAssociation": [
+        "CAM"
+      ],
+      "IdOwner": "AFC",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 0,
+      "CompetitionType": 2,
+      "Properties": {
+        "IdCBS": "2000001017",
+        "IdInfostrada": "785"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "2000000167",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "Campeonato Nacional de Fútbol"
+        }
+      ],
+      "IdConfederation": [
+        "CONCACAF"
+      ],
+      "IdMemberAssociation": [
+        "CUB"
+      ],
+      "IdOwner": "CONCACAF",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 0,
+      "CompetitionType": 2,
+      "Properties": {
+        "IdCBS": "2000000167",
+        "IdInfostrada": "666"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "2000001022",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "Round Cup"
+        }
+      ],
+      "IdConfederation": [
+        "OFC"
+      ],
+      "IdMemberAssociation": [
+        "COK"
+      ],
+      "IdOwner": "OFC",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 0,
+      "CompetitionType": 2,
+      "Properties": {
+        "IdCBS": "2000001022",
+        "IdInfostrada": "805"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "2000001019",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "Guyana, GFF Super League"
+        }
+      ],
+      "IdConfederation": [
+        "CONCACAF"
+      ],
+      "IdMemberAssociation": [
+        "GUY"
+      ],
+      "IdOwner": "CONCACAF",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 0,
+      "CompetitionType": 2,
+      "Properties": {
+        "IdCBS": "2000001019",
+        "IdInfostrada": "802"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "2000001009",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "GFA Division One"
+        }
+      ],
+      "IdConfederation": [
+        "AFC"
+      ],
+      "IdMemberAssociation": [
+        "GUM"
+      ],
+      "IdOwner": "AFC",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 0,
+      "CompetitionType": 2,
+      "Properties": {
+        "IdCBS": "2000001009",
+        "IdInfostrada": "745"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "2000000032",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "Prvata Fudbalska Liga"
+        }
+      ],
+      "IdConfederation": [
+        "UEFA"
+      ],
+      "IdMemberAssociation": [
+        "MKD"
+      ],
+      "IdOwner": "UEFA",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 0,
+      "CompetitionType": 2,
+      "Properties": {
+        "IdCBS": "2000000032",
+        "IdInfostrada": "147"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "2000001031",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "Championnat national de la 1ère division"
+        }
+      ],
+      "IdConfederation": [
+        "CAF"
+      ],
+      "IdMemberAssociation": [
+        "DJI"
+      ],
+      "IdOwner": "CAF",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 0,
+      "CompetitionType": 2,
+      "Properties": {
+        "IdCBS": "2000001031",
+        "IdInfostrada": "864"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "2000000041",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "Raiffeisen Super League"
+        }
+      ],
+      "IdConfederation": [
+        "UEFA"
+      ],
+      "IdMemberAssociation": [
+        "SUI"
+      ],
+      "IdOwner": "UEFA",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 0,
+      "CompetitionType": 2,
+      "Properties": {
+        "IdCBS": "2000000041",
+        "IdInfostrada": "80"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "2000000099",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "Iraqi League"
+        }
+      ],
+      "IdConfederation": [
+        "AFC"
+      ],
+      "IdMemberAssociation": [
+        "IRQ"
+      ],
+      "IdOwner": "AFC",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 0,
+      "CompetitionType": 2,
+      "Properties": {
+        "IdCBS": "2000000099",
+        "IdInfostrada": "674"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "2000001023",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "SFSF-NC National League"
+        }
+      ],
+      "IdConfederation": [
+        "OFC"
+      ],
+      "IdMemberAssociation": [
+        "SAM"
+      ],
+      "IdOwner": "OFC",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 0,
+      "CompetitionType": 2,
+      "Properties": {
+        "IdCBS": "2000001023",
+        "IdInfostrada": "807"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "2000000064",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "Nigerian Premier League"
+        }
+      ],
+      "IdConfederation": [
+        "CAF"
+      ],
+      "IdMemberAssociation": [
+        "NGA"
+      ],
+      "IdOwner": "CAF",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 0,
+      "CompetitionType": 2,
+      "Properties": {
+        "IdCBS": "2000000064",
+        "IdInfostrada": "210"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdCompetition": "2000000158",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "Premier Division"
+        }
+      ],
+      "IdConfederation": [
+        "CONCACAF"
+      ],
+      "IdMemberAssociation": [
+        "BER"
+      ],
+      "IdOwner": "CONCACAF",
+      "Gender": 1,
+      "FootballType": 0,
+      "TeamType": 0,
+      "CompetitionType": 2,
+      "Properties": {
+        "IdCBS": "2000000158",
+        "IdInfostrada": "687"
+      },
+      "IsUpdateable": null
+    }
+  ]
+}

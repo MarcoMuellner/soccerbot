@@ -130,7 +130,7 @@ async def cdoListCompetitionByCountry(msg: Message):
     :DiscordCommando: !listCompetitions
     :return:
     """
-    data = msg.content[0].split(" ")
+    data = msg.content.split(" ")
 
     if len(data) == 0:
         return "List competition needs the country or countrycode as parameter"

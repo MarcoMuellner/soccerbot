@@ -43,7 +43,7 @@ async def watchCompetition(competition, serverName):
 
     season = None
     while season == None:
-        season = Season.objects.filter(competition=competition).order_by('start_date').first()
+        season = Season.objects.filter(competition=competition).order_by('start_date').last()
         if season == None:
             getAndSaveData(getSeasons, idCompetitions=competition.id)
     server = DiscordServer(name=serverName)

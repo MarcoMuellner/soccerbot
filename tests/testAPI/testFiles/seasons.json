@@ -1,0 +1,56 @@
+{
+  "ContinuationToken": null,
+  "ContinuationHash": null,
+  "Results": [
+    {
+      "IdSeason": "2000011119",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "Bundesliga 2018/2019"
+        }
+      ],
+      "ShortName": [],
+      "IdMemberAssociation": [
+        "GER"
+      ],
+      "IdConfederation": [
+        "UEFA"
+      ],
+        "IdCompetition": "2000000019",
+      "StartDate": "2018-08-24T00:00:00Z",
+      "EndDate": "2019-05-18T00:00:00Z",
+      "PictureUrl": null,
+      "Properties": {
+        "IdCBS": "2000011119",
+        "IdInfostrada": "23514"
+      },
+      "IsUpdateable": null
+    },
+    {
+      "IdSeason": "2000010907",
+      "Name": [
+        {
+          "Locale": "en-GB",
+          "Description": "Bundesliga 2017/2018"
+        }
+      ],
+      "ShortName": [],
+      "IdMemberAssociation": [
+        "GER"
+      ],
+      "IdConfederation": [
+        "UEFA"
+      ],
+      "IdCompetition": "2000000019",
+      "StartDate": "2017-08-18T00:00:00Z",
+      "EndDate": "2018-05-12T00:00:00Z",
+      "PictureUrl": null,
+      "Properties": {
+        "IdCBS": "2000010907",
+        "IdInfostrada": "22908"
+      },
+      "IsUpdateable": null
+    }
+  ]
+}
