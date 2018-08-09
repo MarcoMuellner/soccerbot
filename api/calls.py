@@ -5,6 +5,7 @@ from dateutil import parser
 
 from database.models import *
 
+
 class ApiCalls:
     """
     Simple static class, that provides the keywords for the api calls
@@ -19,13 +20,13 @@ class ApiCalls:
     playerInfo = 'players'
     countries = 'countries'
 
+
 class DataCalls:
     data_home = 'https://data.fifa.com/'
     liveData = "matches/en/live/info"
 
 
-
-def loop(func: Callable, reqList : List) -> List:
+def loop(func: Callable, reqList: List) -> List:
     """
     Helper function, that iterates over a given result List from an Api call
     and adds the result by parsing it through the given func
@@ -53,10 +54,11 @@ def makeAPICall(keyword: str, payload: Dict = None) -> Union[List, Dict]:
     req = requests.get(ApiCalls.api_home + keyword, params=params)
     try:
         return json.loads(req.content.decode())['Results']
-    except (KeyError,TypeError) as e:
+    except (KeyError, TypeError) as e:
         return json.loads(req.content.decode())
 
-def makeMiddlewareCall(keyword:str,payload : Dict = None)->Dict:
+
+def makeMiddlewareCall(keyword: str, payload: Dict = None) -> Dict:
     """
     Makes a call to FIFA middleware using requests library. Returns the machine readable
     result for further processing
@@ -65,11 +67,11 @@ def makeMiddlewareCall(keyword:str,payload : Dict = None)->Dict:
     :return: Dictionary containing data
     """
     params = payload if payload != None else {}
-    req = requests.get(DataCalls.data_home+keyword,params=params)
-    return json.loads(req.content.decode().replace("_matchInfoCallBack","").replace("(","").replace(")",""))
+    req = requests.get(DataCalls.data_home + keyword, params=params)
+    return json.loads(req.content.decode().replace("_matchInfoCallBack", "").replace("(", "").replace(")", ""))
 
 
-def getFederations(**kwargs) -> Union[List, Federation]:
+def getAllFederations(**kwargs) -> Union[List, Federation]:
     """
     Gets all Federations from the API.
 
@@ -81,7 +83,7 @@ def getFederations(**kwargs) -> Union[List, Federation]:
     """
     if len(kwargs.keys()) == 0:
         reqDict = makeAPICall(ApiCalls.federations)
-        return loop(getFederations, reqDict)
+        return loop(getAllFederations, reqDict)
 
     elif 'resDict' in kwargs.keys() and len(kwargs.keys()) == 1:
         apiResults = kwargs['resDict']
@@ -92,7 +94,8 @@ def getFederations(**kwargs) -> Union[List, Federation]:
     else:
         raise AttributeError('Wrong parameters for call getFederations')
 
-def getCountries(**kwargs)->Union[List, Association]:
+
+def getAllCountries(**kwargs) -> Union[List, Association]:
     """
     Gets all Federations from the API.
 
@@ -107,11 +110,11 @@ def getCountries(**kwargs)->Union[List, Association]:
             'count': 1000
         }
         reqDict = makeAPICall(ApiCalls.countries, payload=payload)
-        returnList = loop(getCountries, reqDict)
-        federationList = getFederations()
+        returnList = loop(getAllCountries, reqDict)
+        federationList = getAllFederations()
 
         for fed in federationList:
-            returnList.append(Association(id=fed.id,clear_name=fed.clear_name))
+            returnList.append(Association(id=fed.id, clear_name=fed.clear_name))
 
         return returnList
 
@@ -126,7 +129,7 @@ def getCountries(**kwargs)->Union[List, Association]:
         raise AttributeError('Wrong parameters for call getCountries')
 
 
-def getCompetitions(**kwargs) -> Union[List, Competition]:
+def getAllCompetitions(**kwargs) -> Union[List, Competition]:
     """
     Gets all competitions for a given federation from the API
 
@@ -143,7 +146,7 @@ def getCompetitions(**kwargs) -> Union[List, Competition]:
             'footballType': 0
         }
         reqDict = makeAPICall(ApiCalls.competitions, payload)
-        return loop(getCompetitions, reqDict)
+        return loop(getAllCompetitions, reqDict)
 
     elif 'resDict' in kwargs.keys() and len(kwargs.keys()) == 1:
         apiResults = kwargs['resDict']
@@ -167,7 +170,7 @@ def getCompetitions(**kwargs) -> Union[List, Competition]:
         raise AttributeError('Wrong parameters for call getCompetitions')
 
 
-def getSeasons(**kwargs) -> Union[List, Season]:
+def getAllSeasons(**kwargs) -> Union[List, Season]:
     """
     Gets all seasons for a given competition from the API
 
@@ -183,7 +186,7 @@ def getSeasons(**kwargs) -> Union[List, Season]:
             'count': 1000
         }
         reqDict = makeAPICall(ApiCalls.seasons, payload)
-        return loop(getSeasons, reqDict)
+        return loop(getAllSeasons, reqDict)
     elif 'resDict' in kwargs.keys() and len(kwargs.keys()) == 1:
         apiResults = kwargs['resDict']
         return Season(
@@ -198,7 +201,7 @@ def getSeasons(**kwargs) -> Union[List, Season]:
         raise AttributeError(f'Wrong parameters for call getSeasons. Parameters {kwargs}')
 
 
-def getTeams(**kwargs) -> Union[List, Team]:
+def getAllTeams(**kwargs) -> Union[List, Team]:
     """
     Gets 1000 teams from the API
 
@@ -214,7 +217,7 @@ def getTeams(**kwargs) -> Union[List, Team]:
             'count': 1000
         }
         reqDict = makeAPICall(ApiCalls.teams, payload=payload)
-        return loop(getTeams, reqDict)
+        return loop(getAllTeams, reqDict)
     elif 'resDict' in kwargs.keys() and len(kwargs.keys()) == 1:
         apiResults = kwargs['resDict']
         return Team(
@@ -226,7 +229,8 @@ def getTeams(**kwargs) -> Union[List, Team]:
     else:
         raise AttributeError('Wrong parameters for call getTeams')
 
-def getMatches(**kwargs) -> Union[List, Match]:
+
+def getAllMatches(**kwargs) -> Union[List, Match]:
     """
     Gets 1000 matches from the API
 
@@ -243,7 +247,7 @@ def getMatches(**kwargs) -> Union[List, Match]:
             'count': 1000
         }
         reqDict = makeAPICall(ApiCalls.matches, payload)
-        return loop(getMatches, reqDict)
+        return loop(getAllMatches, reqDict)
     elif 'resDict' in kwargs.keys() and len(kwargs.keys()) == 1:
         apiResults = kwargs['resDict']
         match = Match(
@@ -255,7 +259,7 @@ def getMatches(**kwargs) -> Union[List, Match]:
             score_away_team=None if apiResults['AwayTeamScore'] == None else int(
                 apiResults['AwayTeamScore']),
             match_status=apiResults['MatchStatus'],
-            stage = apiResults['IdStage']
+            stage=apiResults['IdStage']
         )
 
         match.competition_id = int(apiResults['IdCompetition'])
@@ -275,7 +279,7 @@ def getMatches(**kwargs) -> Union[List, Match]:
         raise AttributeError(f'Wrong parameters for call getMatches. Parameters {kwargs}')
 
 
-def getSpecificTeam(teamID:int)->Team:
+def getSpecificTeam(teamID: int) -> Team:
     """
     Due to the size restriction of the API, this function is needed if for a given
     match a Team is not yet in the database (Foreign Key error!). Returns a full

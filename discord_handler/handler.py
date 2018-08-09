@@ -1,8 +1,8 @@
 import logging
 from database.models import *
 from discord import Message, Server,Client
-from database.handler import updateMatchesSingleCompetition,getSeasons,getAndSaveData
-from database.handler import updateCompetitions,updateMatches,getNextMatchDays
+from database.handler import updateMatchesSingleCompetition,getAllSeasons,getAndSaveData
+from database.handler import updateOverlayData,updateMatches,getNextMatchDayObjects
 import datetime
 from datetime import timedelta,timezone
 from support.helper import DiscordCommando
@@ -45,7 +45,7 @@ async def watchCompetition(competition, serverName):
     while season == None:
         season = Season.objects.filter(competition=competition).order_by('start_date').last()
         if season == None:
-            getAndSaveData(getSeasons, idCompetitions=competition.id)
+            getAndSaveData(getAllSeasons, idCompetitions=competition.id)
     server = DiscordServer(name=serverName)
     server.save()
 
@@ -74,7 +74,7 @@ async def schedulerInit():
     while(True):
         targetTime = datetime.datetime.now(timezone.utc).replace(hour=0, minute=0, second=0) + timedelta(days=1)
         logger.info("Initializing schedule for tomorrow")
-        updateCompetitions()
+        updateOverlayData()
         updateMatches()
         await updateMatchScheduler()
         await asyncio.sleep(calculateSleepTime(targetTime))
@@ -82,8 +82,8 @@ async def schedulerInit():
 
 async def updateMatchScheduler():
     logger.info("Updating match schedule")
-    tasksCreate = [asyncCreateChannel(calculateSleepTime(i.startTime),i.matchdayString) for i in getNextMatchDays()]
-    tasksDelete = [asyncDeleteChannel(calculateSleepTime(i.endTime), i.matchdayString) for i in getNextMatchDays()]
+    tasksCreate = [asyncCreateChannel(calculateSleepTime(i.startTime),i.matchdayString) for i in getNextMatchDayObjects()]
+    tasksDelete = [asyncDeleteChannel(calculateSleepTime(i.endTime), i.matchdayString) for i in getNextMatchDayObjects()]
     if tasksCreate != []:
         await asyncio.wait(tasksCreate)
     if tasksDelete != []:

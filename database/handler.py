@@ -1,23 +1,19 @@
-from api.calls import *
-from sqlite3 import IntegrityError
 from django.db.utils import IntegrityError
-from api.calls import getSpecificTeam
 import datetime
 from datetime import timedelta
 import logging
-import asyncio
 import enum
+from typing import List
+
+from api.calls import getSpecificTeam,getAllFederations,getAllCountries,getAllCompetitions,getAllMatches,getAllSeasons
+from database.models import Federation,Competition,CompetitionWatcher,Season,Match
 
 logger = logging.getLogger(__name__)
 
-
-class MatchDayObject:
-    def __init__(self, startTime: datetime, endTime: datetime, matchdayString: str):
-        self.startTime = startTime
-        self.endTime = endTime
-        self.matchdayString = matchdayString
-
 class MatchStatus(enum.Enum):
+    """
+    Status as defined by Fifa API
+    """
     Played = 0
     ToBePlayed = 1
     Live = 3
@@ -27,12 +23,24 @@ class MatchStatus(enum.Enum):
     Cancelled = 8
     Suspended = 99
 
+class MatchDayObject:
+    """
+    Matchday object, representing the necessary data for Matchdays
+    """
+    def __init__(self, startTime: datetime, endTime: datetime, matchdayString: str):
+        self.startTime = startTime
+        self.endTime = endTime
+        self.matchdayString = matchdayString
 
 def getAndSaveData(func : callable, **kwargs):
-    if len(kwargs) == 0:
-        data = func()
-    else:
-        data = func(**kwargs)
+    """
+    Takes a getAll function defined in api.calls and iterates over the result, and storing the objects to the DB.
+    It has various special handling functions, for example it looks up ForeignKeyErrors.
+    :param func: Function to be executed and read from
+    :param kwargs: parameters to the function, created as kwargs
+    """
+    data = func(**kwargs)
+
     for i in data:
         try:
             i.save()
@@ -54,22 +62,23 @@ def getAndSaveData(func : callable, **kwargs):
             else:
                 raise IntegrityError(f"Foreign Key constraint failed for {i._meta.label}")
 
-def updateCountries():
-    logger.info("Updating countries")
-
-    pass
-
-def updateCompetitions():
+def updateOverlayData():
+    """
+    The relevant overlay data (Federations, Countries, Competitions and watched seasons) is refreshed from the API.
+    """
     logger.info("Updating competitions")
-    getAndSaveData(getFederations)
-    getAndSaveData(getCountries)
+    getAndSaveData(getAllFederations)
+    getAndSaveData(getAllCountries)
     for federation in Federation.objects.all():
-        getAndSaveData(getCompetitions, idFederation=federation.id)
+        getAndSaveData(getAllCompetitions, idFederation=federation.id)
 
     for watcher in CompetitionWatcher.objects.all():
-        getAndSaveData(getSeasons, idCompetitions=watcher.competition.id)
+        getAndSaveData(getAllSeasons, idCompetitions=watcher.competition.id)
 
 def updateMatches():
+    """
+    Update the data for the matches stored as monitored in the database from the API.
+    """
     logger.info("Updating matches")
     for watcher in CompetitionWatcher.objects.all():
         for season in Season.objects.filter(competition=watcher.competition):
@@ -78,17 +87,36 @@ def updateMatches():
             updateMatchesSingleCompetition(competition=watcher.competition, season=season)
 
 def updateMatchesSingleCompetition(competition : Competition, season : Season):
+    """
+    Updates a single full competition. This reads all relevant matches of the given competition and season and stores
+    it in the database
+    :param competition: The relevant competition object from database.models
+    :param season: The relevant season object from database.models
+    """
     logger.info(f"Updating {competition.clear_name}, season {season.clear_name}")
-    getAndSaveData(getMatches, idCompetitions=competition.id, idSeason=season.id)
+    getAndSaveData(getAllMatches, idCompetitions=competition.id, idSeason=season.id)
 
 def createMatchDayObject(query,watcher):
+    """
+    Creates a Matchday object from a query. It takes the delta between the earliest and latest match, plus some time
+    at the borders to define a Matchday. It also generates a matchday from the name of the competition and its
+    given matchday
+    :param query: A query of matches consisting of database.models.Match objects
+    :param watcher: The watcher (database.models.CompetitionWatcher) object
+    :return: new MatchdayObject with start and endtime as well as the matchdaystring
+    """
     return MatchDayObject(
         startTime=query.first().date - timedelta(hours=3),
         endTime=query.last().date + timedelta(hours=5),
         matchdayString = f"{watcher.competition.clear_name} Matchday {query.first().matchday}"
     )
 
-def getNextMatchDays() -> List[MatchDayObject]:
+def getNextMatchDayObjects() -> List[MatchDayObject]:
+    """
+    Returns the next matchday objects between the current (i.e. time that the function is called) time and +24 hours.
+    It also creates Matchday objects for currently played games
+    :return: List of Matchday Objects containing the next relevant Matchday objects
+    """
     today = datetime.datetime.now().today()
     tomorrow = today + timedelta(days=1)
     retList = []
