@@ -5,27 +5,20 @@ from dateutil import parser
 
 from database.models import *
 
-"""
-TODO:
-    -This whole thing could probably be rewritten through usage of specific api calls
-    This would reduce the number of API calls in the future significantly.
-"""
-
-
 class ApiCalls:
     """
     Simple static class, that provides the keywords for the api calls
     """
     api_home = 'https://api.fifa.com/api/v1/'
-
     federations = 'confederations'
     competitions = 'competitions/all'
     seasons = 'seasons'
     matches = 'calendar/matches'
     teams = 'teams/all'
-    specificTeam = 'teams/'
+    specificTeam = 'teams'
     liveMatch = 'live/football'
     playerInfo = 'players'
+    countries = 'countries'
 
 
 def loop(func: Callable, reqList : List) -> List:
@@ -83,6 +76,39 @@ def getFederations(**kwargs) -> Union[List, Federation]:
     else:
         raise AttributeError('Wrong parameters for call getFederations')
 
+def getCountries(**kwargs)->Union[List, Association]:
+    """
+    Gets all Federations from the API.
+
+    Structurally the same as all other initialize API functions. The initial call
+    with empty kwargs starts the loop, the same function will be called again to
+    actually parse the result.
+    :param kwargs: Empty or resDict from loop
+    :return: Full List of Country objects or single Country object.
+    """
+    if len(kwargs.keys()) == 0:
+        payload = {
+            'count': 1000
+        }
+        reqDict = makeCall(ApiCalls.countries,payload=payload)
+        returnList = loop(getCountries, reqDict)
+        federationList = getFederations()
+
+        for fed in federationList:
+            returnList.append(Association(id=fed.id,clear_name=fed.clear_name))
+
+        return returnList
+
+
+    elif 'resDict' in kwargs.keys() and len(kwargs.keys()) == 1:
+        apiResults = kwargs['resDict']
+        return Association(
+            id=apiResults['IdCountry'],
+            clear_name=apiResults['Name']
+        )
+    else:
+        raise AttributeError('Wrong parameters for call getCountries')
+
 
 def getCompetitions(**kwargs) -> Union[List, Competition]:
     """
@@ -107,10 +133,16 @@ def getCompetitions(**kwargs) -> Union[List, Competition]:
         apiResults = kwargs['resDict']
         comp = Competition(
             id=int(apiResults['IdCompetition']),
-            clear_name=apiResults['Name'][0]["Description"],
-            association=apiResults['IdMemberAssociation'][0]
+            clear_name=apiResults['Name'][0]["Description"]
         )
         comp.federation_id = apiResults["IdOwner"]
+
+        assoc = apiResults['IdMemberAssociation'][0]
+        if assoc == '':
+            comp.association_id = apiResults["IdOwner"]
+        else:
+            comp.association_id = assoc
+
         return comp
     else:
         raise AttributeError('Wrong parameters for call getCompetitions')
@@ -232,7 +264,7 @@ def getSpecificTeam(teamID:int)->Team:
     :param teamID: Identifier of the team
     :return: Team object
     """
-    reqDict = makeCall(ApiCalls.specificTeam+str(teamID))
+    reqDict = makeCall(ApiCalls.specificTeam+f"/{teamID}")
     apiResults = reqDict
     return Team(
         id=int(apiResults['IdTeam']),

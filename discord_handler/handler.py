@@ -58,8 +58,13 @@ async def watchCompetition(competition, serverName):
 
 @log_return
 async def cmdHandler(msg: Message):
+
     for cdos in DiscordCommando.allCommandos():
         if msg.content.startswith(cdos.commando):
+            if msg.author.bot:
+                logger.info("Ignoring {msg.content}, because bot")
+                return
+            logger.info(f"Handling {cdos.commando}")
             try:
                 return await cdos.fun(msg)
             except TypeError:
@@ -79,8 +84,10 @@ async def updateMatchScheduler():
     logger.info("Updating match schedule")
     tasksCreate = [asyncCreateChannel(calculateSleepTime(i.startTime),i.matchdayString) for i in getNextMatchDays()]
     tasksDelete = [asyncDeleteChannel(calculateSleepTime(i.endTime), i.matchdayString) for i in getNextMatchDays()]
-    await asyncio.wait(tasksCreate)
-    await asyncio.wait(tasksDelete) #this doesnt work yet, waits for createTasks to complete
+    if tasksCreate != []:
+        await asyncio.wait(tasksCreate)
+    if tasksDelete != []:
+        await asyncio.wait(tasksDelete) #todo this doesnt work yet, waits for createTasks to complete
     logger.info("End update schedule")
 
 def calculateSleepTime(targetTime:datetime,nowTime :datetime = datetime.datetime.now(timezone.utc)):

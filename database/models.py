@@ -9,14 +9,21 @@ class Federation(models.Model):
         return f"ID: {self.id}, Clear_Name: {self.clear_name.encode('utf-8')}"
 
 
+class Association(models.Model):
+    id = models.CharField(primary_key=True,max_length=3, verbose_name="FIFA country code")
+    clear_name = models.CharField(max_length=255,verbose_name="Full Country Name")
+
+    def __str__(self):
+        return f"Country: {self.clear_name.encode('utf-8')}, id:{self.id}"
+
 class Competition(models.Model):
     id = models.IntegerField(primary_key=True, verbose_name="Id of the competitions, according to API")
     federation = models.ForeignKey(Federation, on_delete=models.CASCADE, verbose_name="Federation ID")
     clear_name = models.CharField(max_length=255, verbose_name="Full name of the competition")
-    association = models.CharField(max_length=255,verbose_name="Country Code of competition",default="")
+    association = models.ForeignKey(Association, on_delete=models.CASCADE, verbose_name="Country of competition")
 
     def __str__(self):
-        return f"ID: {self.id}, Clear_Name: {self.clear_name.encode('utf-8')}"
+        return f"ID: {self.id}, Clear_Name: {self.clear_name.encode('utf-8')},Association {self.association_id}"
 
 
 class Season(models.Model):

@@ -3,5 +3,6 @@ discord.py
 pytest
 pytest-django
 pytest-asyncio
+httmock
 requests
 python-dateutil

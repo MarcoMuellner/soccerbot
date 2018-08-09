@@ -48,12 +48,21 @@ def getAndSaveData(func : callable, **kwargs):
                     i.save()
                 except NameError:
                     pass
+            elif i._meta.label == 'database.Competition':
+                logger.warning(f"{i.association_id} has no country! Will not save country")
+                continue
             else:
                 raise IntegrityError(f"Foreign Key constraint failed for {i._meta.label}")
+
+def updateCountries():
+    logger.info("Updating countries")
+
+    pass
 
 def updateCompetitions():
     logger.info("Updating competitions")
     getAndSaveData(getFederations)
+    getAndSaveData(getCountries)
     for federation in Federation.objects.all():
         getAndSaveData(getCompetitions, idFederation=federation.id)
 

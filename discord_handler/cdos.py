@@ -3,7 +3,7 @@ from typing import Dict,Union
 import logging
 from support.helper import log_return,DiscordCommando
 from discord import Message
-from database.models import CompetitionWatcher,Competition
+from database.models import CompetitionWatcher,Competition,Association
 from discord_handler.handler import watchCompetition
 
 logger = logging.getLogger(__name__)
@@ -38,7 +38,6 @@ async def cdoAddCompetition(msg: Message):
     :param msg: message from Discord Server
     :return: Answer message
     """
-    logger.info(f"Handling {DiscordCmds.addComp}")
 
     parameter = checkCompetitionParameter(msg.content)
 
@@ -122,6 +121,43 @@ async def cdoShowMonitoredCompetitions():
         retString += f"Competition: {watchers.competition.clear_name}\n"
     return retString
 
+@log_return
+async def cdoListCompetitionByCountry(msg: Message):
+    """
+    Lists all competitions for a given country. Needs the name of the country of country code as
+    a parameter.
+
+    :DiscordCommando: !listCompetitions
+    :return:
+    """
+    data = msg.content[0].split(" ")
+
+    if len(data) == 0:
+        return "List competition needs the country or countrycode as parameter"
+
+    association = ""
+
+    for i in data[1:]:
+        if association == "":
+            association += i
+        else:
+            association += " " + i
+
+    competition = Competition.objects.filter(association__clear_name=association)
+
+    if len(competition) == 0:
+        competition = Competition.objects.filter(association_id=association)
+
+    if len(competition) == 0:
+        return f"No competitions were found for {association}"
+
+    retString = "Competitions:\n\n"
+    
+    for comp in competition:
+        retString+=comp.clear_name+"\n"
+
+    return retString
+    
 @log_return
 async def cdoGetHelp():
     """
