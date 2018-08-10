@@ -6,7 +6,6 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
 application = get_wsgi_application()
 
 from database.models import Match
-from discord_handler.live_threader import LiveMatch
 import datetime
 from datetime import timedelta
 

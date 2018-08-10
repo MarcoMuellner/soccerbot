@@ -137,14 +137,16 @@ def getCurrentMatches() -> List[Match]:
     Returns a list of matches that are currently or soon played
     :return:
     """
-    today = datetime.datetime.now().today()
+    today = datetime.datetime.now().today() -timedelta(hours=1)
     later = today + timedelta(hours=1)
-
     retList = []
+
     for i in CompetitionWatcher.objects.all():
-        query = [Match.objects.filter(competition=i.competition).filter(date__lte=later).filter(date__gte=today).order_by('date')]
+        queryUpcoming = Match.objects.filter(competition=i.competition).filter(date__lte=later).filter(date__gte=today).order_by('date')
 
-        query += [Match.objects.filter(competition=i.competition).filter(match_status=MatchStatus.Live.value)]
-        retList += query
-
+        queryLive = Match.objects.filter(competition=i.competition).filter(match_status=MatchStatus.Live.value)
+        retList += queryUpcoming | queryLive
     return retList
+
+
+

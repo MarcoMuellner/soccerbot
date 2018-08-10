@@ -26,26 +26,46 @@ def callFunc(resDict: Dict):
 path = os.path.dirname(os.path.realpath(__file__)) + "/testFiles/"
 
 apiCallList = [
-    (ApiCalls.federations, {}, loadJsonFile(path + "federation.json")),
-    (ApiCalls.competitions, {'owner': 'UEFA', 'count': 1000, 'footballType': 0}
-     , loadJsonFile(path + "competitions.json")),
-    (ApiCalls.seasons, {'idCompetition': '2000000019', 'count': 1000}, loadJsonFile(path + "seasons.json")),
-    (ApiCalls.matches, {'idCompetition': '2000000019', 'idSeason': '2000011119', 'count': 1000}
-     , loadJsonFile(path + "matches.json")),
-    (ApiCalls.teams, {}, loadJsonFile(path + "teams.json")),
-    (ApiCalls.countries, {}, loadJsonFile(path + "countries.json")),
+    (ApiCalls.federations, {}),
+    (ApiCalls.competitions, {'owner': 'UEFA', 'count': 1000, 'footballType': 0}),
+    (ApiCalls.seasons, {'idCompetition': '2000000019', 'count': 1000}),
+    (ApiCalls.matches, {'idCompetition': '2000000019', 'idSeason': '2000011119', 'count': 1000}),
+    (ApiCalls.teams, {}),
+    (ApiCalls.countries, {}),
 ]
 
 getCallList = [
-    (Federation, {}, loadJsonFile(path + "federation.json"), getAllFederations),
-    (Competition, {"idFederation": "UEFA"}, loadJsonFile(path + "competitions.json"), getAllCompetitions),
-    (Season, {'idCompetitions': '2000000019'}, loadJsonFile(path + "seasons.json"), getAllSeasons),
-    (Match, {'idCompetitions': '2000000019', 'idSeason': '2000011119'}, loadJsonFile(path + "matches.json"),
-     getAllMatches),
-    (Team, {}, loadJsonFile(path + "teams.json"), getAllTeams),
-    (Association, {}, loadJsonFile(path + "countries.json"), getAllCountries),
-    (Team, [1885546], loadJsonFile(path + "specificTeam.json"), getSpecificTeam),
+    (Federation, {}, getAllFederations),
+    (Competition, {"idFederation": "UEFA"}, getAllCompetitions),
+    (Season, {'idCompetitions': '2000000019'}, getAllSeasons),
+    (Match, {'idCompetitions': '2000000019', 'idSeason': '2000011119'},getAllMatches),
+    (Team, {}, getAllTeams),
+    (Association, {},  getAllCountries),
+    (Team, [1885546],  getSpecificTeam),
 ]
+
+def unifiedHttMock(url,request):
+    print(request.path_url)
+    if ApiCalls.federations in request.path_url:
+        data = loadJsonFile(path + "federation.json")
+    elif ApiCalls.competitions in request.path_url:
+        data = loadJsonFile(path + "competitions.json")
+    elif ApiCalls.seasons in request.path_url:
+        data = loadJsonFile(path + "seasons.json")
+    elif ApiCalls.matches in request.path_url:
+        data = loadJsonFile(path + "matches.json")
+    elif ApiCalls.teams in request.path_url:
+        data = loadJsonFile(path + "teams.json")
+    elif ApiCalls.countries in request.path_url:
+        data = loadJsonFile(path + "countries.json")
+    elif ApiCalls.specificTeam in request.path_url:
+        data = loadJsonFile(path+ "specificTeam.json")
+    elif DataCalls.liveData in request.path_url:
+        data = loadJsonFile(path + "live.json")
+    else:
+        data = {}
+    return {'status_code': 200,
+            'content': data}
 
 
 def testAPICallObjects():
@@ -100,13 +120,7 @@ def testMakeAPICall(values):
     Tries all different request possibilities for the API
     :param values:  --> Objects
     """
-
-    @all_requests
-    def httpMocker(url, request):
-        return {'status_code': 200,
-                'content': values[2]}
-
-    with HTTMock(httpMocker):
+    with HTTMock(unifiedHttMock):
         result = makeAPICall(values[0], values[1])
         assert isinstance(result, list)
 
@@ -115,13 +129,7 @@ def testMakeMiddlewareCall():
     """
     Tries the live dataset for the Middleware
     """
-
-    @all_requests
-    def httpMocker(url, request):
-        return {'status_code': 200,
-                'content': loadJsonFile(path + "live.json")}
-
-    with HTTMock(httpMocker):
+    with HTTMock(unifiedHttMock):
         result = makeMiddlewareCall(DataCalls.liveData)
         assert isinstance(result, dict)
 
@@ -132,22 +140,12 @@ def testGetCalls(values):
     Tries all Federations
     """
 
-    @all_requests
-    def httpMocker(url, request):
-        if request.path_url == '/api/v1/confederations':
-            content = loadJsonFile(path + "federation.json")
-        else:
-            content = values[2]
-
-        return {'status_code': 200,
-                'content': content}
-
-    with HTTMock(httpMocker):
+    with HTTMock(unifiedHttMock):
         try:
-            feds = values[3](**values[1])
+            feds = values[2](**values[1])
         except:
-            feds = values[3](*values[1])
-        if values[3] != getSpecificTeam:
+            feds = values[2](*values[1])
+        if values[2] != getSpecificTeam:
             assert isinstance(feds, list)
             for i in feds:
                 assert isinstance(i, values[0])

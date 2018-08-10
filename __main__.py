@@ -19,9 +19,6 @@ logger = logging.getLogger(__name__)
 @client.event
 async def on_ready():
     logger.info(f"Logged in as {client.user.name} with id {client.user.id}")
-    parseCommandoFunctions(cdos)
-    client.loop.create_task(schedulerInit())
-    client.loop.create_task(matchChecker())
     logger.info("Update complete")
 
 
@@ -32,5 +29,8 @@ async def on_message(message : discord.Message):
     except discord.errors.HTTPException:
         pass
 
+parseCommandoFunctions(cdos)
+client.loop.create_task(schedulerInit())
+client.loop.create_task(matchChecker())
 logger.info("------------------Soccerbot is starting-----------------------")
 client.run('NDc0MjA5MTg0NzA4MTY1NjQy.DkNbcg.tphF6_RxXzRlylHn4mSPlIe49Zw')
