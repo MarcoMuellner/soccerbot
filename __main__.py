@@ -7,7 +7,7 @@ import sys
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
 # Ensure settings are read
 application = get_wsgi_application()
-from discord_handler.handler import cmdHandler,client,schedulerInit
+from discord_handler.handler import cmdHandler,client,schedulerInit,matchChecker
 from loghandler.loghandler import setup_logging
 from support.helper import parseCommandoFunctions
 from discord_handler import cdos
@@ -20,7 +20,8 @@ logger = logging.getLogger(__name__)
 async def on_ready():
     logger.info(f"Logged in as {client.user.name} with id {client.user.id}")
     parseCommandoFunctions(cdos)
-    await schedulerInit()
+    client.loop.create_task(schedulerInit())
+    client.loop.create_task(matchChecker())
     logger.info("Update complete")
 
 

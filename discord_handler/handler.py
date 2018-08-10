@@ -2,7 +2,7 @@ import logging
 from database.models import *
 from discord import Message, Server,Client
 from database.handler import updateMatchesSingleCompetition,getAllSeasons,getAndSaveData
-from database.handler import updateOverlayData,updateMatches,getNextMatchDayObjects
+from database.handler import updateOverlayData,updateMatches,getNextMatchDayObjects,getCur
 import datetime
 from datetime import timedelta,timezone
 from support.helper import DiscordCommando
@@ -78,6 +78,14 @@ async def schedulerInit():
         updateMatches()
         await updateMatchScheduler()
         await asyncio.sleep(calculateSleepTime(targetTime))
+
+async def matchChecker():
+    while(True):
+        print("x")
+        #get all associated matches
+        #spawn new tasks for every single match
+
+        await asyncio.sleep(60)
 
 
 async def updateMatchScheduler():
