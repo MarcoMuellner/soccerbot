@@ -2,12 +2,13 @@ import os
 import logging
 from django.core.wsgi import get_wsgi_application
 import discord
+import json
 import sys
 # Django specific settings
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
 # Ensure settings are read
 application = get_wsgi_application()
-from discord_handler.handler import cmdHandler,client,schedulerInit,matchChecker
+from discord_handler.handler import cmdHandler,client,runScheduler,runLiveThreader
 from loghandler.loghandler import setup_logging
 from support.helper import parseCommandoFunctions
 from discord_handler import cdos
@@ -30,7 +31,13 @@ async def on_message(message : discord.Message):
         pass
 
 parseCommandoFunctions(cdos)
-client.loop.create_task(schedulerInit())
-client.loop.create_task(matchChecker())
+client.loop.create_task(runScheduler())
+client.loop.create_task(runLiveThreader())
 logger.info("------------------Soccerbot is starting-----------------------")
-client.run('NDc0MjA5MTg0NzA4MTY1NjQy.DkNbcg.tphF6_RxXzRlylHn4mSPlIe49Zw')
+try:
+    with open("secret.json") as f:
+        key = json.loads(f.read())['secret']
+except:
+    logger.error("You need to create the secret.json file and check if secret:key is available")
+    sys.exit()
+client.run(key)

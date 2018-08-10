@@ -21,6 +21,7 @@ def testCheckCompetitionParameter():
     assert result["competition"] == "Bundesliga"
     assert result["association"] == "GER"
 
+"""
 @pytest.mark.asyncio
 def testCdoAddCompetition():
     with HTTMock(unifiedHttMock):
@@ -46,3 +47,4 @@ def testCdoListCompetitionByCountry():
 def testCdoGetHelp():
     with HTTMock(unifiedHttMock):
         pass
+"""

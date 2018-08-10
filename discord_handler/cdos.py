@@ -1,12 +1,19 @@
 import re
 from typing import Dict,Union
 import logging
-from support.helper import log_return,DiscordCommando
 from discord import Message
+
+from support.helper import log_return,DiscordCommando
 from database.models import CompetitionWatcher,Competition
-from discord_handler.handler import watchCompetition
+from discord_handler.handler import watchCompetition,client
 
 logger = logging.getLogger(__name__)
+
+"""
+Concering commandos: These are automatically parsed in support.helper.parseCommandoFunctions. Every commando
+has to have a :DiscordCommando: tag with the according commando. They have to be unique as well. Parameters for 
+commandos either have to be nothing or the message object.
+"""
 
 def checkCompetitionParameter(cmdString : str) ->Union[Dict,str]:
     """
@@ -81,7 +88,7 @@ async def cdoAddCompetition(msg: Message):
     if len(watcher) != 0:
         return f"Allready watching {competition_string}"
 
-    await watchCompetition(comp.first(), msg.server)
+    client.loop.create_task(watchCompetition(comp.first(), msg.server))
 
     return (f"Start watching competition {competition_string}")
 

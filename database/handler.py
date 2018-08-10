@@ -1,9 +1,10 @@
 from django.db.utils import IntegrityError
 import datetime
-from datetime import timedelta
+from datetime import timedelta,timezone
 import logging
 import enum
 from typing import List
+from pytz import utc
 
 from api.calls import getSpecificTeam,getAllFederations,getAllCountries,getAllCompetitions,getAllMatches,getAllSeasons
 from database.models import Federation,Competition,CompetitionWatcher,Season,Match
@@ -117,11 +118,12 @@ def getNextMatchDayObjects() -> List[MatchDayObject]:
     It also creates Matchday objects for currently played games
     :return: List of Matchday Objects containing the next relevant Matchday objects
     """
-    today = datetime.datetime.now().today()
+    today = datetime.datetime.now(timezone.utc).today()
     tomorrow = today + timedelta(days=1)
     retList = []
     for i in CompetitionWatcher.objects.all():
-        query = Match.objects.filter(competition=i.competition).filter(date__lte=tomorrow).filter(date__gte=today).order_by('date')
+        query = Match.objects.filter(competition=i.competition).filter(date__lte=utc.localize(tomorrow))\
+            .filter(date__gte=utc.localize(today)).order_by('date')
 
         if len(query) != 0:
             retList.append(createMatchDayObject(query,i))
@@ -137,12 +139,13 @@ def getCurrentMatches() -> List[Match]:
     Returns a list of matches that are currently or soon played
     :return:
     """
-    today = datetime.datetime.now().today() -timedelta(hours=1)
+    today = datetime.datetime.now(timezone.utc).today() -timedelta(hours=1)
     later = today + timedelta(hours=1)
     retList = []
 
     for i in CompetitionWatcher.objects.all():
-        queryUpcoming = Match.objects.filter(competition=i.competition).filter(date__lte=later).filter(date__gte=today).order_by('date')
+        queryUpcoming = Match.objects.filter(competition=i.competition).filter(date__lte=utc.localize(later))\
+            .filter(date__gte=utc.localize(today)).order_by('date')
 
         queryLive = Match.objects.filter(competition=i.competition).filter(match_status=MatchStatus.Live.value)
         retList += queryUpcoming | queryLive
