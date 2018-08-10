@@ -3,12 +3,17 @@ from typing import Dict,Union
 import logging
 from support.helper import log_return,DiscordCommando
 from discord import Message
-from database.models import CompetitionWatcher,Competition,Association
+from database.models import CompetitionWatcher,Competition
 from discord_handler.handler import watchCompetition
 
 logger = logging.getLogger(__name__)
 
 def checkCompetitionParameter(cmdString : str) ->Union[Dict,str]:
+    """
+    Reads competition parameters, i.e. competition and country code
+    :param cmdString: string from message
+    :return: Either error message or dict with competition string and country code
+    """
     parameterSplit = cmdString.split("#")
     data = parameterSplit[0].split(" ")
     competition_string = ""
