@@ -69,6 +69,11 @@ class Match(models.Model):
 class DiscordServer(models.Model):
     name = models.CharField(max_length=255,verbose_name="Name of the discord server")
 
+class DiscordUsers(models.Model):
+    id = models.IntegerField(primary_key=True,verbose_name="Id of the user according to discord")
+    name = models.CharField(max_length=2048,verbose_name="Name on of the user")
+    userLevel = models.IntegerField(verbose_name="UserLevel for the bot",default=0)
+
 
 class CompetitionWatcher(models.Model):
     competition = models.ForeignKey(Competition, verbose_name="Id of the competition",on_delete=models.CASCADE)
