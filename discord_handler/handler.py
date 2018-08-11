@@ -26,6 +26,9 @@ class MatchEvents(Enum):
     yellowCard = 7,
     redCard = 8,
     substitution = 9,
+    missedPenalty = 10
+    ownGoal = 11,
+    scoredPenalty = 12
 
 
 class MatchEventData:
@@ -47,7 +50,6 @@ def toDiscordChannelName(name: str) -> str:
         return None
     return name.lower().replace(" ", "-")
     pass
-
 
 async def createChannel(server: Server, channelName: str):
     """
@@ -163,13 +165,38 @@ async def asyncDeleteChannel(sleepPeriod: float, channelName: str):
     await asyncio.sleep(sleepPeriod)
     await deleteChannel(list(client.servers)[0], channelName)
 
-def getEventIcons(event : MatchEvents):
+def getEventIcons(event : MatchEvents) ->str:
     """
     Returns a specific icon for a specific event
     :param event: event that happened
     :return: Stringcode for icon
     """
-    return ""
+    if event == MatchEvents.goal:
+        return "https://i.imgur.com/pDheMQF.png"
+    elif event == MatchEvents.kickoffFirstHalf:
+        return "https://i.imgur.com/ABv0qHb.png"
+    elif event == MatchEvents.kickoffSecondHalf:
+        return "https://i.imgur.com/KfbwJ6f.png"
+    elif event == MatchEvents.firstHalfEnd:
+        return "https://i.imgur.com/QhAqT4Y.png"
+    elif event == MatchEvents.secondHalfEnd:
+        return "https://i.imgur.com/7UHsJA8.png"
+    elif event == MatchEvents.matchOver:
+        return ""
+    elif event == MatchEvents.yellowCard:
+        return "https://i.imgur.com/lpM48of.png"
+    elif event == MatchEvents.redCard:
+        return "https://i.imgur.com/mJ9vyRh.png"
+    elif event == MatchEvents.substitution:
+        return "https://i.imgur.com/xSuf6nq.png"
+    elif event == MatchEvents.missedPenalty:
+        return "https://i.imgur.com/1fY7wsN.png"
+    elif event == MatchEvents.scoredPenalty:
+        return "https://i.imgur.com/Q0uncrb.png"
+    elif event == MatchEvents.ownGoal:
+        return "https://i.imgur.com/1vxHDbr.png"
+    else:
+        return ""
 
 async def sendMatchEvent(channel: Channel, match: Match, event: MatchEventData):
     """
@@ -194,12 +221,12 @@ async def sendMatchEvent(channel: Channel, match: Match, event: MatchEventData):
         goalString = f"{data['scoreHome']} : {data['scoreAway']}"
 
     title = f"**{homeTeam}** {goalString} **{awayTeam}**"
-    content = f"{event.minute}: {getEventIcons(event.event)}"
+    content = f"{event.minute}"
 
     if event.event == MatchEvents.kickoffFirstHalf:
-        content += "Kickoff for the first half."
+        content += "**KICKOFF** first half."
     elif event.event == MatchEvents.kickoffSecondHalf:
-        content += "Kickoff for the second half."
+        content += "**Kickoff** second half."
     elif event.event == MatchEvents.firstHalfEnd:
         content += "First half has ended."
     elif event.event == MatchEvents.secondHalfEnd:
@@ -207,19 +234,24 @@ async def sendMatchEvent(channel: Channel, match: Match, event: MatchEventData):
     elif event.event == MatchEvents.matchOver:
         content += "Game over."
     elif event.event == MatchEvents.goal:
-        content += f"Goal! {event.player} scores for {event.team}"
+        content += f"Goal! {event.player} scores for **{event.team}**"
     elif event.event == MatchEvents.yellowCard:
-        content += f"Yellow card for {event.player}"
+        content += f"Yellow card for {event.player}(**{event.team}**)"
     elif event.event == MatchEvents.redCard:
-        content += f"Red card for {event.player}"
+        content += f"Red card for {event.player} (**{event.team}**)"
     elif event.event == MatchEvents.substitution:
-        content += f"Substitution for {event.team}: {event.player} comes on for {event.playerTo}"
+        content += f"Substitution for **{event.team}**: {event.player} comes on for {event.playerTo}"
+    elif event.event == MatchEvents.missedPenalty:
+        content += f"Missed penalty by {event.player} **({event.team})"
     else:
         logger.error(f"Event {event.event} not handled. No message is send to server!")
         return
 
 
     embObj = Embed(title=title,description=content)
+    url = getEventIcons(event.event)
+    if url != "":
+        embObj.set_thumbnail(url=getEventIcons(event.event))
     await client.send_message(channel,embed=embObj)
 
 
@@ -287,6 +319,8 @@ def parseEvents(data: list, pastEvents=list) -> Tuple[List[MatchEventData], List
             elif event['eventCode'] == 1:
                 ev = MatchEvents.yellowCard if event['eventDescriptionShort'] == "Y" else MatchEvents.redCard
                 eventData.event = ev
+            elif event['eventCode'] == 5:
+                eventData.event = MatchEvents.missedPenalty
             elif event['eventCode'] == 14:
                 ev = MatchEvents.firstHalfEnd if event['phaseDescriptionShort'] == "1H" else MatchEvents.secondHalfEnd
                 eventData.event = ev
@@ -296,6 +330,7 @@ def parseEvents(data: list, pastEvents=list) -> Tuple[List[MatchEventData], List
                 eventData.event = ev
             else:
                 logger.error(f"EventId {event['eventCode']} with descr {event['eventDescription']} not handled!")
+                logger.error(f"TeamName: {event['teamName']}")
                 continue
             retEvents.append(eventData)
         pastEvents = data

@@ -300,7 +300,10 @@ async def cdoShowMonitoredCompetitions(**kwargs):
     retString = "Monitored competitions:\n\n"
     addInfo = OrderedDict()
     for watchers in CompetitionWatcher.objects.all():
-        addInfo[watchers.competition.association.clear_name].append(watchers.competition.clear_name)
+        try:
+            addInfo[watchers.competition.association.clear_name].append(f"\nwatchers.competition.clear_name")
+        except KeyError:
+            addInfo[watchers.competition.association.clear_name] = watchers.competition.clear_name
 
     return CDOInteralResponseData(retString, addInfo)
 

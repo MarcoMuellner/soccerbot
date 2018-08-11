@@ -5,6 +5,7 @@ import logging
 import enum
 from typing import List
 from pytz import utc
+from django.db.models import Q
 
 from api.calls import getSpecificTeam,getAllFederations,getAllCountries,getAllCompetitions,getAllMatches,getAllSeasons
 from database.models import Federation,Competition,CompetitionWatcher,Season,Match
@@ -123,15 +124,13 @@ def getNextMatchDayObjects() -> List[MatchDayObject]:
     retList = []
     for i in CompetitionWatcher.objects.all():
         query = Match.objects.filter(competition=i.competition).filter(date__lte=utc.localize(tomorrow))\
-            .filter(date__gte=utc.localize(today)).order_by('date')
+            .filter(date__gte=utc.localize(today)).filter(~Q(match_status=MatchStatus.Live.value)).order_by('date')
+
+        query = Match.objects.filter(competition=i.competition).filter(match_status=MatchStatus.Live.value) | query
 
         if len(query) != 0:
             retList.append(createMatchDayObject(query,i))
 
-        query = Match.objects.filter(competition=i.competition).filter(match_status=MatchStatus.Live.value)
-
-        if len(query) != 0:
-            retList.append(createMatchDayObject(query,i))
     return retList
 
 def getCurrentMatches() -> List[Match]:
@@ -145,7 +144,7 @@ def getCurrentMatches() -> List[Match]:
 
     for i in CompetitionWatcher.objects.all():
         queryUpcoming = Match.objects.filter(competition=i.competition).filter(date__lte=utc.localize(later))\
-            .filter(date__gte=utc.localize(today)).order_by('date')
+            .filter(date__gte=utc.localize(today)).order_by('date').filter(~Q(match_status=MatchStatus.Live.value))
 
         queryLive = Match.objects.filter(competition=i.competition).filter(match_status=MatchStatus.Live.value)
         retList += queryUpcoming | queryLive
