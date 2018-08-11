@@ -8,9 +8,9 @@ import sys
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
 # Ensure settings are read
 application = get_wsgi_application()
-from discord_handler.handler import cmdHandler,client,runScheduler,runLiveThreader
+from discord_handler.handler import client,runScheduler,runLiveThreader
+from discord_handler.cdos import cmdHandler
 from loghandler.loghandler import setup_logging
-from support.helper import parseCommandoFunctions
 from discord_handler import cdos
 
 
@@ -26,11 +26,10 @@ async def on_ready():
 @client.event
 async def on_message(message : discord.Message):
     try:
-        await client.send_message(message.channel, await cmdHandler(message))
+        await cmdHandler(message)
     except discord.errors.HTTPException:
         pass
 
-parseCommandoFunctions(cdos)
 client.loop.create_task(runScheduler())
 client.loop.create_task(runLiveThreader())
 logger.info("------------------Soccerbot is starting-----------------------")

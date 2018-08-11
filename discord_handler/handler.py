@@ -1,15 +1,13 @@
 import logging
 from datetime import timedelta, timezone, datetime
 import asyncio
-from discord import Message, Server, Client, Channel, Embed
-from typing import Union, Tuple, List, Dict
+from discord import Server, Client, Channel, Embed
+from typing import Union, Tuple, List
 from enum import Enum
 
 from database.models import *
 from database.handler import updateOverlayData, updateMatches, getNextMatchDayObjects, getCurrentMatches
-from support.helper import DiscordCommando
 from api.calls import makeMiddlewareCall, DataCalls
-from support.helper import log_return
 from database.handler import updateMatchesSingleCompetition, getAllSeasons, getAndSaveData
 
 client = Client()
@@ -76,26 +74,6 @@ async def deleteChannel(server: Server, channelName: str):
             logger.info(f"Deleting channel {toDiscordChannelName(channelName)} on {server.name}")
             await client.delete_channel(i)
             break
-
-
-@log_return
-async def cmdHandler(msg: Message) -> str:
-    """
-    Receives commands and handles it according to allCommandos. Commandos are automatically parsed from the code.
-    :param msg: message from the discord channel
-    :return:
-    """
-    for cdos in DiscordCommando.allCommandos():
-        if msg.content.startswith(cdos.commando):
-            if msg.author.bot:
-                logger.info("Ignoring {msg.content}, because bot")
-                return
-            logger.info(f"Handling {cdos.commando}")
-            try:
-                return await cdos.fun(msg)
-            except TypeError:
-                return await cdos.fun()
-
 
 schedulerInitRunning = asyncio.Event(loop=client.loop)
 

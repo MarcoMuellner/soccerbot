@@ -1,21 +1,99 @@
 import re
-from typing import Dict,Union
+from typing import Dict, Union
 import logging
-from discord import Message,Channel
+from discord import Message, Channel, Embed
+from collections import OrderedDict
 
-from support.helper import log_return,DiscordCommando
-from database.models import CompetitionWatcher,Competition
-from discord_handler.handler import client,watchCompetition
+from database.models import CompetitionWatcher, Competition
+from discord_handler.handler import client, watchCompetition
 
 logger = logging.getLogger(__name__)
 
 """
-Concering commandos: These are automatically parsed in support.helper.parseCommandoFunctions. Every commando
-has to have a :DiscordCommando: tag with the according commando. They have to be unique as well. Parameters for 
-commandos either have to be nothing or the message object.
+Concering commandos: Commandos are automatically added by marking it with the markCommando decorator. This 
+decorator also has as a parameter the given Commando that is wished to be used for this Commando. Commandos in 
+general get a kwargs object, containing the message and commando, which can be used. It has to return a 
+CDOInternalResponseData object, which is used for its response to the channel.
 """
 
-def checkCompetitionParameter(cmdString : str) ->Union[Dict,str]:
+discordCommandos = []
+class DiscordCommando:
+    def __init__(self,commando,fun,docstring):
+        self.commando = commando
+        self.fun = fun
+        self.docstring = docstring
+
+    @staticmethod
+    def allCommandos():
+        return discordCommandos
+    @staticmethod
+    def addCommando(commando):
+        logger.info(f"Add commando {commando}")
+        discordCommandos.append(commando)
+
+    def __str__(self):
+        return f"Cmd: {self.commando}"
+
+
+class CDOInteralResponseData:
+    def __init__(self,response : str = "", additionalInfo: OrderedDict = OrderedDict()):
+        self.response = response
+        self.additionalInfo = additionalInfo
+
+
+class CDOFullResponseData:
+    def __init__(self, channel: Channel, cdo: str, internalResponse : CDOInteralResponseData):
+        self.channel = channel
+        self.cdo = cdo
+        self.response = internalResponse.response
+        self.additionalInfo = internalResponse.additionalInfo
+
+    def __str__(self):
+        return f"Posting {self.response} to {self.cdo} with addInfo {self.additionalInfo} to {self.channel}"
+
+
+def markCommando(cmd):
+    def internal_func_wrapper(func:callable):
+        async def func_wrapper(**kwargs):
+            responseData = await func(**kwargs)
+            if not isinstance(responseData,CDOInteralResponseData):
+                raise TypeError("Commandos need to return a CDOInteralResponseData type!")
+
+            responseData = CDOFullResponseData(kwargs['msg'].channel,kwargs['cdo'],responseData)
+            logger.info(responseData)
+            title = f"Commando {responseData.cdo}"
+            content = responseData.response
+
+            embObj = Embed(title=title, description=content)
+
+            for key, val in responseData.additionalInfo.items():
+                embObj.add_field(name=key, value=val)
+
+            await client.send_message(responseData.channel, embed=embObj)
+            return
+        DiscordCommando.addCommando(DiscordCommando(cmd, func_wrapper, func.__doc__))
+        return func_wrapper
+    return internal_func_wrapper
+
+async def cmdHandler(msg: Message) -> str:
+    """
+    Receives commands and handles it according to allCommandos. Commandos are automatically parsed from the code.
+    :param msg: message from the discord channel
+    :return:
+    """
+    for cdos in DiscordCommando.allCommandos():
+        if msg.content.startswith(cdos.commando):
+            if msg.author.bot:
+                logger.info("Ignoring {msg.content}, because bot")
+                return
+            logger.info(f"Handling {cdos.commando}")
+            kwargs = {'cdo':cdos.commando,
+                      'msg':msg}
+
+            return await cdos.fun(**kwargs)
+
+
+def checkCompetitionParameter(cmdString: str) -> Union[Dict, str]:
     """
     Reads competition parameters, i.e. competition and country code
     :param cmdString: string from message
@@ -37,49 +115,50 @@ def checkCompetitionParameter(cmdString : str) ->Union[Dict,str]:
         return "Add competition needs the competition as a Parameter!"
 
     try:
-        return {"competition":competition_string,"association":parameterSplit[1]}
+        return {"competition": competition_string, "association": parameterSplit[1]}
     except IndexError:
         return {"competition": competition_string, "association": None}
 
-@log_return
-async def cdoAddCompetition(msg: Message):
+###################################Commandos########################################
+
+@markCommando("!addCompetition")
+async def cdoAddCompetition(**kwargs):
     """
     Adds a competition to be watched by soccerbot. It will be regularly checked for new games
-
-    :DiscordCommando: !addCompetition
-    :param msg: message from Discord Server
     :return: Answer message
     """
+    responseData = CDOInteralResponseData()
+    parameter = checkCompetitionParameter(kwargs['msg'].content)
 
-    parameter = checkCompetitionParameter(msg.content)
-
-    if isinstance(parameter,str):
+    if isinstance(parameter, str):
         return parameter
     else:
         competition_string = parameter["competition"]
         association = parameter["association"]
-
 
     comp = Competition.objects.filter(clear_name=competition_string)
 
     logger.debug(f"Available competitions: {comp}")
 
     if len(comp) == 0:
-        return f"Can't find competition {competition_string}"
+        responseData.response = f"Can't find competition {competition_string}"
+        return responseData
 
     if len(comp) != 1:
         if association == None:
             names = [existing_com.clear_name for existing_com in comp]
             countryCodes = [existing_com.association for existing_com in comp]
             name_code = list(zip(names, countryCodes))
-            return f"Found competitions {name_code} with that name. Please be more specific (add #ENG for example)."
+            responseData.response = f"Found competitions {name_code} with that name. Please be more specific (add #ENG for example)."
+            return responseData
         else:
             comp = Competition.objects.filter(clear_name=competition_string, association=association)
             if len(comp) != 1:
                 names = [existing_com.clear_name for existing_com in comp]
                 countryCodes = [existing_com.association for existing_com in comp]
                 name_code = list(zip(names, countryCodes))
-                return f"Found competitions {name_code} with that name. Please be more specific (add #ENG for example)."
+                responseData.response = f"Found competitions {name_code} with that name. Please be more specific (add #ENG for example)."
+                return responseData
 
     watcher = CompetitionWatcher.objects.filter(competition=comp.first())
 
@@ -88,21 +167,20 @@ async def cdoAddCompetition(msg: Message):
     if len(watcher) != 0:
         return f"Allready watching {competition_string}"
 
-    client.loop.create_task(watchCompetition(comp.first(), msg.server))
+    client.loop.create_task(watchCompetition(comp.first(), kwargs['msg'].server))
+    responseData.response = f"Start watching competition {competition_string}"
+    return responseData
 
-    return (f"Start watching competition {competition_string}")
 
-@log_return
-async def cdoRemoveCompetition(msg : Message):
+@markCommando("!removeCompetition")
+async def cdoRemoveCompetition(**kwargs):
     """
     Removes a competition from the watchlist.
-
-    :DiscordCommando: !removeCompetition
-    :param msg: message from Discord Server
     :return: Answer message
     """
-    parameter = checkCompetitionParameter(msg.content)
-    if isinstance(parameter,str):
+    responseData = CDOInteralResponseData()
+    parameter = checkCompetitionParameter(kwargs['msg'].content)
+    if isinstance(parameter, str):
         return parameter
     else:
         competition_string = parameter["competition"]
@@ -111,41 +189,44 @@ async def cdoRemoveCompetition(msg : Message):
     watcher = CompetitionWatcher.objects.filter(competition__clear_name=competition_string)
 
     if len(watcher) == 0:
-        return f"Competition {competition_string} was not monitored"
+        responseData.response =  f"Competition {competition_string} was not monitored"
+        return responseData
 
     if len(watcher) > 1:
         watcher = watcher.filter(competition__association=association)
 
     logger.info(f"Deleting {watcher}")
     watcher.delete()
-    return f"Removed {competition_string} from monitoring"
+    responseData.response = f"Removed {competition_string} from monitoring"
+    return responseData
 
-@log_return
-async def cdoShowMonitoredCompetitions():
+
+@markCommando("!monitoredCompetitions")
+async def cdoShowMonitoredCompetitions(**kwargs):
     """
     Lists all watched competitions by soccerbot.
-
-    :DiscordCommando: !monitoredCompetitions
     :return: Answer message
     """
     retString = "Monitored competitions:\n\n"
+    addInfo = OrderedDict()
     for watchers in CompetitionWatcher.objects.all():
-        retString += f"Competition: {watchers.competition.clear_name}\n"
-    return retString
+        addInfo[watchers.competition.association.clear_name].append(watchers.competition.clear_name)
 
-@log_return
-async def cdoListCompetitionByCountry(msg: Message):
+    return CDOInteralResponseData(retString, addInfo)
+
+@markCommando("!listCompetitions")
+async def cdoListCompetitionByCountry(**kwargs):
     """
     Lists all competitions for a given country. Needs the name of the country of country code as
     a parameter.
-
-    :DiscordCommando: !listCompetitions
     :return:
     """
-    data = msg.content.split(" ")
+    responseData = CDOInteralResponseData()
+    data = kwargs['msg'].content.split(" ")
 
     if len(data) == 0:
-        return "List competition needs the country or countrycode as parameter"
+        responseData.response = "List competition needs the country or countrycode as parameter"
+        return responseData
 
     association = ""
 
@@ -161,38 +242,29 @@ async def cdoListCompetitionByCountry(msg: Message):
         competition = Competition.objects.filter(association_id=association)
 
     if len(competition) == 0:
-        return f"No competitions were found for {association}"
+        responseData.response = f"No competitions were found for {association}"
+        return responseData
 
     retString = "Competitions:\n\n"
-    
-    for comp in competition:
-        retString+=comp.clear_name+"\n"
 
-    return retString
-    
-@log_return
-async def cdoGetHelp():
+    for comp in competition:
+        retString += comp.clear_name + "\n"
+
+    responseData.response = retString
+    return responseData
+
+@markCommando("!help")
+async def cdoGetHelp(**kwargs):
     """
     Returns all available Commandos and their documentation.
-
-    :DiscordCommando: !help
     :return:
     """
     retString = "Available Commandos:\n"
+    addInfo = OrderedDict()
     for i in DiscordCommando.allCommandos():
-        retString += i.commando +":\n"
         doc = i.docstring
-        doc = re.sub(':.+\n',"",doc)
-        doc = re.sub('\n+',"",doc)
-        retString += doc + "\n\n"
-    return retString
+        doc = re.sub(':.+\n', "", doc)
+        doc = re.sub('\n+', "", doc)
+        addInfo[i.commando] = doc
 
-def sendCdoResponse(channel : Channel, cdo : str ,responseDict : dict):
-    """
-
-    :param channel:
-    :param cdo:
-    :param responseDict:
-    :return:
-    """
-    pass
+    return CDOInteralResponseData(retString, addInfo)
