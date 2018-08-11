@@ -1,11 +1,11 @@
 import re
 from typing import Dict,Union
 import logging
-from discord import Message
+from discord import Message,Channel
 
 from support.helper import log_return,DiscordCommando
 from database.models import CompetitionWatcher,Competition
-from discord_handler.handler import watchCompetition,client
+from discord_handler.handler import client,watchCompetition
 
 logger = logging.getLogger(__name__)
 
@@ -186,3 +186,13 @@ async def cdoGetHelp():
         doc = re.sub('\n+',"",doc)
         retString += doc + "\n\n"
     return retString
+
+def sendCdoResponse(channel : Channel, cdo : str ,responseDict : dict):
+    """
+
+    :param channel:
+    :param cdo:
+    :param responseDict:
+    :return:
+    """
+    pass

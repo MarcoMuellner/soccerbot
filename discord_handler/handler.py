@@ -1,19 +1,42 @@
 import logging
 from datetime import timedelta, timezone, datetime
 import asyncio
-from discord import Message, Server, Client, Channel
-from typing import Union,Tuple,List
+from discord import Message, Server, Client, Channel, Embed
+from typing import Union, Tuple, List, Dict
+from enum import Enum
 
 from database.models import *
-from database.handler import updateMatchesSingleCompetition, getAllSeasons, getAndSaveData
 from database.handler import updateOverlayData, updateMatches, getNextMatchDayObjects, getCurrentMatches
 from support.helper import DiscordCommando
 from api.calls import makeMiddlewareCall, DataCalls
 from support.helper import log_return
+from database.handler import updateMatchesSingleCompetition, getAllSeasons, getAndSaveData
 
 client = Client()
 
 logger = logging.getLogger(__name__)
+
+
+class MatchEvents(Enum):
+    none = 0
+    kickoffFirstHalf = 1,
+    kickoffSecondHalf = 2,
+    firstHalfEnd = 3,
+    secondHalfEnd = 4,
+    matchOver = 5,
+    goal = 6,
+    yellowCard = 7,
+    redCard = 8,
+    substitution = 9,
+
+
+class MatchEventData:
+    def __init__(self, event: MatchEvents , minute: str, team: str, player: str, playerTo : str):
+        self.event = event
+        self.minute = minute
+        self.team = team
+        self.player = player
+        self.playerTo = playerTo
 
 
 def toDiscordChannelName(name: str) -> str:
@@ -53,30 +76,6 @@ async def deleteChannel(server: Server, channelName: str):
             logger.info(f"Deleting channel {toDiscordChannelName(channelName)} on {server.name}")
             await client.delete_channel(i)
             break
-
-
-async def watchCompetition(competition: Competition, serverName: str):
-    """
-    Adds a compeitition to be monitored. Also updates matches and competitions accordingly.
-    :param competition: Competition to be monitored.
-    :param serverName: Name of the discord server
-    """
-    logger.info(f"Start watching competition {competition} on {serverName}")
-
-    season = None
-    while season == None:
-        season = Season.objects.filter(competition=competition).order_by('start_date').last()
-        if season == None:
-            getAndSaveData(getAllSeasons, idCompetitions=competition.id)
-    server = DiscordServer(name=serverName)
-    server.save()
-
-    updateMatchesSingleCompetition(competition=competition, season=season)
-
-    compWatcher = CompetitionWatcher(competition=competition,
-                                     current_season=season, applicable_server=server, current_matchday=1)
-    compWatcher.save()
-    client.loop.create_task(updateMatchScheduler())
 
 
 @log_return
@@ -137,7 +136,7 @@ async def runLiveThreader():
     while True:
         schedulerInitRunning.wait()
 
-        #Get all matches that are nearly upcoming or currently running
+        # Get all matches that are nearly upcoming or currently running
         matchList = [i for i in getCurrentMatches() if i not in runningMatches]
         for match in matchList:
             logger.info(f"Starting match between {match.home_team.clear_name} and {match.away_team.clear_name}")
@@ -186,35 +185,81 @@ async def asyncDeleteChannel(sleepPeriod: float, channelName: str):
     await asyncio.sleep(sleepPeriod)
     await deleteChannel(list(client.servers)[0], channelName)
 
-
-async def sendToChannel(channel : Channel, msg : str):
+def getEventIcons(event : MatchEvents):
     """
-    Sends a message to a given channel
-    :param channel: Channel object where we want to send the stuff to
-    :param msg: msg that is to be sent
+    Returns a specific icon for a specific event
+    :param event: event that happened
+    :return: Stringcode for icon
     """
-    await client.send_message(channel, msg)
+    return ""
+
+async def sendMatchEvent(channel: Channel, match: Match, event: MatchEventData):
+    """
+    This function encapsulates the look and feel of the message that is sent when a matchEvent happens.
+    It will build the matchString, the embed object, etc. and than send it to the appropiate channel.
+    :param channel: The channel where we want to send things to
+    :param match: The match that this message applies to (Metadata!)
+    :param event: The actual event that happened. It consists of a MatchEvents enum and a DataDict, which in
+    itself contains the minute, team and player(s) the event applies to.
+    """
+
+    data = makeMiddlewareCall(DataCalls.liveData + f"/{match.id}")['match']
+    homeTeam = match.home_team.clear_name
+    awayTeam = match.away_team.clear_name
+
+    if event.event == MatchEvents.goal:
+        if event.team == homeTeam:
+            goalString = f"[{data['scoreHome']}] : {data['scoreAway']}"
+        else:
+            goalString = f"{data['scoreHome']} : [{data['scoreAway']}]"
+    else:
+        goalString = f"{data['scoreHome']} : {data['scoreAway']}"
+
+    title = f"**{homeTeam}** {goalString} **{awayTeam}**"
+    content = f"{event.minute}: {getEventIcons(event.event)}"
+
+    if event.event == MatchEvents.kickoffFirstHalf:
+        content += "Kickoff for the first half."
+    elif event.event == MatchEvents.kickoffSecondHalf:
+        content += "Kickoff for the second half."
+    elif event.event == MatchEvents.firstHalfEnd:
+        content += "First half has ended."
+    elif event.event == MatchEvents.secondHalfEnd:
+        content += "Second half has ended."
+    elif event.event == MatchEvents.matchOver:
+        content += "Game over."
+    elif event.event == MatchEvents.goal:
+        content += f"Goal! {event.player} scores for {event.team}"
+    elif event.event == MatchEvents.yellowCard:
+        content += f"Yellow card for {event.player}"
+    elif event.event == MatchEvents.redCard:
+        content += f"Red card for {event.player}"
+    elif event.event == MatchEvents.substitution:
+        content += f"Substitution for {event.team}: {event.player} comes on for {event.playerTo}"
+    else:
+        logger.error(f"Event {event.event} not handled. No message is send to server!")
+        return
 
 
-async def runMatchThread(match : Union[str,Match]):
+    embObj = Embed(title=title,description=content)
+    await client.send_message(channel,embed=embObj)
+
+
+async def runMatchThread(match: Union[str, Match]):
     """
     Start a match threader for a given match. Will read the live data from the middleWare API (data.fifa.com) every
     20 seconds and post the events to the channel that corresponds to the match. This channel has to be created
     previously.
-    :param match: Match object. Can be the id of the match or the Match object. Will only post to discord channels
-    if the object is a database.models.Match object
+    :param match: Match object.  Will  post to discord channels if the object is a database.models.Match object
     """
     pastEvents = []
     eventList = []
 
-    if isinstance(match, int):
-        matchid = match
-        channelName = None
-    elif isinstance(match, Match):
+    if isinstance(match, Match):
         matchid = match.id
         channelName = toDiscordChannelName(f"{match.competition.clear_name} Matchday {match.matchday}")
     else:
-        raise ValueError("Match needs to be Match instance or int")
+        raise ValueError("Match needs to be Match instance")
     while True:
         data = makeMiddlewareCall(DataCalls.liveData + f"/{matchid}")
 
@@ -224,7 +269,7 @@ async def runMatchThread(match : Union[str,Match]):
         for i in eventList:
             for channel in client.get_all_channels():
                 if channel.name == channelName:
-                    await sendToChannel(channel, i)
+                    await sendMatchEvent(channel, match, i)
                     try:
                         eventList.remove(i)
                     except ValueError:
@@ -238,7 +283,7 @@ async def runMatchThread(match : Union[str,Match]):
         await asyncio.sleep(20)
 
 
-def parseEvents(data: list, pastEvents=list) -> Tuple[List,List]:
+def parseEvents(data: list, pastEvents=list) -> Tuple[List[MatchEventData], List]:
     """
     Parses the event list from the middleware api. The code below should be self explanatory, every eventCode
     represents a certain event.
@@ -251,20 +296,53 @@ def parseEvents(data: list, pastEvents=list) -> Tuple[List,List]:
     if data != pastEvents:
         diff = [i for i in data if i not in pastEvents]
         for event in reversed(diff):
+            eventData = MatchEventData(event=MatchEvents.none,
+                                       minute=event['minute'],
+                                       team=event['teamName'],
+                                       player=event['playerName'],
+                                       playerTo = event['playerToName'],
+                                       )
             if event['eventCode'] == 3:  # Goal!
-                retEvents.append(f"{event['minute']}: Goal! {event['playerName']} scores for {event['teamName']}")
+                eventData.event = MatchEvents.goal
             elif event['eventCode'] == 4:  # Substitution!
-                retEvents.append(
-                    f"{event['minute']}: Substition! {event['playerName']} changes for {event['playerToName']}")
+                eventData.event = MatchEvents.substitution
             elif event['eventCode'] == 1:
-                retEvents.append(f"{event['minute']}: Yellow card for {event['playerName']}")
+                ev = MatchEvents.yellowCard if event['eventDescriptionShort'] == "Y" else MatchEvents.redCard
+                eventData.event = ev
             elif event['eventCode'] == 14:
-                retEvents.append(f"{event['minute']}: End of the first half")
+                ev = MatchEvents.firstHalfEnd if event['phaseDescriptionShort'] == "1H" else MatchEvents.secondHalfEnd
+                eventData.event = ev
             elif event['eventCode'] == 13:
-                ret = f"{event['minute']}: Kickoff"
-                ret += " in the first half" if event['phaseDescriptionShort'] == "1H" else " in the second half"
-                retEvents.append(ret)
+                ev = MatchEvents.kickoffFirstHalf if event[
+                                                         'phaseDescriptionShort'] == "1H" else MatchEvents.kickoffSecondHalf
+                eventData.event = ev
             else:
-                print(f"EventId {event['eventCode']} with descr {event['eventDescription']} not handled!")
+                logger.error(f"EventId {event['eventCode']} with descr {event['eventDescription']} not handled!")
+                continue
+            retEvents.append(eventData)
         pastEvents = data
     return retEvents, pastEvents
+
+
+async def watchCompetition(competition: Competition, serverName: str):
+    """
+    Adds a compeitition to be monitored. Also updates matches and competitions accordingly.
+    :param competition: Competition to be monitored.
+    :param serverName: Name of the discord server
+    """
+    logger.info(f"Start watching competition {competition} on {serverName}")
+
+    season = None
+    while season == None:
+        season = Season.objects.filter(competition=competition).order_by('start_date').last()
+        if season == None:
+            getAndSaveData(getAllSeasons, idCompetitions=competition.id)
+    server = DiscordServer(name=serverName)
+    server.save()
+
+    updateMatchesSingleCompetition(competition=competition, season=season)
+
+    compWatcher = CompetitionWatcher(competition=competition,
+                                     current_season=season, applicable_server=server, current_matchday=1)
+    compWatcher.save()
+    client.loop.create_task(updateMatchScheduler())
