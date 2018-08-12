@@ -1,4 +1,21 @@
 from django.db import models
+from enum import Enum
+
+class MatchEvents(Enum):
+    none = 0
+    kickoffFirstHalf = 1
+    kickoffSecondHalf = 2
+    firstHalfEnd = 3
+    secondHalfEnd = 4
+    matchOver = 5
+    goal = 6
+    yellowCard = 7
+    redCard = 8
+    substitution = 9
+    missedPenalty = 10
+    ownGoal = 11
+    scoredPenalty = 12
+    yellowRedCard = 13
 
 
 class Federation(models.Model):
@@ -45,6 +62,10 @@ class Team(models.Model):
 
     def __str__(self):
         return f"ID: {self.id}, Clear_Name: {self.clear_name.encode('utf-8')}"
+
+class MatchEventIcon(models.Model):
+    events = models.IntegerField(verbose_name= "Event",primary_key=True)
+    eventIcon = models.CharField(max_length=50,default="",verbose_name="Icon for the event")
 
 
 class Match(models.Model):

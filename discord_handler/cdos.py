@@ -5,7 +5,7 @@ from discord import Message, Channel, Embed
 from collections import OrderedDict
 from django.core.exceptions import ObjectDoesNotExist
 
-from database.models import CompetitionWatcher, Competition, DiscordUsers
+from database.models import CompetitionWatcher, Competition, DiscordUsers, MatchEvents,MatchEventIcon
 from discord_handler.handler import client, watchCompetition
 from inspect import getmembers,isroutine
 
@@ -130,7 +130,7 @@ async def sendResponse(responseData):
     embObj = Embed(title=title, description=content)
 
     for key, val in responseData.additionalInfo.items():
-        embObj.add_field(name=key, value=val)
+        embObj.add_field(name=key, value=val,inline=True)
 
     await client.send_message(responseData.channel, embed=embObj)
 
@@ -208,6 +208,15 @@ def checkCompetitionParameter(cmdString: str) -> Union[Dict, str]:
         return {"competition": competition_string, "association": parameterSplit[1]}
     except IndexError:
         return {"competition": competition_string, "association": None}
+################################### Commandos ########################################
+
+@markGroup("Admin")
+class GrpAdmin:
+    """
+    Admin group. Changing of behaviour should fall into this group.
+    """
+    userLevel = 0
+    name = "Admin"
 
 ################################### Commandos ########################################
 
@@ -363,3 +372,47 @@ async def cdoGetHelp(**kwargs):
         addInfo[i.commando] = doc
 
     return CDOInteralResponseData(retString, addInfo)
+
+@markCommando("!changeEventIcons")
+async def cdoChangeIcons(**kwargs):
+    """
+    Allows for changing of icons for match Events. The command with no parameters will return all events,
+    with the event alone the currently set icon and with event and icon it will set the icon to the event.
+    :return:
+    """
+    data = kwargs['msg'].content.split(" ")
+
+    if len(data) == 1:
+        responseString = "Available events:"
+        addInfo = OrderedDict()
+        for tag in MatchEvents:
+            try:
+                query = MatchEventIcon.objects.get(events=tag.value)
+                val = query.eventIcon
+            except ObjectDoesNotExist:
+                val = "No icon set"
+
+            addInfo[str(tag).replace("MatchEvents.","")] = val
+        return CDOInteralResponseData(responseString,addInfo)
+
+    if len(data) == 2:
+        for tag in MatchEvents:
+            if data[1] in str(tag):
+                try:
+                    query = MatchEventIcon.objects.get(events=tag.value)
+                    val = query.eventIcon
+                except ObjectDoesNotExist:
+                    val = "No icon set"
+                return CDOInteralResponseData(f"**{data[1]}** : {val}")
+
+        return CDOInteralResponseData(f"Event **{data[1]}** is not available")
+
+    if len(data) == 3:
+        for tag in MatchEvents:
+            if data[1] in str(tag):
+                MatchEventIcon(tag.value,data[2]).save()
+                return CDOInteralResponseData(f"Set **{data[1]}** to {data[2]}")
+        return CDOInteralResponseData(f"Event **{data[1]}** is not available")
+
+    return CDOInteralResponseData()
+

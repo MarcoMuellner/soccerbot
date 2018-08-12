@@ -3,7 +3,7 @@ import json
 from typing import Dict, List, Callable, Union
 from dateutil import parser
 
-from database.models import *
+from database.models import Federation,Competition,Association,Match,Season,Team
 
 
 class ApiCalls:
