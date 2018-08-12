@@ -85,7 +85,9 @@ class Match(models.Model):
     passed = models.BooleanField(verbose_name="Flag if the match is allready passed", default=False)
 
     def __str__(self):
-        return f"ID: {self.id}, HomeTeam: {self.home_team_id}, AwayTeam: {self.away_team_id}, matchday: {self.matchday}"
+        return f"ID: {self.id}, HomeTeam: {self.home_team.clear_name}, " \
+               f"AwayTeam: {self.away_team.clear_name}, matchday: {self.matchday}," \
+               f"Competition {self.competition.clear_name}"
 
 class DiscordServer(models.Model):
     name = models.CharField(max_length=255,verbose_name="Name of the discord server")

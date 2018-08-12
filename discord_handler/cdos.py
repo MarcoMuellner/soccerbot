@@ -4,11 +4,12 @@ import logging
 from discord import Message, Channel, Embed
 from collections import OrderedDict
 from django.core.exceptions import ObjectDoesNotExist
+import asyncio
 
 from database.models import CompetitionWatcher, Competition, DiscordUsers, MatchEvents,MatchEventIcon
 from discord_handler.handler import client, watchCompetition
 from inspect import getmembers,isroutine
-
+from support.helper import Task
 logger = logging.getLogger(__name__)
 
 """
@@ -24,6 +25,7 @@ the userlevel of the group is used.
 
 discordCommandos = []
 commandoGroups = []
+emojiList = ["0⃣","1⃣","2⃣","3⃣"]
 
 class CommandoGroup:
     def __init__(self, group , fun : callable, docstring : str, userlevel : int = 0 ):
@@ -107,9 +109,10 @@ class GrpGeneral:
 ################################### Commandos Helpers ########################################
 
 class CDOInteralResponseData:
-    def __init__(self, response: str = "", additionalInfo: OrderedDict = OrderedDict()):
+    def __init__(self, response: str = "", additionalInfo: OrderedDict = OrderedDict(),reactionFunc = None):
         self.response = response
         self.additionalInfo = additionalInfo
+        self.reactionFunc = reactionFunc
 
 
 class CDOFullResponseData:
@@ -137,12 +140,14 @@ async def sendResponse(responseData):
 def markCommando(cmd : str, group = GrpGeneral, userlevel = None):
     def internal_func_wrapper(func: callable):
         async def func_wrapper(**kwargs):
-            responseData = await func(**kwargs)
-            if not isinstance(responseData, CDOInteralResponseData):
+            responseDataInternal = await func(**kwargs)
+            if not isinstance(responseDataInternal, CDOInteralResponseData):
                 raise TypeError("Commandos need to return a CDOInteralResponseData type!")
 
-            responseData = CDOFullResponseData(kwargs['msg'].channel, kwargs['cdo'], responseData)
-            await sendResponse(responseData)
+            responseData = CDOFullResponseData(kwargs['msg'].channel, kwargs['cdo'], responseDataInternal)
+            msg = await sendResponse(responseData)
+            if responseDataInternal.reactionFunc is not None:
+                await client.wait_for_reaction(message=msg, check=responseDataInternal.reactionFunc)
             return
 
         DiscordCommando.addCommando(DiscordCommando(cmd, func_wrapper, func.__doc__, group, userlevel))
@@ -230,7 +235,9 @@ async def cdoAddCompetition(**kwargs):
     parameter = checkCompetitionParameter(kwargs['msg'].content)
 
     if isinstance(parameter, str):
-        return parameter
+        responseData.response = "Error within Commando!"
+        logger.error("Parameter is not string instance, please check logic!")
+        return responseData
     else:
         competition_string = parameter["competition"]
         association = parameter["association"]
@@ -306,15 +313,27 @@ async def cdoShowMonitoredCompetitions(**kwargs):
     Lists all watched competitions by soccerbot.
     :return: Answer message
     """
-    retString = "Monitored competitions:\n\n"
+    retString = f"Monitored competitions (react with number emojis to remove.Only the first {len(emojiList)} can " \
+                 f"be added this way):\n\n"
     addInfo = OrderedDict()
+    compList = []
     for watchers in CompetitionWatcher.objects.all():
+        compList.append(watchers.competition.clear_name)
         try:
             addInfo[watchers.competition.association.clear_name].append(f"\nwatchers.competition.clear_name")
         except KeyError:
             addInfo[watchers.competition.association.clear_name] = watchers.competition.clear_name
 
-    return CDOInteralResponseData(retString, addInfo)
+    def check(reaction,user):
+        if reaction.emoji in emojiList:
+            index = emojiList.index(reaction.emoji)
+            if index < len(compList):
+                kwargs['msg'].content = f"!removeCompetition {compList[index]}"
+                client.loop.create_task(cmdHandler(kwargs['msg']))
+                return True
+        return False
+
+    return CDOInteralResponseData(retString, addInfo,check)
 
 
 @markCommando("!listCompetitions")
@@ -349,11 +368,29 @@ async def cdoListCompetitionByCountry(**kwargs):
         return responseData
 
     retString = "Competitions:\n\n"
+    compList = []
 
     for comp in competition:
         retString += comp.clear_name + "\n"
+        compList.append(f"{comp.clear_name}#{comp.association.id}")
 
+    retString += f"\n\nReact with according number emoji to add competitions. Only the first {len(emojiList)} can " \
+                 f"be added this way"
     responseData.response = retString
+
+    def check(reaction,user):
+        if reaction.emoji in emojiList:
+            try:
+                index = emojiList.index(reaction.emoji)
+            except ValueError:
+                logger.error(f"{reaction.emoji} not in list!")
+                return False
+            if index < len(compList):
+                kwargs['msg'].content = f"!addCompetition {compList[index]}"
+                client.loop.create_task(cmdHandler(kwargs['msg']))
+                return True
+        return False
+    responseData.reactionFunc = check
     return responseData
 
 
@@ -373,7 +410,7 @@ async def cdoGetHelp(**kwargs):
 
     return CDOInteralResponseData(retString, addInfo)
 
-@markCommando("!changeEventIcons")
+@markCommando("!changeEventIcons",GrpAdmin)
 async def cdoChangeIcons(**kwargs):
     """
     Allows for changing of icons for match Events. The command with no parameters will return all events,
@@ -387,7 +424,7 @@ async def cdoChangeIcons(**kwargs):
         addInfo = OrderedDict()
         for tag in MatchEvents:
             try:
-                query = MatchEventIcon.objects.get(events=tag.value)
+                query = MatchEventIcon.objects.get(event=tag.value)
                 val = query.eventIcon
             except ObjectDoesNotExist:
                 val = "No icon set"
@@ -399,7 +436,7 @@ async def cdoChangeIcons(**kwargs):
         for tag in MatchEvents:
             if data[1] in str(tag):
                 try:
-                    query = MatchEventIcon.objects.get(events=tag.value)
+                    query = MatchEventIcon.objects.get(event=tag.value)
                     val = query.eventIcon
                 except ObjectDoesNotExist:
                     val = "No icon set"
@@ -416,3 +453,34 @@ async def cdoChangeIcons(**kwargs):
 
     return CDOInteralResponseData()
 
+@markCommando("!showRunningTasks",GrpAdmin)
+async def cdoShowRunningTasks(**kwargs):
+    """
+    Shows all currently running tasks on the server
+    :return:
+    """
+    tasks = Task.getAllTaks()
+    responseString = "Running tasks:"
+    addInfo = OrderedDict()
+
+    for i in tasks:
+        args = str(i.args).replace("<","").replace(">","").replace(",)",")")
+        addInfo[f"{i.name}{args}"] = f"Started at {i.time}"
+
+    return CDOInteralResponseData(responseString,addInfo)
+
+@markCommando("!test")
+async def cdoTest(**kwargs):
+    """
+    Test Kommando
+    :param kwargs:
+    :return:
+    """
+    msg = await client.send_message(kwargs['msg'].channel, 'React with thumbs up or thumbs down.')
+    def check(reaction,user):
+        e = str(reaction.emoji)
+        print(e)
+        print(e == emojiList[0])
+        return False
+    res = await client.wait_for_reaction(message=msg,check=check)
+    await client.send_message(kwargs['msg'].channel, '{0.user} reacted with {0.reaction.emoji}!'.format(res))

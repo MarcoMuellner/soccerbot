@@ -8,7 +8,7 @@ import sys
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
 # Ensure settings are read
 application = get_wsgi_application()
-from discord_handler.handler import client,runScheduler,runLiveThreader
+from discord_handler.handler import client,runScheduler,runLiveThreader,removeOldChannels
 from discord_handler.cdos import cmdHandler
 from loghandler.loghandler import setup_logging
 from discord_handler import cdos
@@ -20,6 +20,9 @@ logger = logging.getLogger(__name__)
 @client.event
 async def on_ready():
     logger.info(f"Logged in as {client.user.name} with id {client.user.id}")
+    await removeOldChannels()
+    client.loop.create_task(runScheduler())
+    client.loop.create_task(runLiveThreader())
     logger.info("Update complete")
 
 
@@ -30,8 +33,6 @@ async def on_message(message : discord.Message):
     except discord.errors.HTTPException:
         pass
 
-client.loop.create_task(runScheduler())
-client.loop.create_task(runLiveThreader())
 logger.info("------------------Soccerbot is starting-----------------------")
 try:
     with open("secret.json") as f:

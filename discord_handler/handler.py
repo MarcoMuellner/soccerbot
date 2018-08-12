@@ -2,13 +2,15 @@ import logging
 from datetime import timedelta, timezone, datetime
 import asyncio
 from discord import Server, Client, Channel, Embed
-from typing import Union, Tuple, List
+from typing import Union, Tuple, List, Dict
 from django.core.exceptions import ObjectDoesNotExist
+from collections import OrderedDict
 
-from database.models import CompetitionWatcher,Match,DiscordServer, Season, Competition,MatchEvents, MatchEventIcon
+from database.models import CompetitionWatcher, Match, DiscordServer, Season, Competition, MatchEvents, MatchEventIcon
 from database.handler import updateOverlayData, updateMatches, getNextMatchDayObjects, getCurrentMatches
 from api.calls import makeMiddlewareCall, DataCalls
 from database.handler import updateMatchesSingleCompetition, getAllSeasons, getAndSaveData
+from support.helper import task
 
 client = Client()
 
@@ -16,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 class MatchEventData:
-    def __init__(self, event: MatchEvents , minute: str, team: str, player: str, playerTo : str):
+    def __init__(self, event: MatchEvents, minute: str, team: str, player: str, playerTo: str):
         self.event = event
         self.minute = minute
         self.team = team
@@ -34,6 +36,7 @@ def toDiscordChannelName(name: str) -> str:
         return None
     return name.lower().replace(" ", "-")
     pass
+
 
 async def createChannel(server: Server, channelName: str):
     """
@@ -61,9 +64,22 @@ async def deleteChannel(server: Server, channelName: str):
             await client.delete_channel(i)
             break
 
+
+async def removeOldChannels():
+    deleteChannelList = []
+    for i in client.get_all_channels():
+        if "-matchday-" in i.name:
+            logger.info("Deleting old channel {i.name}")
+            deleteChannelList.append((i.server, i.name))
+
+    for i in deleteChannelList:
+        await deleteChannel(i[0], i[1])
+
+
 schedulerInitRunning = asyncio.Event(loop=client.loop)
 
 
+@task
 async def runScheduler():
     """
     Starts the scheduler task, which will automatically create channels adnd update databases. Currently this is
@@ -88,6 +104,7 @@ async def runScheduler():
         await asyncio.sleep(calculateSleepTime(targetTime))
 
 
+@task
 async def runLiveThreader():
     """
     Starts the LiveThreader task, that automatically posts updates from matches to its according matches.
@@ -102,6 +119,7 @@ async def runLiveThreader():
 
         # Get all matches that are nearly upcoming or currently running
         matchList = [i for i in getCurrentMatches() if i not in runningMatches]
+        logger.debug(f"Current matchlist: {matchList}")
         for match in matchList:
             logger.info(f"Starting match between {match.home_team.clear_name} and {match.away_team.clear_name}")
 
@@ -148,6 +166,64 @@ async def asyncDeleteChannel(sleepPeriod: float, channelName: str):
     logger.info(f"Initializing delete Channel task for {channelName} in {sleepPeriod}")
     await asyncio.sleep(sleepPeriod)
     await deleteChannel(list(client.servers)[0], channelName)
+
+async def postLineups(channel: Channel, match: Match, data: Dict):
+    lineup = OrderedDict()
+    for i in ['home', 'away']:
+        lineup[i] = OrderedDict()
+        lineup[i]['starting'] = []
+        lineup[i]['bench'] = []
+        lineup[i]['coach'] = []
+        for player in data['lineups']['teams'][i]:
+            playerInfo = OrderedDict()
+            playerInfo['name'] = player['personName']
+            playerInfo['number'] = player['shirtNumber']
+            playerInfo['captain'] = player['isCaptain']
+            playerInfo['gk'] = player['isGoalKeeper']
+
+            if player['isCoach']:
+                lineup[i]['coach'].append(playerInfo)
+            elif player['startingLineUp']:
+                lineup[i]['starting'].append(playerInfo)
+            else:
+                lineup[i]['bench'].append(playerInfo)
+
+    def getLineupPlayerString(teamString):
+        def listPlayers(position):
+            lineupString = ""
+            for startingPlayer in lineup[teamString][position]:
+                lineupString += f"**{startingPlayer['number']}** - {startingPlayer['name']}"
+                if startingPlayer['gk']:
+                    lineupString += f" (GK) "
+                if startingPlayer['captain']:
+                    lineupString += f"(C) "
+                lineupString += "\n"
+            return lineupString
+
+        lineupString = "**Starting lineup:**\n"
+        lineupString += listPlayers('starting')
+        #lineupString += "\n**Bench:**\n"
+        #lineupString += listPlayers('bench')
+        lineupString += f"\n\n**Coach:\n{lineup[teamString]['coach'][0]['name']}**\n\n\n  "
+        return lineupString
+
+    homeString = getLineupPlayerString('home')
+    awayString = getLineupPlayerString('away')
+
+    embObj = Embed(title="Lineups", description=f"**{match.home_team.clear_name} vs {match.away_team.clear_name}**")
+
+    embObj.add_field(name=match.home_team.clear_name, value=homeString)
+    embObj.add_field(name=match.away_team.clear_name, value=awayString)
+
+    try:
+        await client.send_message(channel, embed=embObj)
+    except:
+        asyncio.sleep(10)
+        for i in client.get_all_channels():
+            if channel.name == i.name:
+                await client.send_message(channel, embed=embObj)
+
+
 
 async def sendMatchEvent(channel: Channel, match: Match, event: MatchEventData):
     """
@@ -204,13 +280,19 @@ async def sendMatchEvent(channel: Channel, match: Match, event: MatchEventData):
         logger.error(f"Event {event.event} not handled. No message is send to server!")
         return
 
-
-    embObj = Embed(title=title,description=content)
+    embObj = Embed(title=title, description=content)
     embObj.set_author(name=match.competition.clear_name)
 
-    await client.send_message(channel,embed=embObj)
+    try:
+        await client.send_message(channel, embed=embObj)
+    except:
+        asyncio.sleep(10)
+        for i in client.get_all_channels():
+            if i.name == channel.name:
+                await client.send_message(i, embed=embObj)
 
 
+@task
 async def runMatchThread(match: Union[str, Match]):
     """
     Start a match threader for a given match. Will read the live data from the middleWare API (data.fifa.com) every
@@ -226,28 +308,41 @@ async def runMatchThread(match: Union[str, Match]):
         channelName = toDiscordChannelName(f"{match.competition.clear_name} Matchday {match.matchday}")
     else:
         raise ValueError("Match needs to be Match instance")
+
+    lineupsPosted = False
     while True:
         data = makeMiddlewareCall(DataCalls.liveData + f"/{matchid}")
+        if not lineupsPosted:
+            try:
+                for channel in client.get_all_channels():
+                    if channel.name == channelName:
+                        await postLineups(channel,match,data["match"])
+                        lineupsPosted = True
+            except RuntimeError:
+                logger.warning("Size of channels has changed")
 
         newEvents, pastEvents = parseEvents(data["match"]["events"], pastEvents)
         eventList += newEvents
 
         for i in eventList:
-            for channel in client.get_all_channels():
-                if channel.name == channelName:
-                    await sendMatchEvent(channel, match, i)
-                    try:
-                        eventList.remove(i)
-                    except ValueError:
-                        pass
-                    logger.info(f"Posting event: {i}")
+            try:
+                for channel in client.get_all_channels():
+                    if channel.name == channelName:
+                        await sendMatchEvent(channel, match, i)
+                        try:
+                            eventList.remove(i)
+                        except ValueError:
+                            pass
+                        logger.info(f"Posting event: {i}")
+            except RuntimeError:
+                logger.warning("Size of channels has changed!")
+                break
 
         if data["match"]["isFinished"]:
             logger.info(f"Match {match} finished!")
             break
 
         await asyncio.sleep(20)
-
 
 def parseEvents(data: list, pastEvents=list) -> Tuple[List[MatchEventData], List]:
     """
@@ -266,7 +361,7 @@ def parseEvents(data: list, pastEvents=list) -> Tuple[List[MatchEventData], List
                                        minute=event['minute'],
                                        team=event['teamName'],
                                        player=event['playerName'],
-                                       playerTo = event['playerToName'],
+                                       playerTo=event['playerToName'],
                                        )
             if event['eventCode'] == 3:  # Goal!
                 eventData.event = MatchEvents.goal
@@ -295,6 +390,7 @@ def parseEvents(data: list, pastEvents=list) -> Tuple[List[MatchEventData], List
     return retEvents, pastEvents
 
 
+@task
 async def watchCompetition(competition: Competition, serverName: str):
     """
     Adds a compeitition to be monitored. Also updates matches and competitions accordingly.
@@ -303,11 +399,10 @@ async def watchCompetition(competition: Competition, serverName: str):
     """
     logger.info(f"Start watching competition {competition} on {serverName}")
 
-    season = None
-    while season == None:
+    season = Season.objects.filter(competition=competition).order_by('start_date').last()
+    if season == None:
+        getAndSaveData(getAllSeasons, idCompetitions=competition.id)
         season = Season.objects.filter(competition=competition).order_by('start_date').last()
-        if season == None:
-            getAndSaveData(getAllSeasons, idCompetitions=competition.id)
     server = DiscordServer(name=serverName)
     server.save()
 

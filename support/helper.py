@@ -3,6 +3,8 @@ logger = logging.getLogger(__name__)
 from inspect import getmembers, iscoroutine
 import re
 import logging
+from typing import Callable
+from datetime import datetime,timezone
 
 logger = logging.getLogger(__name__)
 
@@ -15,17 +17,24 @@ def log_return(func : callable):
     func_wrapper.__doc__ = func.__doc__
     return func_wrapper
 
-def parseCommandoFunctions(module):
+taskList = []
 
-    functions_list = [o for o in getmembers(module) if iscoroutine(o[1])]
+class Task:
+    def __init__(self,name,args):
+        self.name = name
+        self.args = args
+        self.time = datetime.now(timezone.utc)
 
-    for name,fun in functions_list:
-        try:
-            if ":DiscordCommando:" in fun.__doc__ and name.startswith("cdo"):
-                commando = re.search(':DiscordCommando:\s*(!\w+)',fun.__doc__).group(1)
-                docstring = fun.__doc__
-                DiscordCommando.addCommando(DiscordCommando(commando,fun,docstring))
-            elif name.startswith("cdo"):
-                raise ValueError("You seemed to have added a command function without :DidscordCommando: keyword!")
-        except TypeError:
-            pass
+    @staticmethod
+    def getAllTaks():
+        return taskList
+
+    @staticmethod
+    def addtask(task):
+        taskList.append(task)
+
+def task(fun:Callable):
+    async def func_wrapper(*args):
+        Task.addtask(Task(fun.__name__,args))
+        return await fun(*args)
+    return func_wrapper
