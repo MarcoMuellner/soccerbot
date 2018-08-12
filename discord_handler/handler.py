@@ -173,7 +173,7 @@ async def sendMatchEvent(channel: Channel, match: Match, event: MatchEventData):
 
     title = f"**{homeTeam}** {goalString} **{awayTeam}**"
     try:
-        val = MatchEventIcon.objects.get(event=event.event.value)
+        val = MatchEventIcon.objects.get(event=event.event.value).eventIcon
     except ObjectDoesNotExist:
         val = ""
     content = f"{val}{event.minute}"

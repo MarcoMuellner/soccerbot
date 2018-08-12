@@ -64,7 +64,7 @@ class Team(models.Model):
         return f"ID: {self.id}, Clear_Name: {self.clear_name.encode('utf-8')}"
 
 class MatchEventIcon(models.Model):
-    events = models.IntegerField(verbose_name= "Event",primary_key=True)
+    event = models.IntegerField(verbose_name="Event", primary_key=True)
     eventIcon = models.CharField(max_length=50,default="",verbose_name="Icon for the event")
 
 
