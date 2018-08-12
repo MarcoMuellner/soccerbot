@@ -224,25 +224,25 @@ async def sendMatchEvent(channel: Channel, match: Match, event: MatchEventData):
     content = f"{event.minute}"
 
     if event.event == MatchEvents.kickoffFirstHalf:
-        content += "**KICKOFF** first half."
+        content += "**KICKOFF** The match is underway!"
     elif event.event == MatchEvents.kickoffSecondHalf:
-        content += "**Kickoff** second half."
+        content += "**Kickoff** Second Half!"
     elif event.event == MatchEvents.firstHalfEnd:
-        content += "First half has ended."
+        content += "**HALF TIME!**"
     elif event.event == MatchEvents.secondHalfEnd:
         content += "Second half has ended."
     elif event.event == MatchEvents.matchOver:
-        content += "Game over."
+        content += "**FULL TIME**!"
     elif event.event == MatchEvents.goal:
-        content += f"Goal! {event.player} scores for **{event.team}**"
+        content += f"**GOAL**! {event.player} scores for **{event.team}**"
     elif event.event == MatchEvents.yellowCard:
         content += f"Yellow card for {event.player}(**{event.team}**)"
     elif event.event == MatchEvents.redCard:
         content += f"Red card for {event.player} (**{event.team}**)"
     elif event.event == MatchEvents.substitution:
-        content += f"Substitution for **{event.team}**: {event.player} comes on for {event.playerTo}"
+        content += f"Substitution **{event.team}**: **{event.player} IN**, ***{event.playerTo} OUT***"
     elif event.event == MatchEvents.missedPenalty:
-        content += f"Missed penalty by {event.player} **({event.team})"
+        content += f"**PENALTY MISSED!** {event.player} has missed a penalty **({event.team})"
     else:
         logger.error(f"Event {event.event} not handled. No message is send to server!")
         return
