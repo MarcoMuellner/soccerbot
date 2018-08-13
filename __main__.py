@@ -34,10 +34,11 @@ async def on_message(message : discord.Message):
         pass
 
 logger.info("------------------Soccerbot is starting-----------------------")
+path = os.path.dirname(os.path.realpath(__file__))
 try:
-    with open("secret.json") as f:
+    with open(path+"/secret.json") as f:
         key = json.loads(f.read())['secret']
 except:
-    logger.error("You need to create the secret.json file and check if secret:key is available")
+    logger.error(f"You need to create the secret.json file and check if secret:key is available, path {path+'/secret.json'}")
     sys.exit()
 client.run(key)
