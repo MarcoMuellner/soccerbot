@@ -8,9 +8,10 @@ import sys
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
 # Ensure settings are read
 application = get_wsgi_application()
-from discord_handler.handler import client,runScheduler,runLiveThreader,removeOldChannels
+from discord_handler.handler import runScheduler,runLiveThreader,removeOldChannels
 from discord_handler.cdos import cmdHandler
 from loghandler.loghandler import setup_logging
+from discord_handler.client import client
 from discord_handler import cdos
 
 

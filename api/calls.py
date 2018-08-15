@@ -2,6 +2,7 @@ import requests
 import json
 from typing import Dict, List, Callable, Union
 from dateutil import parser
+from pytz import utc
 
 from database.models import Federation,Competition,Association,Match,Season,Team
 

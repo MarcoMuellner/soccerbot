@@ -5,7 +5,7 @@ from collections import OrderedDict
 from discord import Channel, Embed, Message
 from django.core.exceptions import ObjectDoesNotExist
 
-from discord_handler.handler import client
+from discord_handler.client import client
 from database.models import DiscordUsers
 
 logger = logging.getLogger(__name__)
