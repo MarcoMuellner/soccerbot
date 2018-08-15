@@ -1,6 +1,5 @@
 from django.db.utils import IntegrityError
-import datetime
-from datetime import timedelta,timezone
+from datetime import timedelta,timezone,datetime
 import logging
 import enum
 from typing import List
@@ -108,8 +107,8 @@ def createMatchDayObject(query,watcher):
     :return: new MatchdayObject with start and endtime as well as the matchdaystring
     """
     return MatchDayObject(
-        startTime=query.first().date - timedelta(hours=3),
-        endTime=query.last().date + timedelta(hours=5),
+        startTime=query.first().date - timedelta(hours=1),
+        endTime=query.last().date + timedelta(hours=3),
         matchdayString = f"{watcher.competition.clear_name} Matchday {query.first().matchday}"
     )
 
@@ -119,7 +118,7 @@ def getNextMatchDayObjects() -> List[MatchDayObject]:
     It also creates Matchday objects for currently played games
     :return: List of Matchday Objects containing the next relevant Matchday objects
     """
-    today = datetime.datetime.now(timezone.utc).today()
+    today = datetime.utcnow()
     tomorrow = today + timedelta(days=1)
     retList = []
     for i in CompetitionWatcher.objects.all():

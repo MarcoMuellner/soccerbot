@@ -89,7 +89,7 @@ async def runScheduler():
     while True:
         # take synchronization object, during update no live thread should run!
         schedulerInitRunning.set()
-        targetTime = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0) + timedelta(days=1)
+        targetTime = datetime.utcnow().replace(hour=0, minute=0, second=0) + timedelta(days=1)
         logger.info("Initializing schedule for tomorrow")
 
         # update competitions, seasons etc. Essentially the data that is always there
@@ -139,7 +139,7 @@ async def updateMatchScheduler():
     logger.info("End update schedule")
 
 
-def calculateSleepTime(targetTime: datetime, nowTime: datetime = datetime.now(timezone.utc)):
+def calculateSleepTime(targetTime: datetime, nowTime: datetime = datetime.utcnow()):
     """
     Calculates time between targetTime and nowTime in seconds
     """

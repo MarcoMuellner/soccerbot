@@ -6,10 +6,11 @@ from collections import OrderedDict
 from django.core.exceptions import ObjectDoesNotExist
 import asyncio
 
-from database.models import CompetitionWatcher, Competition, DiscordUsers, MatchEvents,MatchEventIcon
+from database.models import CompetitionWatcher, Competition, DiscordUsers, MatchEvents, MatchEventIcon
 from discord_handler.handler import client, watchCompetition
-from inspect import getmembers,isroutine
+from inspect import getmembers, isroutine
 from support.helper import Task
+
 logger = logging.getLogger(__name__)
 
 """
@@ -25,10 +26,11 @@ the userlevel of the group is used.
 
 discordCommandos = []
 commandoGroups = []
-emojiList = ["0⃣","1⃣","2⃣","3⃣"]
+emojiList = ["0⃣", "1⃣", "2⃣", "3⃣"]
+
 
 class CommandoGroup:
-    def __init__(self, group , fun : callable, docstring : str, userlevel : int = 0 ):
+    def __init__(self, group, fun: callable, docstring: str, userlevel: int = 0):
         self.group = group
         self.fun = fun
         self.docstring = docstring
@@ -45,7 +47,7 @@ class CommandoGroup:
         commandoGroups.append(group)
 
     @staticmethod
-    def associateCommando(commando,group):
+    def associateCommando(commando, group):
         for i in commandoGroups:
             if i.fun == group:
                 i.associatedCommandos.append(commando)
@@ -56,9 +58,9 @@ class CommandoGroup:
 
 
 class DiscordCommando:
-    def __init__(self, commando: str, fun : callable, docstring : str, group, userLevel : int):
+    def __init__(self, commando: str, fun: callable, docstring: str, group, userLevel: int):
         self.commando = commando
-        self.cmd_group = CommandoGroup.associateCommando(self,group)
+        self.cmd_group = CommandoGroup.associateCommando(self, group)
         self.userLevel = userLevel if userLevel is not None else self.cmd_group.userLevel
         self.fun = fun
         self.docstring = docstring
@@ -76,18 +78,18 @@ class DiscordCommando:
         return f"Cmd {self.cmd_group}:{self.commando}, userLevel {self.userLevel}"
 
 
-
 ################################### Group Helpers #####################################
 
-neededParameters = {'name':str,
-                    'userLevel':int,
+neededParameters = {'name': str,
+                    'userLevel': int,
                     }
 
-def markGroup(group : str):
-    def internal_func_wrapper(func:callable):
-        attributes = getmembers(func, lambda a:not(isroutine(a)))
-        memberDescriptors = dict([a for a in attributes if not(a[0].startswith('__') and a[0].endswith('__'))])
-        for name,valueType in neededParameters.items():
+
+def markGroup(group: str):
+    def internal_func_wrapper(func: callable):
+        attributes = getmembers(func, lambda a: not (isroutine(a)))
+        memberDescriptors = dict([a for a in attributes if not (a[0].startswith('__') and a[0].endswith('__'))])
+        for name, valueType in neededParameters.items():
             if name not in memberDescriptors.keys():
                 raise AttributeError(f"A group for a command has to implement {name}")
 
@@ -95,9 +97,11 @@ def markGroup(group : str):
                 valueType(memberDescriptors[name])
             except ValueError:
                 raise AttributeError(f"The parameter {name} has to be of type {valueType}")
-        CommandoGroup.addGroup(CommandoGroup(group,func,func.__doc__))
+        CommandoGroup.addGroup(CommandoGroup(group, func, func.__doc__))
         return func
+
     return internal_func_wrapper
+
 
 @markGroup("General")
 class GrpGeneral:
@@ -106,10 +110,12 @@ class GrpGeneral:
     """
     userLevel = 0
     name = "General"
+
+
 ################################### Commandos Helpers ########################################
 
 class CDOInteralResponseData:
-    def __init__(self, response: str = "", additionalInfo: OrderedDict = OrderedDict(),reactionFunc = None):
+    def __init__(self, response: str = "", additionalInfo: OrderedDict = OrderedDict(), reactionFunc=None):
         self.response = response
         self.additionalInfo = additionalInfo
         self.reactionFunc = reactionFunc
@@ -125,6 +131,7 @@ class CDOFullResponseData:
     def __str__(self):
         return f"Posting {self.response} to {self.cdo} with addInfo {self.additionalInfo} to {self.channel}"
 
+
 async def sendResponse(responseData):
     logger.info(responseData)
     title = f"Commando {responseData.cdo}"
@@ -133,11 +140,12 @@ async def sendResponse(responseData):
     embObj = Embed(title=title, description=content)
 
     for key, val in responseData.additionalInfo.items():
-        embObj.add_field(name=key, value=val,inline=True)
+        embObj.add_field(name=key, value=val, inline=True)
 
     await client.send_message(responseData.channel, embed=embObj)
 
-def markCommando(cmd : str, group = GrpGeneral, userlevel = None):
+
+def markCommando(cmd: str, group=GrpGeneral, userlevel=None):
     def internal_func_wrapper(func: callable):
         async def func_wrapper(**kwargs):
             responseDataInternal = await func(**kwargs)
@@ -174,17 +182,16 @@ async def cmdHandler(msg: Message) -> str:
             except ObjectDoesNotExist:
                 authorUserLevel = 0
 
-
             if cdos.userLevel <= authorUserLevel:
                 logger.info(f"Handling {cdos.commando}")
                 kwargs = {'cdo': cdos.commando,
                           'msg': msg,
-                          'userLevel':authorUserLevel}
+                          'userLevel': authorUserLevel}
 
                 return await cdos.fun(**kwargs)
             else:
                 responseStr = "I am sorry, you are not allowed to do that"
-                responseData = CDOFullResponseData(msg.channel,cdos.commando,CDOInteralResponseData(responseStr))
+                responseData = CDOFullResponseData(msg.channel, cdos.commando, CDOInteralResponseData(responseStr))
                 await sendResponse(responseData)
 
 
@@ -213,6 +220,8 @@ def checkCompetitionParameter(cmdString: str) -> Union[Dict, str]:
         return {"competition": competition_string, "association": parameterSplit[1]}
     except IndexError:
         return {"competition": competition_string, "association": None}
+
+
 ################################### Commandos ########################################
 
 @markGroup("Admin")
@@ -222,6 +231,7 @@ class GrpAdmin:
     """
     userLevel = 0
     name = "Admin"
+
 
 ################################### Commandos ########################################
 
@@ -271,7 +281,7 @@ async def cdoAddCompetition(**kwargs):
     logger.debug(f"Watcher objects: {watcher}")
 
     if len(watcher) != 0:
-        return f"Allready watching {competition_string}"
+        return CDOInteralResponseData(f"Allready watching {competition_string}")
 
     client.loop.create_task(watchCompetition(comp.first(), kwargs['msg'].server))
     responseData.response = f"Start watching competition {competition_string}"
@@ -314,7 +324,7 @@ async def cdoShowMonitoredCompetitions(**kwargs):
     :return: Answer message
     """
     retString = f"Monitored competitions (react with number emojis to remove.Only the first {len(emojiList)} can " \
-                 f"be added this way):\n\n"
+                f"be added this way):\n\n"
     addInfo = OrderedDict()
     compList = []
     for watchers in CompetitionWatcher.objects.all():
@@ -324,7 +334,7 @@ async def cdoShowMonitoredCompetitions(**kwargs):
         except KeyError:
             addInfo[watchers.competition.association.clear_name] = watchers.competition.clear_name
 
-    def check(reaction,user):
+    def check(reaction, user):
         if reaction.emoji in emojiList:
             index = emojiList.index(reaction.emoji)
             if index < len(compList):
@@ -333,7 +343,7 @@ async def cdoShowMonitoredCompetitions(**kwargs):
                 return True
         return False
 
-    return CDOInteralResponseData(retString, addInfo,check)
+    return CDOInteralResponseData(retString, addInfo, check)
 
 
 @markCommando("!listCompetitions")
@@ -378,7 +388,7 @@ async def cdoListCompetitionByCountry(**kwargs):
                  f"be added this way"
     responseData.response = retString
 
-    def check(reaction,user):
+    def check(reaction, user):
         if reaction.emoji in emojiList:
             try:
                 index = emojiList.index(reaction.emoji)
@@ -390,6 +400,7 @@ async def cdoListCompetitionByCountry(**kwargs):
                 client.loop.create_task(cmdHandler(kwargs['msg']))
                 return True
         return False
+
     responseData.reactionFunc = check
     return responseData
 
@@ -410,7 +421,8 @@ async def cdoGetHelp(**kwargs):
 
     return CDOInteralResponseData(retString, addInfo)
 
-@markCommando("!changeEventIcons",GrpAdmin)
+
+@markCommando("!changeEventIcons", GrpAdmin)
 async def cdoChangeIcons(**kwargs):
     """
     Allows for changing of icons for match Events. The command with no parameters will return all events,
@@ -429,8 +441,8 @@ async def cdoChangeIcons(**kwargs):
             except ObjectDoesNotExist:
                 val = "No icon set"
 
-            addInfo[str(tag).replace("MatchEvents.","")] = val
-        return CDOInteralResponseData(responseString,addInfo)
+            addInfo[str(tag).replace("MatchEvents.", "")] = val
+        return CDOInteralResponseData(responseString, addInfo)
 
     if len(data) == 2:
         for tag in MatchEvents:
@@ -447,13 +459,14 @@ async def cdoChangeIcons(**kwargs):
     if len(data) == 3:
         for tag in MatchEvents:
             if data[1] in str(tag):
-                MatchEventIcon(tag.value,data[2]).save()
+                MatchEventIcon(tag.value, data[2]).save()
                 return CDOInteralResponseData(f"Set **{data[1]}** to {data[2]}")
         return CDOInteralResponseData(f"Event **{data[1]}** is not available")
 
     return CDOInteralResponseData()
 
-@markCommando("!showRunningTasks",GrpAdmin)
+
+@markCommando("!showRunningTasks", GrpAdmin)
 async def cdoShowRunningTasks(**kwargs):
     """
     Shows all currently running tasks on the server
@@ -464,10 +477,11 @@ async def cdoShowRunningTasks(**kwargs):
     addInfo = OrderedDict()
 
     for i in tasks:
-        args = str(i.args).replace("<","").replace(">","").replace(",)",")")
+        args = str(i.args).replace("<", "").replace(">", "").replace(",)", ")")
         addInfo[f"{i.name}{args}"] = f"Started at {i.time}"
 
-    return CDOInteralResponseData(responseString,addInfo)
+    return CDOInteralResponseData(responseString, addInfo)
+
 
 @markCommando("!test")
 async def cdoTest(**kwargs):
@@ -477,10 +491,12 @@ async def cdoTest(**kwargs):
     :return:
     """
     msg = await client.send_message(kwargs['msg'].channel, 'React with thumbs up or thumbs down.')
-    def check(reaction,user):
+
+    def check(reaction, user):
         e = str(reaction.emoji)
         print(e)
         print(e == emojiList[0])
         return False
-    res = await client.wait_for_reaction(message=msg,check=check)
+
+    res = await client.wait_for_reaction(message=msg, check=check)
     await client.send_message(kwargs['msg'].channel, '{0.user} reacted with {0.reaction.emoji}!'.format(res))

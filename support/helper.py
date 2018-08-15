@@ -30,11 +30,18 @@ class Task:
         return taskList
 
     @staticmethod
-    def addtask(task):
+    def addTask(task):
         taskList.append(task)
+
+    @staticmethod
+    def removeTask(task):
+        taskList.remove(task)
 
 def task(fun:Callable):
     async def func_wrapper(*args):
-        Task.addtask(Task(fun.__name__,args))
-        return await fun(*args)
+        task = Task(fun.__name__, args)
+        Task.addTask(task)
+        res = await fun(*args)
+        Task.removeTask(task)
+        return res
     return func_wrapper
