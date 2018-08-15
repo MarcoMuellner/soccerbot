@@ -273,7 +273,7 @@ async def sendMatchEvent(channel: Channel, match: Match, event: MatchEventData):
     elif event.event == MatchEvents.redCard:
         content += f" **RED CARD**: {event.player} (**{event.team}**)"
     elif event.event == MatchEvents.substitution:
-        content += f" **SUBSTITUTION** **{event.team}**: **{event.player} IN**, ***{event.playerTo} OUT***"
+        content += f" **SUBSTITUTION** **{event.team}**:{event.player} **IN**, {event.playerTo} **OUT**"
     elif event.event == MatchEvents.missedPenalty:
         content += f" **PENALTY MISSED!** {event.player} has missed a penalty **({event.team})"
     else:
