@@ -182,6 +182,8 @@ class LiveMatch:
             val = ""
         content = f"{val}{event.minute}"
 
+        goalListing = ""
+
         if event.event == MatchEvents.kickoffFirstHalf:
             content += " **KICKOFF** The match is underway!"
         elif event.event == MatchEvents.kickoffSecondHalf:
@@ -193,7 +195,7 @@ class LiveMatch:
         elif event.event == MatchEvents.matchOver:
             content += "**FULL TIME**!"
         elif event.event == MatchEvents.goal:
-            goalString =content+ f" {event.player}"
+            goalListing = content+ f" {event.player}"
             content += f" **GOAL**! {event.player} scores for **{event.team}**"
         elif event.event == MatchEvents.yellowCard:
             content += f" **YELLOW CARD:** {event.player}(**{event.team}**)"
@@ -209,7 +211,7 @@ class LiveMatch:
             logger.error(f"Event {event.event} not handled. No message is send to server!")
             return
 
-        return title,content,goalString
+        return title,content,goalListing
 
     @staticmethod
     async def sendMatchEvent(channel: Channel, match: Match, event: MatchEventData):

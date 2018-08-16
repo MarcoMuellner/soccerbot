@@ -368,11 +368,13 @@ async def cdoScores(**kwargs):
                 id = matchID
 
             for event in newEvents:
-                title,_,goalString = LiveMatch.beautifyEvent(event,Match)
-                try:
-                    addInfo[title]+=goalString
-                except KeyError:
-                    addInfo[title] = goalString + "\n"
+                title,_,goalListing = await LiveMatch.beautifyEvent(event,Match)
+
+                if goalListing != "":
+                    try:
+                        addInfo[title]+=goalListing + "\n"
+                    except KeyError:
+                        addInfo[title] = goalListing + "\n"
 
         if addInfo == OrderedDict():
             return CDOInteralResponseData(f"No goals currently for {matchObj}")
@@ -380,6 +382,14 @@ async def cdoScores(**kwargs):
         resp = CDOInteralResponseData(f"Current scores for {matchObj}")
         resp.additionalInfo = addInfo
         return resp
+
+@markCommando("!currentGames")
+async def cdoCurrentGames(**kwargs):
+    """
+    Lists all current games within a matchday channel
+    :param kwargs:
+    :return:
+    """
 
 
 @markCommando("!test")
