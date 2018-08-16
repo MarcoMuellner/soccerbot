@@ -95,13 +95,16 @@ class Scheduler:
                     if data['start'] < currentTime and data['end'] > currentTime:
                         await asyncCreateChannel(data['channel_name'])
                         for i in data['upcomingMatches']:
-                            client.loop.create_task(i.runMatchThread())
+                            if not i.runningStarted:
+                                client.loop.create_task(i.runMatchThread())
                             data['currentMatches'].append(i)
                             data['upcomingMatches'].remove(i)
 
-                        asyncio.sleep(5)
+                        await asyncio.sleep(5)
 
                         for i in data['currentMatches']:
+                            if not i.runningStarted:
+                                client.loop.create_task(i.runMatchThread())
                             if i.passed:
                                 data['passedMatches'].append(i)
                                 data['currentMatches'].remove(i)
@@ -150,6 +153,29 @@ class Scheduler:
                 retDict[match.title] = match.goalList
 
         return retDict
+
+    @staticmethod
+    def startedMatches():
+        matchList = []
+        for competition, matchObject in Scheduler.matchDayObject.items():
+            for md, data in matchObject.items():
+                for match in data['currentMatches']:
+                    if match.started:
+                        matchList.append(match)
+
+        return matchList
+
+    @staticmethod
+    def upcomingMatches():
+        matchList = []
+        for competition, matchObject in Scheduler.matchDayObject.items():
+            for md, data in matchObject.items():
+                for match in data['upcomingMatches']:
+                    matchList.append(match)
+                for match in data['currentMatches']:
+                    if not match.started:
+                        matchList.append(match)
+        return matchList
 
 
 

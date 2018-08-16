@@ -34,6 +34,7 @@ class LiveMatch:
         awayTeam = match.away_team.clear_name
         self.title = f"**{homeTeam}** - : - **{awayTeam}**"
         self.goalList = []
+        self.runningStarted = False
 
     @task
     async def runMatchThread(self):
@@ -43,6 +44,12 @@ class LiveMatch:
         previously.
         :param match: Match object.  Will  post to discord channels if the object is a database.models.Match object
         """
+        if self.runningStarted:
+            logger.error(f"Match {self.title} already started!")
+            return
+        else:
+            logger.info(f"Starting match {self.title}")
+        self.runningStarted = True
         pastEvents = []
         eventList = []
         sleepTime = 600
@@ -64,6 +71,8 @@ class LiveMatch:
             self.running = True
 
             if not lineupsPosted and data["match"]["hasLineup"]:
+                logger.info(f"Posting lineups for {self.title}")
+                await asyncio.sleep(20)
                 try:
                     for channel in client.get_all_channels():
                         if channel.name == channelName:
@@ -71,7 +80,11 @@ class LiveMatch:
                             lineupsPosted = True
                             sleepTime = 20
                 except RuntimeError:
+                    lineupsPosted = False
                     logger.warning("Size of channels has changed")
+            else:
+                if not lineupsPosted:
+                    logger.info(f"Lineups not yet available for {self.title}")
 
             newEvents, pastEvents = LiveMatch.parseEvents(data["match"]["events"], pastEvents)
             eventList += newEvents
@@ -103,6 +116,8 @@ class LiveMatch:
             self.passed = True
         self.running = False
         self.started = False
+        self.runningStarted = False
+        logger.info(f"Ending match {self.title}")
 
     @staticmethod
     async def postLineups(channel: Channel, match: Match, data: Dict):
@@ -156,7 +171,7 @@ class LiveMatch:
         try:
             await client.send_message(channel, embed=embObj)
         except:
-            asyncio.sleep(10)
+            await asyncio.sleep(10)
             for i in client.get_all_channels():
                 if channel.name == i.name:
                     await client.send_message(channel, embed=embObj)
@@ -224,14 +239,14 @@ class LiveMatch:
         itself contains the minute, team and player(s) the event applies to.
         """
 
-        title,content,goalString = LiveMatch.beautifyEvent(event,match)
+        title,content,goalString = await LiveMatch.beautifyEvent(event,match)
         embObj = Embed(title=title, description=content)
         embObj.set_author(name=match.competition.clear_name)
 
         try:
             await client.send_message(channel, embed=embObj)
         except:
-            asyncio.sleep(10)
+            await asyncio.sleep(10)
             for i in client.get_all_channels():
                 if i.name == channel.name:
                     await client.send_message(i, embed=embObj)

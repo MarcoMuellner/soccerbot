@@ -152,7 +152,7 @@ async def cdoShowMonitoredCompetitions(**kwargs):
     for watchers in CompetitionWatcher.objects.all():
         compList.append(watchers.competition.clear_name)
         try:
-            addInfo[watchers.competition.association.clear_name].append(f"\nwatchers.competition.clear_name")
+            addInfo[watchers.competition.association.clear_name] +=(f"\n{watchers.competition.clear_name}")
         except KeyError:
             addInfo[watchers.competition.association.clear_name] = watchers.competition.clear_name
 
@@ -390,6 +390,41 @@ async def cdoCurrentGames(**kwargs):
     :param kwargs:
     :return:
     """
+    matchList = Scheduler.startedMatches()
+    addInfo = OrderedDict()
+    for match in matchList:
+        addInfo[match.title] = f"{match.match.date} (UTC)"
+
+    if addInfo == OrderedDict():
+        respStr = "No running matches"
+    else:
+        respStr = "Running matches:"
+
+    resp = CDOInteralResponseData(respStr)
+    resp.additionalInfo = addInfo
+    return resp
+
+@markCommando("!upcomingGames")
+async def cdoUpcomingGames(**kwargs):
+    """
+    Lists all upcoming games
+    :param kwargs:
+    :return:
+    """
+
+    matchList = Scheduler.upcomingMatches()
+    addInfo = OrderedDict()
+    for match in matchList:
+        addInfo[match.title] = f"{match.match.date} (UTC)"
+
+    if addInfo == OrderedDict():
+        respStr = "No upcoming matches"
+    else:
+        respStr = "Upcoming matches:"
+
+    resp = CDOInteralResponseData(respStr)
+    resp.additionalInfo = addInfo
+    return resp
 
 
 @markCommando("!test")
