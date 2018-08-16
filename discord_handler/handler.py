@@ -3,6 +3,8 @@ from datetime import timedelta, datetime
 import asyncio
 from discord import Server
 from pytz import UTC
+from typing import Tuple,Dict
+from collections import OrderedDict
 
 from database.models import CompetitionWatcher,  DiscordServer, Season, Competition
 from database.handler import updateOverlayData, updateMatches, getNextMatchDayObjects, getCurrentMatches
@@ -91,24 +93,22 @@ class Scheduler:
                 for md,data in matchObject.items():
                     currentTime = datetime.utcnow().replace(tzinfo=UTC)
                     if data['start'] < currentTime and data['end'] > currentTime:
-                        if not data['channel_created']:
-                            await asyncCreateChannel(data['channel_name'])
-                            for i in data['upcomingMatches']:
-                                client.loop.create_task(i.runMatchThread())
-                                data['currentMatches'].append(i)
-                                data['upcomingMatches'].remove(i)
+                        await asyncCreateChannel(data['channel_name'])
+                        for i in data['upcomingMatches']:
+                            client.loop.create_task(i.runMatchThread())
+                            data['currentMatches'].append(i)
+                            data['upcomingMatches'].remove(i)
 
-                            asyncio.sleep(5)
+                        asyncio.sleep(5)
 
-                            for i in data['currentMatches']:
-                                if i.passed:
-                                    data['passedMatches'].append(i)
-                                    data['currentMatches'].remove(i)
+                        for i in data['currentMatches']:
+                            if i.passed:
+                                data['passedMatches'].append(i)
+                                data['currentMatches'].remove(i)
 
-                                if not i.passed and not i.running:
-                                    data['upcomingMatches'].append(i)
-                                    data['currentMatches'].remove(i)
-
+                            if not i.passed and not i.running:
+                                data['upcomingMatches'].append(i)
+                                data['currentMatches'].remove(i)
                     elif data['end'] < currentTime:
                         await asyncDeleteChannel(data['channel_name'])
             Scheduler.matchSchedulerRunning.clear()
@@ -125,6 +125,32 @@ class Scheduler:
         Scheduler.matchSchedulerRunning.wait()
         #todo clear up channels
         del Scheduler.matchDayObject[competition.competition.clear_name]
+
+    @staticmethod
+    def findCompetitionMatchdayByChannel(channelName : str) -> Tuple[str,int]:
+        for competition, matchObject in Scheduler.matchDayObject.items():
+            for md, data in matchObject.items():
+                if channelName == data['channel_name']:
+                    return (competition,md)
+    @staticmethod
+    def getScores(competition : str, matchday : int) -> Dict:
+        if competition not in Scheduler.matchDayObject.keys():
+            logger.error(f"{competition} is not in matchday objects!")
+            return {}
+
+        if matchday not in Scheduler.matchDayObject[competition]:
+            logger.error(f"Matchday {matchday} is not in matchday objects")
+            return {}
+
+        matches = Scheduler.matchDayObject[competition][matchday]
+
+        retDict = OrderedDict()
+        for match in matches['currentMatches']:
+            if match.started:
+                retDict[match.title] = match.goalList
+
+        return retDict
+
 
 
 def calculateSleepTime(targetTime: datetime, nowTime: datetime = datetime.utcnow().replace(tzinfo=UTC)):

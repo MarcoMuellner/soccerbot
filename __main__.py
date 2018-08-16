@@ -12,7 +12,6 @@ from discord_handler.handler import removeOldChannels,Scheduler
 from discord_handler.cdos import cmdHandler
 from loghandler.loghandler import setup_logging
 from discord_handler.client import client
-from discord_handler import cdos
 
 
 setup_logging()

@@ -3,10 +3,13 @@ from typing import Dict, Union
 import logging
 from collections import OrderedDict
 from django.core.exceptions import ObjectDoesNotExist
+from json.decoder import JSONDecodeError
 
 from database.models import CompetitionWatcher, Competition, MatchEvents, MatchEventIcon
 from discord_handler.handler import client, watchCompetition,Scheduler
 from discord_handler.cdo_meta import markCommando, CDOInteralResponseData, cmdHandler, emojiList, DiscordCommando
+from discord_handler.liveMatch import LiveMatch
+from api.calls import getLiveMatches,makeMiddlewareCall,DataCalls,getTeamsSearchedByName
 
 from support.helper import Task
 
@@ -130,7 +133,7 @@ async def cdoRemoveCompetition(**kwargs):
         watcher = watcher.filter(competition__association=association)
 
     logger.info(f"Deleting {watcher}")
-    await Scheduler.removeCompetition(watcher)
+    await Scheduler.removeCompetition(watcher.first())
     watcher.delete()
     responseData.response = f"Removed {competition_string} from monitoring"
     return responseData
@@ -154,8 +157,8 @@ async def cdoShowMonitoredCompetitions(**kwargs):
             addInfo[watchers.competition.association.clear_name] = watchers.competition.clear_name
 
     def check(reaction, user):
-        if reaction.emoji in emojiList:
-            index = emojiList.index(reaction.emoji)
+        if reaction.emoji in emojiList():
+            index = emojiList().index(reaction.emoji)
             if index < len(compList):
                 kwargs['msg'].content = f"!removeCompetition {compList[index]}"
                 client.loop.create_task(cmdHandler(kwargs['msg']))
@@ -300,6 +303,83 @@ async def cdoShowRunningTasks(**kwargs):
         addInfo[f"{i.name}{args}"] = f"Started at {i.time}"
 
     return CDOInteralResponseData(responseString, addInfo)
+
+@markCommando("!scores")
+async def cdoScores(**kwargs):
+    """
+    Returns the scores for a given competition/matchday/team
+    :param kwargs:
+    :return:
+    """
+    data = kwargs['msg'].content.split(" ")
+    channel = kwargs['msg'].channel
+
+    if len(data) == 1:
+        if not "-matchday-" in channel.name:
+            return CDOInteralResponseData("!scores with no argument can only be called within matchday channels")
+
+        comp,md = Scheduler.findCompetitionMatchdayByChannel(channel.name)
+
+        matchList = Scheduler.getScores(comp,md)
+
+        resp = CDOInteralResponseData("Current scores:")
+        addInfo = OrderedDict()
+        for matchString,goalList in matchList.items():
+            addInfo[matchString] = ""
+            for goals in goalList:
+                addInfo[matchString] += goals+"\n"
+            if addInfo[matchString] == "":
+                del addInfo[matchString]
+
+        if addInfo == OrderedDict():
+            resp.response = "Currently no running matches"
+        resp.additionalInfo = addInfo
+        return resp
+    else:
+        searchString = kwargs['msg'].content.replace(data[0] + " ","")
+        query = Competition.objects.filter(clear_name = searchString)
+
+        if len(query) == 0:
+            teamList = getTeamsSearchedByName(searchString)
+            if len(teamList) == 0:
+                return CDOInteralResponseData(f"Can't find team {searchString}")
+            matchObj = teamList[0]['Name'][0]['Description']
+            matchList = getLiveMatches(teamID=int(teamList[0]["IdTeam"]))
+
+        else:
+            comp = query.first()
+            matchObj = comp.clear_name
+            matchList = getLiveMatches(competitionID=comp.id)
+
+        if len(matchList) == 0:
+            return CDOInteralResponseData(f"No current matches for {matchObj}")
+
+        addInfo = OrderedDict()
+        for matchID in matchList:
+            try:
+                data = makeMiddlewareCall(DataCalls.liveData + f"/{matchID}")
+            except JSONDecodeError:
+                logger.error(f"Failed to do a middleware call for {matchID}")
+                continue
+
+            newEvents, _ = LiveMatch.parseEvents(data["match"]["events"], [])
+
+            class Match:
+                id = matchID
+
+            for event in newEvents:
+                title,_,goalString = LiveMatch.beautifyEvent(event,Match)
+                try:
+                    addInfo[title]+=goalString
+                except KeyError:
+                    addInfo[title] = goalString + "\n"
+
+        if addInfo == OrderedDict():
+            return CDOInteralResponseData(f"No goals currently for {matchObj}")
+
+        resp = CDOInteralResponseData(f"Current scores for {matchObj}")
+        resp.additionalInfo = addInfo
+        return resp
 
 
 @markCommando("!test")

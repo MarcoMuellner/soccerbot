@@ -8,6 +8,7 @@ from pytz import utc,UTC
 from api.calls import getSpecificTeam,getAllFederations,getAllCountries,getAllCompetitions,getAllMatches,getAllSeasons
 from database.models import Federation,Competition,CompetitionWatcher,Season,Match
 from discord_handler.liveMatch import LiveMatch
+from discord_handler.client import toDiscordChannelName
 
 logger = logging.getLogger(__name__)
 
@@ -125,7 +126,7 @@ def compDict(competition : CompetitionWatcher) ->Dict[str,Dict]:
 
         matchDict[md]['start'] = (matchList.first().date - timedelta(hours=1)).replace(tzinfo=UTC)
         matchDict[md]['end'] = (matchList.last().date + timedelta(hours=3)).replace(tzinfo=UTC)
-        matchDict[md]['channel_name'] = f"{comp_name} Matchday {md}"
+        matchDict[md]['channel_name'] = toDiscordChannelName(f"{comp_name} Matchday {md}")
         matchDict[md]['channel_created'] = False
         matchDict[md]['passedMatches'] = [LiveMatch(obj) for obj in matchList.filter(date__lt=passedTime)]
         matchDict[md]['currentMatches'] = [LiveMatch(obj) for obj in matchList.filter(date__gt=passedTime)

@@ -29,6 +29,11 @@ class LiveMatch:
         self.match = match
         self.passed = False
         self.running = False
+        self.started = False
+        homeTeam = match.home_team.clear_name
+        awayTeam = match.away_team.clear_name
+        self.title = f"**{homeTeam}** - : - **{awayTeam}**"
+        self.goalList = []
 
     @task
     async def runMatchThread(self):
@@ -75,7 +80,9 @@ class LiveMatch:
                 try:
                     for channel in client.get_all_channels():
                         if channel.name == channelName:
-                            await LiveMatch.sendMatchEvent(channel, self.match, i)
+                            self.started = True
+                            self.title,goalString = await LiveMatch.sendMatchEvent(channel, self.match, i)
+                            self.goalList.append(goalString)
                             try:
                                 eventList.remove(i)
                             except ValueError:
@@ -95,6 +102,7 @@ class LiveMatch:
         if now < (self.match.date + timedelta(hours=3)).replace(tzinfo=UTC):
             self.passed = True
         self.running = False
+        self.started = False
 
     @staticmethod
     async def postLineups(channel: Channel, match: Match, data: Dict):
@@ -154,19 +162,10 @@ class LiveMatch:
                     await client.send_message(channel, embed=embObj)
 
     @staticmethod
-    async def sendMatchEvent(channel: Channel, match: Match, event: MatchEventData):
-        """
-        This function encapsulates the look and feel of the message that is sent when a matchEvent happens.
-        It will build the matchString, the embed object, etc. and than send it to the appropiate channel.
-        :param channel: The channel where we want to send things to
-        :param match: The match that this message applies to (Metadata!)
-        :param event: The actual event that happened. It consists of a MatchEvents enum and a DataDict, which in
-        itself contains the minute, team and player(s) the event applies to.
-        """
-
+    async def beautifyEvent(event,match):
         data = makeMiddlewareCall(DataCalls.liveData + f"/{match.id}")['match']
-        homeTeam = match.home_team.clear_name
-        awayTeam = match.away_team.clear_name
+        homeTeam = data['teamHomeName']
+        awayTeam = data['teamAwayName']
 
         if event.event == MatchEvents.goal:
             if event.team == homeTeam:
@@ -194,6 +193,7 @@ class LiveMatch:
         elif event.event == MatchEvents.matchOver:
             content += "**FULL TIME**!"
         elif event.event == MatchEvents.goal:
+            goalString =content+ f" {event.player}"
             content += f" **GOAL**! {event.player} scores for **{event.team}**"
         elif event.event == MatchEvents.yellowCard:
             content += f" **YELLOW CARD:** {event.player}(**{event.team}**)"
@@ -209,6 +209,20 @@ class LiveMatch:
             logger.error(f"Event {event.event} not handled. No message is send to server!")
             return
 
+        return title,content,goalString
+
+    @staticmethod
+    async def sendMatchEvent(channel: Channel, match: Match, event: MatchEventData):
+        """
+        This function encapsulates the look and feel of the message that is sent when a matchEvent happens.
+        It will build the matchString, the embed object, etc. and than send it to the appropiate channel.
+        :param channel: The channel where we want to send things to
+        :param match: The match that this message applies to (Metadata!)
+        :param event: The actual event that happened. It consists of a MatchEvents enum and a DataDict, which in
+        itself contains the minute, team and player(s) the event applies to.
+        """
+
+        title,content,goalString = LiveMatch.beautifyEvent(event,match)
         embObj = Embed(title=title, description=content)
         embObj.set_author(name=match.competition.clear_name)
 
@@ -219,6 +233,8 @@ class LiveMatch:
             for i in client.get_all_channels():
                 if i.name == channel.name:
                     await client.send_message(i, embed=embObj)
+
+        return title,goalString
 
     @staticmethod
     def parseEvents(data: list, pastEvents=list) -> Tuple[List[MatchEventData], List]:
