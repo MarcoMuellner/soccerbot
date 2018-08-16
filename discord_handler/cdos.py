@@ -5,7 +5,7 @@ from collections import OrderedDict
 from django.core.exceptions import ObjectDoesNotExist
 
 from database.models import CompetitionWatcher, Competition, MatchEvents, MatchEventIcon
-from discord_handler.handler import client, watchCompetition
+from discord_handler.handler import client, watchCompetition,Scheduler
 from discord_handler.cdo_meta import markCommando, CDOInteralResponseData, cmdHandler, emojiList, DiscordCommando
 
 from support.helper import Task
@@ -130,6 +130,7 @@ async def cdoRemoveCompetition(**kwargs):
         watcher = watcher.filter(competition__association=association)
 
     logger.info(f"Deleting {watcher}")
+    await Scheduler.removeCompetition(watcher)
     watcher.delete()
     responseData.response = f"Removed {competition_string} from monitoring"
     return responseData

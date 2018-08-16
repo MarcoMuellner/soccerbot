@@ -8,7 +8,7 @@ import sys
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
 # Ensure settings are read
 application = get_wsgi_application()
-from discord_handler.handler import runScheduler,runLiveThreader,removeOldChannels
+from discord_handler.handler import removeOldChannels,Scheduler
 from discord_handler.cdos import cmdHandler
 from loghandler.loghandler import setup_logging
 from discord_handler.client import client
@@ -22,8 +22,8 @@ logger = logging.getLogger(__name__)
 async def on_ready():
     logger.info(f"Logged in as {client.user.name} with id {client.user.id}")
     await removeOldChannels()
-    client.loop.create_task(runScheduler())
-    client.loop.create_task(runLiveThreader())
+    client.loop.create_task(Scheduler.maintananceScheduler())
+    client.loop.create_task(Scheduler.matchScheduler())
     logger.info("Update complete")
 
 

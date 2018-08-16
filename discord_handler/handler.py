@@ -6,10 +6,9 @@ from pytz import UTC
 
 from database.models import CompetitionWatcher,  DiscordServer, Season, Competition
 from database.handler import updateOverlayData, updateMatches, getNextMatchDayObjects, getCurrentMatches
-from database.handler import updateMatchesSingleCompetition, getAllSeasons, getAndSaveData
+from database.handler import updateMatchesSingleCompetition, getAllSeasons, getAndSaveData,compDict
 from support.helper import task
 from discord_handler.client import client,toDiscordChannelName
-from discord_handler.liveMatch import runMatchThread
 
 logger = logging.getLogger(__name__)
 
@@ -54,66 +53,78 @@ async def removeOldChannels():
 
 schedulerInitRunning = asyncio.Event(loop=client.loop)
 
+class Scheduler:
+    matchDayObject = {}
+    matchSchedulerRunning = asyncio.Event(loop=client.loop)
+    maintananceSynchronizer = asyncio.Event(loop=client.loop)
+    @staticmethod
+    @task
+    async def maintananceScheduler():
+        """
+        Starts the scheduler task, which will automatically create channels adnd update databases. Currently this is
+        always done at 24:00 UTC. Should be called via create_task!
+        """
+        await client.wait_until_ready()
+        while True:
+            # take synchronization object, during update no live thread should run!
+            Scheduler.maintananceSynchronizer.set()
+            targetTime = datetime.utcnow().replace(hour=0, minute=0, second=0) + timedelta(days=1)
+            logger.info("Maintaining data")
 
-@task
-async def runScheduler():
-    """
-    Starts the scheduler task, which will automatically create channels adnd update databases. Currently this is
-    always done at 24:00 UTC. Should be called via create_task!
-    """
-    await client.wait_until_ready()
-    matchDayList = getNextMatchDayObjects()
-    while True:
-        # take synchronization object, during update no live thread should run!
-        schedulerInitRunning.set()
-        targetTime = datetime.utcnow().replace(hour=0, minute=0, second=0) + timedelta(days=1)
-        logger.info("Initializing schedule for tomorrow")
+            # update competitions, seasons etc. Essentially the data that is always there
+            updateOverlayData()
+            # update all matches for the monitored competitions
+            updateMatches()
 
-        # update competitions, seasons etc. Essentially the data that is always there
-        updateOverlayData()
-        # update all matches for the monitored competitions
-        updateMatches()
+            Scheduler.maintananceSynchronizer.clear()
+            await asyncio.sleep(calculateSleepTime(targetTime))
 
-        # update schedulers that create and delete channels
-        client.loop.create_task(updateMatchScheduler())
-        schedulerInitRunning.clear()
+    @staticmethod
+    @task
+    async def matchScheduler():
+        await client.wait_until_ready()
+        Scheduler.matchDayObject = getNextMatchDayObjects()
+        while True:
+            Scheduler.matchSchedulerRunning.set()
+            Scheduler.maintananceSynchronizer.wait()
+            for competition,matchObject in Scheduler.matchDayObject.items():
+                for md,data in matchObject.items():
+                    currentTime = datetime.utcnow().replace(tzinfo=UTC)
+                    if data['start'] < currentTime and data['end'] > currentTime:
+                        if not data['channel_created']:
+                            await asyncCreateChannel(data['channel_name'])
+                            for i in data['upcomingMatches']:
+                                client.loop.create_task(i.runMatchThread())
+                                data['currentMatches'].append(i)
+                                data['upcomingMatches'].remove(i)
 
-        await asyncio.sleep(calculateSleepTime(targetTime))
+                            asyncio.sleep(5)
 
+                            for i in data['currentMatches']:
+                                if i.passed:
+                                    data['passedMatches'].append(i)
+                                    data['currentMatches'].remove(i)
 
-@task
-async def runLiveThreader():
-    """
-    Starts the LiveThreader task, that automatically posts updates from matches to its according matches.
-    :todo: remove matches from runningMatches
-    :return:
-    """
-    await client.wait_until_ready()
-    runningMatches = []
+                                if not i.passed and not i.running:
+                                    data['upcomingMatches'].append(i)
+                                    data['currentMatches'].remove(i)
 
-    while True:
-        schedulerInitRunning.wait()
+                    elif data['end'] < currentTime:
+                        await asyncDeleteChannel(data['channel_name'])
+            Scheduler.matchSchedulerRunning.clear()
+            await asyncio.sleep(60)
 
-        # Get all matches that are nearly upcoming or currently running
-        matchList = [i for i in getCurrentMatches() if i not in runningMatches]
-        logger.debug(f"Current matchlist: {matchList}")
-        for match in matchList:
-            logger.info(f"Starting match between {match.home_team.clear_name} and {match.away_team.clear_name}")
+    @staticmethod
+    def addCompetition(competition : CompetitionWatcher):
+        Scheduler.matchSchedulerRunning.wait()
+        Scheduler.matchDayObject[competition.competition.clear_name] = compDict(competition)
 
-            client.loop.create_task(runMatchThread(match))
-            runningMatches.append(match)
-        await asyncio.sleep(60)
-
-
-async def updateMatchScheduler():
-    """
-    Creates tasks that create and delete channels at specific times.
-    """
-    logger.info("Updating match schedule")
-    for i in getNextMatchDayObjects():
-        client.loop.create_task(asyncCreateChannel(calculateSleepTime(i.startTime), i.matchdayString))
-        client.loop.create_task(asyncDeleteChannel(calculateSleepTime(i.endTime), i.matchdayString))
-    logger.info("End update schedule")
+    @staticmethod
+    @task
+    async def removeCompetition(competition : CompetitionWatcher):
+        Scheduler.matchSchedulerRunning.wait()
+        #todo clear up channels
+        del Scheduler.matchDayObject[competition.competition.clear_name]
 
 
 def calculateSleepTime(targetTime: datetime, nowTime: datetime = datetime.utcnow().replace(tzinfo=UTC)):
@@ -123,25 +134,27 @@ def calculateSleepTime(targetTime: datetime, nowTime: datetime = datetime.utcnow
     return (targetTime.replace(tzinfo=UTC) - nowTime).total_seconds()
 
 
-async def asyncCreateChannel(sleepPeriod: float, channelName: str):
+async def asyncCreateChannel(channelName: str,sleepPeriod: float = None):
     """
     Async wrapper to create channel
     :param sleepPeriod: Period to wait before channel can be created
     :param channelName: Name of the channel that will be created
     """
     logger.info(f"Initializing create Channel task for {channelName} in {sleepPeriod}")
-    await asyncio.sleep(sleepPeriod)
+    if sleepPeriod != None:
+        await asyncio.sleep(sleepPeriod)
     await createChannel(list(client.servers)[0], channelName)
 
 
-async def asyncDeleteChannel(sleepPeriod: float, channelName: str):
+async def asyncDeleteChannel( channelName: str,sleepPeriod: float = None):
     """
     Async wrapper to delete channel
     :param sleepPeriod: Period to wait before channel can be deleted
     :param channelName: Name of the channel that will be deleted
     """
     logger.info(f"Initializing delete Channel task for {channelName} in {sleepPeriod}")
-    await asyncio.sleep(sleepPeriod)
+    if sleepPeriod != None:
+        await asyncio.sleep(sleepPeriod)
     await deleteChannel(list(client.servers)[0], channelName)
 
 @task
@@ -165,4 +178,4 @@ async def watchCompetition(competition: Competition, serverName: str):
     compWatcher = CompetitionWatcher(competition=competition,
                                      current_season=season, applicable_server=server, current_matchday=1)
     compWatcher.save()
-    client.loop.create_task(updateMatchScheduler())
+    Scheduler.addCompetition(compWatcher)
