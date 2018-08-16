@@ -62,6 +62,7 @@ async def runScheduler():
     always done at 24:00 UTC. Should be called via create_task!
     """
     await client.wait_until_ready()
+    matchDayList = getNextMatchDayObjects()
     while True:
         # take synchronization object, during update no live thread should run!
         schedulerInitRunning.set()

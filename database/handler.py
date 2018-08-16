@@ -118,19 +118,26 @@ def getNextMatchDayObjects() -> List[MatchDayObject]:
     It also creates Matchday objects for currently played games
     :return: List of Matchday Objects containing the next relevant Matchday objects
     """
-    today = datetime.utcnow()
-    tomorrow = today + timedelta(days=1)
-    retList = []
-    for i in CompetitionWatcher.objects.all():
-        query = Match.objects.filter(competition=i.competition).filter(date__lte=utc.localize(tomorrow))\
-            .filter(date__gte=utc.localize(today)).filter(~Q(match_status=MatchStatus.Live.value)).order_by('date')
+    matchDict = {}
+    for competition in CompetitionWatcher.objects.all():
+        comp_name = competition.competition.clear_name
+        matchDict[comp_name] = {}
+        matchDayList = competition.current_season.match_set.values_list('matchday',flat=True).distinct()
+        for md in matchDayList:
+            matchDict[comp_name][md] = {}
+            matchList = Match.objects.filter(matchday=md).filter(competition=competition.competition)\
+                .filter(season=competition.current_season).order_by('date')
+            passedTime = datetime.utcnow() - timedelta(hours=3)
+            upcomingTime = datetime.utcnow() + timedelta(hours=3)
 
-        query = Match.objects.filter(competition=i.competition).filter(match_status=MatchStatus.Live.value) | query
-
-        if len(query) != 0:
-            retList.append(createMatchDayObject(query,i))
-
-    return retList
+            matchDict[comp_name][md]['start'] = matchList.first().date - timedelta(hours=1)
+            matchDict[comp_name][md]['end'] = matchList.last().date + timedelta(hours = 3)
+            matchDict[comp_name][md]['channel_name'] = f"{comp_name} Matchday {md}"
+            matchDict[comp_name][md]['passedMatches'] = [list(matchList.filter(date__lt=passedTime))]
+            matchDict[comp_name][md]['currentMatches'] = [list(matchList.filter(date__gt=passedTime)
+                                                               .filter(date__lt=upcomingTime))]
+            matchDict[comp_name][md]['upcomingMatches'] = list(matchList.filter(date__gt=upcomingTime))
+    return matchDict
 
 def getCurrentMatches() -> List[Match]:
     """
