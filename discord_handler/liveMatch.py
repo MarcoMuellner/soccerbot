@@ -43,6 +43,8 @@ class LiveMatch:
         self.title = f"**{homeTeam}** - : - **{awayTeam}**"
         self.goalList = []
         self.runningStarted = False
+        self.lock = asyncio.Event(loop=client.loop)
+        self.lock.set()
 
     @staticmethod
     def styleSheetEvents(key: str = None) -> Union[Dict, str]:
@@ -112,6 +114,9 @@ class LiveMatch:
             else:
                 self.started = False
 
+            if not self.lock.is_set():
+                self.lock.set()
+
             if not lineupsPosted and data["match"]["hasLineup"]:
                 logger.info(f"Posting lineups for {self.title}")
                 await asyncio.sleep(5)
@@ -151,6 +156,9 @@ class LiveMatch:
                 logger.info(f"Match {match} finished!")
                 break
 
+            if self.lock.is_set():
+                self.lock.clear()
+
             await asyncio.sleep(sleepTime)
 
         now = datetime.utcnow().replace(tzinfo=UTC)
@@ -159,6 +167,7 @@ class LiveMatch:
         self.running = False
         self.started = False
         self.runningStarted = False
+        self.lock.set()
         logger.info(f"Ending match {self.title}")
 
     @staticmethod

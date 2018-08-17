@@ -191,7 +191,7 @@ class GrpGeneral:
     name = "General"
 
 
-def markCommando(cmd: str, group=GrpGeneral, userlevel=None):
+def markCommando(cmd: str, group=GrpGeneral, defaultUserLevel=None):
     def internal_func_wrapper(func: callable):
         async def func_wrapper(**kwargs):
             responseDataInternal = await func(**kwargs)
@@ -204,7 +204,7 @@ def markCommando(cmd: str, group=GrpGeneral, userlevel=None):
                 await client.wait_for_reaction(message=msg, check=responseDataInternal.reactionFunc)
             return
 
-        DiscordCommando.addCommando(DiscordCommando(cmd, func_wrapper, func.__doc__, group, userlevel))
+        DiscordCommando.addCommando(DiscordCommando(cmd, func_wrapper, func.__doc__, group, defaultUserLevel))
         return func_wrapper
 
     return internal_func_wrapper

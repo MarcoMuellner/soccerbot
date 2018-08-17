@@ -7,6 +7,7 @@ from json.decoder import JSONDecodeError
 import subprocess
 import sys
 import os
+import re
 
 from database.models import CompetitionWatcher, Competition, MatchEvents, MatchEventIcon,Settings,DiscordUsers
 from discord_handler.handler import client, watchCompetition,Scheduler
@@ -61,7 +62,7 @@ def checkCompetitionParameter(cmdString: str) -> Union[Dict, str]:
 
 ################################### Commandos ########################################
 
-@markCommando("addCompetition",userlevel=3)
+@markCommando("addCompetition", defaultUserLevel=3)
 async def cdoAddCompetition(**kwargs):
     """
     Adds a competition to be watched by soccerbot. It will be regularly checked for new games
@@ -114,7 +115,7 @@ async def cdoAddCompetition(**kwargs):
     return responseData
 
 
-@markCommando("removeCompetition",userlevel=3)
+@markCommando("removeCompetition", defaultUserLevel=3)
 async def cdoRemoveCompetition(**kwargs):
     """
     Removes a competition from the watchlist.
@@ -257,12 +258,16 @@ async def cdoGetHelp(**kwargs):
             doc = i.docstring
             doc = re.sub(':.+\n', "", doc)
             doc = re.sub('\n+', "", doc)
-            addInfo[prefix + i.commando] = doc
+            if authorUserLevel >= 5:
+                level = f" lvl:{i.userLevel}"
+            else:
+                level = ""
+            addInfo[prefix + i.commando + level] = doc
 
     return CDOInteralResponseData(retString, addInfo)
 
 
-@markCommando("changeEventIcons",userlevel=4)
+@markCommando("changeEventIcons", defaultUserLevel=4)
 async def cdoChangeIcons(**kwargs):
     """
     Allows for changing of icons for match Events. The command with no parameters will return all events,
@@ -306,7 +311,7 @@ async def cdoChangeIcons(**kwargs):
     return CDOInteralResponseData()
 
 
-@markCommando("showRunningTasks",userlevel=6)
+@markCommando("showRunningTasks", defaultUserLevel=6)
 async def cdoShowRunningTasks(**kwargs):
     """
     Shows all currently running tasks on the server
@@ -345,12 +350,17 @@ async def cdoScores(**kwargs):
         for matchString,goalList in matchList.items():
             addInfo[matchString] = ""
             for goals in goalList:
-                addInfo[matchString] += goals+"\n"
+                if goals != '':
+                    addInfo[matchString] += goals+"\n"
             if addInfo[matchString] == "":
                 del addInfo[matchString]
+            if addInfo == OrderedDict():
+                addInfo[matchString] = "No goals currently."
 
         if addInfo == OrderedDict():
             resp.response = "Currently no running matches"
+        else:
+            resp.response = "Current scores:"
         resp.additionalInfo = addInfo
         return resp
     else:
@@ -444,7 +454,7 @@ async def cdoUpcomingGames(**kwargs):
     resp.additionalInfo = addInfo
     return resp
 
-@markCommando("setStartCommando",userlevel=5)
+@markCommando("setStartCommando", defaultUserLevel=5)
 async def cdoSetStartCDO(**kwargs):
     """
     Sets a commandline argument to start the bot.
@@ -461,7 +471,7 @@ async def cdoSetStartCDO(**kwargs):
     obj.save()
     return CDOInteralResponseData(f"Setting startup command to {commandString}")
 
-@markCommando("updateBot",userlevel=5)
+@markCommando("updateBot", defaultUserLevel=5)
 async def cdoUpdateBot(**kwargs):
     """
     Updates bot
@@ -472,7 +482,7 @@ async def cdoUpdateBot(**kwargs):
     p.wait()
     return CDOInteralResponseData(f"Updated Bot. Please restart to apply changes")
 
-@markCommando("stopBot",userlevel=5)
+@markCommando("stopBot", defaultUserLevel=5)
 async def cdoStopBot(**kwargs):
     """
     Stops the execution of the bot
@@ -493,7 +503,7 @@ async def cdoStopBot(**kwargs):
     responseData.reactionFunc = check
     return responseData
 
-@markCommando("restartBot",userlevel=5)
+@markCommando("restartBot", defaultUserLevel=5)
 async def cdoRestartBot(**kwargs):
     """
     Restart Kommando
@@ -511,7 +521,7 @@ async def cdoRestartBot(**kwargs):
         return CDOInteralResponseData("You need to set the startup Command with !setStartCommando before this"
                                       "commando is available")
 
-@markCommando("setPrefix",userlevel=5)
+@markCommando("setPrefix", defaultUserLevel=5)
 async def cdoSetPrefix(**kwargs):
     """
     Sets the prefix for the commands
@@ -532,16 +542,75 @@ async def cdoSetPrefix(**kwargs):
     prefix.save()
     return CDOInteralResponseData(f"New prefix is {prefix.value}")
 
-@markCommando("setUserPermissions",userlevel=5)
+@markCommando("setUserPermissions", defaultUserLevel=5)
 async def cdoSetUserPermissions(**kwargs):
     """
     Sets the userlevel for the mentioned users.
     :param kwargs:
     :return:
     """
-    pass
+    data = list(kwargs['msg'].content.split(" "))
 
-@markCommando("test",userlevel=6)
+    if len(kwargs['msg'].mentions) == 0:
+        return CDOInteralResponseData("You need to mention a user to set its permission levels")
+
+    for i in data:
+        if i.startswith("<@!"):
+            del data[data.index(i)]
+
+    if len(data) != 2:
+        return CDOInteralResponseData("Wrong number of parameters. Needs !setUserPermissions *mentions* userLevel")
+
+    try:
+        userLevel = int(data[1])
+    except ValueError:
+        return CDOInteralResponseData("Userlevel needs to be a number between 0 and 5")
+
+    if userLevel > 5 or userLevel < 0:
+        return CDOInteralResponseData("Only user levels from 0 to 5 are available")
+
+    retString = ""
+    for user in kwargs['msg'].mentions:
+        DiscordUsers(id=user.id,name=user.name,userLevel=userLevel).save()
+        retString += f"Setting {user.name} with id {user.id} to user level {userLevel}\n"
+
+    return CDOInteralResponseData(retString)
+
+@markCommando("getUserPermissions",defaultUserLevel=5)
+async def cdoGetUserPermissions(**kwargs):
+    """
+    Gets the userlevel of a mentioned user
+    :param kwargs:
+    :return:
+    """
+
+    data = list(kwargs['msg'].content.split(" "))
+
+    if len(kwargs['msg'].mentions) == 0:
+        return CDOInteralResponseData("You need to mention a user to set its permission levels")
+
+    for i in data:
+        if i.startswith("<@!"):
+            del data[data.index(i)]
+
+    if len(data) != 1:
+        return CDOInteralResponseData("Wrong number of parameters. Needs !getUserPermissions *mentions* ")
+
+    addInfo = OrderedDict()
+    for user in kwargs['msg'].mentions:
+        try:
+            user = DiscordUsers.objects.get(id=user.id)
+            addInfo[user.name] = f"User level: {user.userLevel}"
+        except ObjectDoesNotExist:
+            addInfo[user.name] = f"User level: 0"
+
+    retObj = CDOInteralResponseData("UserLevels:")
+    retObj.additionalInfo = addInfo
+    return retObj
+
+
+
+@markCommando("test", defaultUserLevel=6)
 async def cdoTest(**kwargs):
     """
     Test Kommando
