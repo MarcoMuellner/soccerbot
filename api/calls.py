@@ -2,6 +2,7 @@ import requests
 import json
 from typing import Dict, List, Callable, Union
 from dateutil import parser
+from pytz import utc
 
 from database.models import Federation,Competition,Association,Match,Season,Team
 
@@ -19,6 +20,8 @@ class ApiCalls:
     specificTeam = 'teams'
     playerInfo = 'players'
     countries = 'countries'
+    live = "live/football"
+    teamSearch = "teams/search"
 
 
 class DataCalls:
@@ -56,7 +59,6 @@ def makeAPICall(keyword: str, payload: Dict = None) -> Union[List, Dict]:
         return json.loads(req.content.decode())['Results']
     except (KeyError, TypeError) as e:
         return json.loads(req.content.decode())
-
 
 def makeMiddlewareCall(keyword: str, payload: Dict = None) -> Dict:
     """
@@ -294,3 +296,26 @@ def getSpecificTeam(teamID: int) -> Team:
         clear_name=apiResults['Name'][0]['Description'],
         short_name=apiResults['ShortClubName']
     )
+
+def getLiveMatches(competitionID : int = None, teamID : int = None) -> List[int]:
+    """
+    Returns all match ids for a given competition that is currently running.
+    :param competitionID: Competition id
+    :return:
+    """
+    payload = {}
+    if competitionID != None:
+        payload["idCompetition"] = competitionID
+    if teamID != None:
+        payload["idTeam"] = teamID
+
+    reqDict = makeAPICall(ApiCalls.live,payload=payload)
+    resultList = []
+    for i in reqDict:
+        resultList.append(int(i['IdMatch']))
+    return resultList
+
+def getTeamsSearchedByName(name : str) -> List:
+    payload = {"name":name}
+    reqDict = makeAPICall(ApiCalls.teamSearch,payload=payload)
+    return reqDict

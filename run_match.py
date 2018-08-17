@@ -11,7 +11,7 @@ from datetime import timedelta
 
 from database.handler import MatchStatus
 
-today = datetime.datetime.now().today()
+today = datetime.datetime.utcnow().today()
 tomorrow = today + timedelta(days=1)
 
 print(Match.objects.filter(date__lte=tomorrow).filter(date__gte=today).filter(competition_id=2000001041))

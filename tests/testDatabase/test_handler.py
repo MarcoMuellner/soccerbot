@@ -76,7 +76,7 @@ def testGetNextMatchDayObjects(preUpdate):
                                          current_season=season, applicable_server=server,
                                          current_matchday=1)
         compWatcher.save()
-        today = datetime.datetime.now().today()+timedelta(hours=5)
+        today = datetime.utcnow()+timedelta(hours=5)
 
         for i in Match.objects.all():
             i.date = today

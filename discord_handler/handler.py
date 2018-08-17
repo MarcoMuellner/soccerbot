@@ -1,39 +1,19 @@
 import logging
-from datetime import timedelta, timezone, datetime
+from datetime import timedelta, datetime
 import asyncio
-from discord import Server, Client, Channel, Embed
-from typing import Union, Tuple, List
-from django.core.exceptions import ObjectDoesNotExist
+from discord import Server
+from pytz import UTC
+from typing import Tuple,Dict
+from collections import OrderedDict
 
-from database.models import CompetitionWatcher,Match,DiscordServer, Season, Competition,MatchEvents, MatchEventIcon
+from database.models import CompetitionWatcher,  DiscordServer, Season, Competition
 from database.handler import updateOverlayData, updateMatches, getNextMatchDayObjects, getCurrentMatches
-from api.calls import makeMiddlewareCall, DataCalls
-from database.handler import updateMatchesSingleCompetition, getAllSeasons, getAndSaveData
-
-client = Client()
+from database.handler import updateMatchesSingleCompetition, getAllSeasons, getAndSaveData,compDict
+from support.helper import task
+from discord_handler.client import client,toDiscordChannelName
 
 logger = logging.getLogger(__name__)
 
-
-class MatchEventData:
-    def __init__(self, event: MatchEvents , minute: str, team: str, player: str, playerTo : str):
-        self.event = event
-        self.minute = minute
-        self.team = team
-        self.player = player
-        self.playerTo = playerTo
-
-
-def toDiscordChannelName(name: str) -> str:
-    """
-    Converts a string to a discord channel like name -> all lowercase and no spaces
-    :param name:
-    :return:
-    """
-    if name == None:
-        return None
-    return name.lower().replace(" ", "-")
-    pass
 
 async def createChannel(server: Server, channelName: str):
     """
@@ -61,240 +41,175 @@ async def deleteChannel(server: Server, channelName: str):
             await client.delete_channel(i)
             break
 
+
+async def removeOldChannels():
+    deleteChannelList = []
+    for i in client.get_all_channels():
+        if "-matchday-" in i.name:
+            logger.info("Deleting old channel {i.name}")
+            deleteChannelList.append((i.server, i.name))
+
+    for i in deleteChannelList:
+        await deleteChannel(i[0], i[1])
+
+
 schedulerInitRunning = asyncio.Event(loop=client.loop)
 
+class Scheduler:
+    matchDayObject = {}
+    matchSchedulerRunning = asyncio.Event(loop=client.loop)
+    maintananceSynchronizer = asyncio.Event(loop=client.loop)
+    @staticmethod
+    @task
+    async def maintananceScheduler():
+        """
+        Starts the scheduler task, which will automatically create channels adnd update databases. Currently this is
+        always done at 24:00 UTC. Should be called via create_task!
+        """
+        await client.wait_until_ready()
+        while True:
+            # take synchronization object, during update no live thread should run!
+            Scheduler.maintananceSynchronizer.set()
+            targetTime = datetime.utcnow().replace(hour=0, minute=0, second=0) + timedelta(days=1)
+            logger.info("Maintaining data")
 
-async def runScheduler():
-    """
-    Starts the scheduler task, which will automatically create channels adnd update databases. Currently this is
-    always done at 24:00 UTC. Should be called via create_task!
-    """
-    await client.wait_until_ready()
-    while True:
-        # take synchronization object, during update no live thread should run!
-        schedulerInitRunning.set()
-        targetTime = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0) + timedelta(days=1)
-        logger.info("Initializing schedule for tomorrow")
+            # update competitions, seasons etc. Essentially the data that is always there
+            updateOverlayData()
+            # update all matches for the monitored competitions
+            updateMatches()
 
-        # update competitions, seasons etc. Essentially the data that is always there
-        updateOverlayData()
-        # update all matches for the monitored competitions
-        updateMatches()
+            Scheduler.maintananceSynchronizer.clear()
+            await asyncio.sleep(calculateSleepTime(targetTime))
 
-        # update schedulers that create and delete channels
-        client.loop.create_task(updateMatchScheduler())
-        schedulerInitRunning.clear()
+    @staticmethod
+    @task
+    async def matchScheduler():
+        await client.wait_until_ready()
+        Scheduler.matchDayObject = getNextMatchDayObjects()
+        while True:
+            Scheduler.matchSchedulerRunning.set()
+            Scheduler.maintananceSynchronizer.wait()
+            for competition,matchObject in Scheduler.matchDayObject.items():
+                for md,data in matchObject.items():
+                    currentTime = datetime.utcnow().replace(tzinfo=UTC)
+                    if data['start'] < currentTime and data['end'] > currentTime:
+                        await asyncCreateChannel(data['channel_name'])
+                        for i in data['upcomingMatches']:
+                            if not i.runningStarted:
+                                client.loop.create_task(i.runMatchThread())
+                            data['currentMatches'].append(i)
+                            data['upcomingMatches'].remove(i)
 
-        await asyncio.sleep(calculateSleepTime(targetTime))
+                        await asyncio.sleep(5)
+
+                        for i in data['currentMatches']:
+                            if not i.runningStarted:
+                                client.loop.create_task(i.runMatchThread())
+                            if i.passed:
+                                data['passedMatches'].append(i)
+                                data['currentMatches'].remove(i)
+
+                            if not i.passed and not i.running:
+                                data['upcomingMatches'].append(i)
+                                data['currentMatches'].remove(i)
+                    elif data['end'] < currentTime:
+                        await asyncDeleteChannel(data['channel_name'])
+            Scheduler.matchSchedulerRunning.clear()
+            await asyncio.sleep(60)
+
+    @staticmethod
+    def addCompetition(competition : CompetitionWatcher):
+        Scheduler.matchSchedulerRunning.wait()
+        Scheduler.matchDayObject[competition.competition.clear_name] = compDict(competition)
+
+    @staticmethod
+    @task
+    async def removeCompetition(competition : CompetitionWatcher):
+        Scheduler.matchSchedulerRunning.wait()
+        #todo clear up channels
+        del Scheduler.matchDayObject[competition.competition.clear_name]
+
+    @staticmethod
+    def findCompetitionMatchdayByChannel(channelName : str) -> Tuple[str,int]:
+        for competition, matchObject in Scheduler.matchDayObject.items():
+            for md, data in matchObject.items():
+                if channelName == data['channel_name']:
+                    return (competition,md)
+    @staticmethod
+    def getScores(competition : str, matchday : int) -> Dict:
+        if competition not in Scheduler.matchDayObject.keys():
+            logger.error(f"{competition} is not in matchday objects!")
+            return {}
+
+        if matchday not in Scheduler.matchDayObject[competition]:
+            logger.error(f"Matchday {matchday} is not in matchday objects")
+            return {}
+
+        matches = Scheduler.matchDayObject[competition][matchday]
+
+        retDict = OrderedDict()
+        for match in matches['currentMatches']:
+            if match.started:
+                retDict[match.title] = match.goalList
+
+        return retDict
+
+    @staticmethod
+    def startedMatches():
+        matchList = []
+        for competition, matchObject in Scheduler.matchDayObject.items():
+            for md, data in matchObject.items():
+                for match in data['currentMatches']:
+                    if match.started:
+                        matchList.append(match)
+
+        return matchList
+
+    @staticmethod
+    def upcomingMatches():
+        matchList = []
+        for competition, matchObject in Scheduler.matchDayObject.items():
+            for md, data in matchObject.items():
+                for match in data['upcomingMatches']:
+                    matchList.append(match)
+                for match in data['currentMatches']:
+                    if not match.started:
+                        matchList.append(match)
+        return matchList
 
 
-async def runLiveThreader():
-    """
-    Starts the LiveThreader task, that automatically posts updates from matches to its according matches.
-    :todo: remove matches from runningMatches
-    :return:
-    """
-    await client.wait_until_ready()
-    runningMatches = []
 
-    while True:
-        schedulerInitRunning.wait()
-
-        # Get all matches that are nearly upcoming or currently running
-        matchList = [i for i in getCurrentMatches() if i not in runningMatches]
-        for match in matchList:
-            logger.info(f"Starting match between {match.home_team.clear_name} and {match.away_team.clear_name}")
-
-            client.loop.create_task(runMatchThread(match))
-            runningMatches.append(match)
-        await asyncio.sleep(60)
-
-
-async def updateMatchScheduler():
-    """
-    Creates tasks that create and delete channels at specific times.
-    """
-    logger.info("Updating match schedule")
-    for i in getNextMatchDayObjects():
-        client.loop.create_task(asyncCreateChannel(calculateSleepTime(i.startTime), i.matchdayString))
-        client.loop.create_task(asyncDeleteChannel(calculateSleepTime(i.endTime), i.matchdayString))
-    logger.info("End update schedule")
-
-
-def calculateSleepTime(targetTime: datetime, nowTime: datetime = datetime.now(timezone.utc)):
+def calculateSleepTime(targetTime: datetime, nowTime: datetime = datetime.utcnow().replace(tzinfo=UTC)):
     """
     Calculates time between targetTime and nowTime in seconds
     """
-    return (targetTime - nowTime).total_seconds()
+    return (targetTime.replace(tzinfo=UTC) - nowTime).total_seconds()
 
 
-async def asyncCreateChannel(sleepPeriod: float, channelName: str):
+async def asyncCreateChannel(channelName: str,sleepPeriod: float = None):
     """
     Async wrapper to create channel
     :param sleepPeriod: Period to wait before channel can be created
     :param channelName: Name of the channel that will be created
     """
     logger.info(f"Initializing create Channel task for {channelName} in {sleepPeriod}")
-    await asyncio.sleep(sleepPeriod)
+    if sleepPeriod != None:
+        await asyncio.sleep(sleepPeriod)
     await createChannel(list(client.servers)[0], channelName)
 
 
-async def asyncDeleteChannel(sleepPeriod: float, channelName: str):
+async def asyncDeleteChannel( channelName: str,sleepPeriod: float = None):
     """
     Async wrapper to delete channel
     :param sleepPeriod: Period to wait before channel can be deleted
     :param channelName: Name of the channel that will be deleted
     """
     logger.info(f"Initializing delete Channel task for {channelName} in {sleepPeriod}")
-    await asyncio.sleep(sleepPeriod)
+    if sleepPeriod != None:
+        await asyncio.sleep(sleepPeriod)
     await deleteChannel(list(client.servers)[0], channelName)
 
-async def sendMatchEvent(channel: Channel, match: Match, event: MatchEventData):
-    """
-    This function encapsulates the look and feel of the message that is sent when a matchEvent happens.
-    It will build the matchString, the embed object, etc. and than send it to the appropiate channel.
-    :param channel: The channel where we want to send things to
-    :param match: The match that this message applies to (Metadata!)
-    :param event: The actual event that happened. It consists of a MatchEvents enum and a DataDict, which in
-    itself contains the minute, team and player(s) the event applies to.
-    """
-
-    data = makeMiddlewareCall(DataCalls.liveData + f"/{match.id}")['match']
-    homeTeam = match.home_team.clear_name
-    awayTeam = match.away_team.clear_name
-
-    if event.event == MatchEvents.goal:
-        if event.team == homeTeam:
-            goalString = f"[{data['scoreHome']}] : {data['scoreAway']}"
-        else:
-            goalString = f"{data['scoreHome']} : [{data['scoreAway']}]"
-    else:
-        goalString = f"{data['scoreHome']} : {data['scoreAway']}"
-
-    title = f"**{homeTeam}** {goalString} **{awayTeam}**"
-    try:
-        val = MatchEventIcon.objects.get(event=event.event.value)
-    except ObjectDoesNotExist:
-        val = ""
-    content = f"{val}{event.minute}"
-
-    if event.event == MatchEvents.kickoffFirstHalf:
-        content += " **KICKOFF** The match is underway!"
-    elif event.event == MatchEvents.kickoffSecondHalf:
-        content += " **KICKOFF** Second Half!"
-    elif event.event == MatchEvents.firstHalfEnd:
-        content += " **HALF TIME!**"
-    elif event.event == MatchEvents.secondHalfEnd:
-        content += " Second half has ended."
-    elif event.event == MatchEvents.matchOver:
-        content += "**FULL TIME**!"
-    elif event.event == MatchEvents.goal:
-        content += f" **GOAL**! {event.player} scores for **{event.team}**"
-    elif event.event == MatchEvents.yellowCard:
-        content += f" **YELLOW CARD:** {event.player}(**{event.team}**)"
-    elif event.event == MatchEvents.yellowRedCard:
-        content += f" **SECOND YELLOW CARD**: {event.player}(**{event.team}**)"
-    elif event.event == MatchEvents.redCard:
-        content += f" **RED CARD**: {event.player} (**{event.team}**)"
-    elif event.event == MatchEvents.substitution:
-        content += f" **SUBSTITUTION** **{event.team}**:{event.player} **IN**, {event.playerTo} **OUT**"
-    elif event.event == MatchEvents.missedPenalty:
-        content += f" **PENALTY MISSED!** {event.player} has missed a penalty **({event.team})"
-    else:
-        logger.error(f"Event {event.event} not handled. No message is send to server!")
-        return
-
-
-    embObj = Embed(title=title,description=content)
-    embObj.set_author(name=match.competition.clear_name)
-
-    await client.send_message(channel,embed=embObj)
-
-
-async def runMatchThread(match: Union[str, Match]):
-    """
-    Start a match threader for a given match. Will read the live data from the middleWare API (data.fifa.com) every
-    20 seconds and post the events to the channel that corresponds to the match. This channel has to be created
-    previously.
-    :param match: Match object.  Will  post to discord channels if the object is a database.models.Match object
-    """
-    pastEvents = []
-    eventList = []
-
-    if isinstance(match, Match):
-        matchid = match.id
-        channelName = toDiscordChannelName(f"{match.competition.clear_name} Matchday {match.matchday}")
-    else:
-        raise ValueError("Match needs to be Match instance")
-    while True:
-        data = makeMiddlewareCall(DataCalls.liveData + f"/{matchid}")
-
-        newEvents, pastEvents = parseEvents(data["match"]["events"], pastEvents)
-        eventList += newEvents
-
-        for i in eventList:
-            for channel in client.get_all_channels():
-                if channel.name == channelName:
-                    await sendMatchEvent(channel, match, i)
-                    try:
-                        eventList.remove(i)
-                    except ValueError:
-                        pass
-                    logger.info(f"Posting event: {i}")
-
-        if data["match"]["isFinished"]:
-            logger.info(f"Match {match} finished!")
-            break
-
-        await asyncio.sleep(20)
-
-
-def parseEvents(data: list, pastEvents=list) -> Tuple[List[MatchEventData], List]:
-    """
-    Parses the event list from the middleware api. The code below should be self explanatory, every eventCode
-    represents a certain event.
-    :param data: data that is to be parsed
-    :param pastEvents: all events that already happened
-    :return: Returns two lists: the events that are new, as well as a full list of all events that already happened
-    including the new ones.
-    """
-    retEvents = []
-    if data != pastEvents:
-        diff = [i for i in data if i not in pastEvents]
-        for event in reversed(diff):
-            eventData = MatchEventData(event=MatchEvents.none,
-                                       minute=event['minute'],
-                                       team=event['teamName'],
-                                       player=event['playerName'],
-                                       playerTo = event['playerToName'],
-                                       )
-            if event['eventCode'] == 3:  # Goal!
-                eventData.event = MatchEvents.goal
-            elif event['eventCode'] == 4:  # Substitution!
-                eventData.event = MatchEvents.substitution
-            elif event['eventCode'] == 1:
-                ev = MatchEvents.yellowCard if event['eventDescriptionShort'] == "Y" else MatchEvents.redCard
-                eventData.event = ev
-            elif event['eventCode'] == 2:
-                eventData.event = MatchEvents.yellowRedCard
-            elif event['eventCode'] == 5:
-                eventData.event = MatchEvents.missedPenalty
-            elif event['eventCode'] == 14:
-                ev = MatchEvents.firstHalfEnd if event['phaseDescriptionShort'] == "1H" else MatchEvents.secondHalfEnd
-                eventData.event = ev
-            elif event['eventCode'] == 13:
-                ev = MatchEvents.kickoffFirstHalf if event[
-                                                         'phaseDescriptionShort'] == "1H" else MatchEvents.kickoffSecondHalf
-                eventData.event = ev
-            else:
-                logger.error(f"EventId {event['eventCode']} with descr {event['eventDescription']} not handled!")
-                logger.error(f"TeamName: {event['teamName']}")
-                continue
-            retEvents.append(eventData)
-        pastEvents = data
-    return retEvents, pastEvents
-
-
+@task
 async def watchCompetition(competition: Competition, serverName: str):
     """
     Adds a compeitition to be monitored. Also updates matches and competitions accordingly.
@@ -303,11 +218,10 @@ async def watchCompetition(competition: Competition, serverName: str):
     """
     logger.info(f"Start watching competition {competition} on {serverName}")
 
-    season = None
-    while season == None:
+    season = Season.objects.filter(competition=competition).order_by('start_date').last()
+    if season == None:
+        getAndSaveData(getAllSeasons, idCompetitions=competition.id)
         season = Season.objects.filter(competition=competition).order_by('start_date').last()
-        if season == None:
-            getAndSaveData(getAllSeasons, idCompetitions=competition.id)
     server = DiscordServer(name=serverName)
     server.save()
 
@@ -316,4 +230,4 @@ async def watchCompetition(competition: Competition, serverName: str):
     compWatcher = CompetitionWatcher(competition=competition,
                                      current_season=season, applicable_server=server, current_matchday=1)
     compWatcher.save()
-    client.loop.create_task(updateMatchScheduler())
+    Scheduler.addCompetition(compWatcher)

@@ -8,10 +8,10 @@ import sys
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
 # Ensure settings are read
 application = get_wsgi_application()
-from discord_handler.handler import client,runScheduler,runLiveThreader
+from discord_handler.handler import removeOldChannels,Scheduler
 from discord_handler.cdos import cmdHandler
 from loghandler.loghandler import setup_logging
-from discord_handler import cdos
+from discord_handler.client import client
 
 
 setup_logging()
@@ -20,6 +20,9 @@ logger = logging.getLogger(__name__)
 @client.event
 async def on_ready():
     logger.info(f"Logged in as {client.user.name} with id {client.user.id}")
+    await removeOldChannels()
+    client.loop.create_task(Scheduler.maintananceScheduler())
+    client.loop.create_task(Scheduler.matchScheduler())
     logger.info("Update complete")
 
 
@@ -30,13 +33,12 @@ async def on_message(message : discord.Message):
     except discord.errors.HTTPException:
         pass
 
-client.loop.create_task(runScheduler())
-client.loop.create_task(runLiveThreader())
 logger.info("------------------Soccerbot is starting-----------------------")
+path = os.path.dirname(os.path.realpath(__file__))
 try:
-    with open("secret.json") as f:
+    with open(path+"/secret.json") as f:
         key = json.loads(f.read())['secret']
 except:
-    logger.error("You need to create the secret.json file and check if secret:key is available")
+    logger.error(f"You need to create the secret.json file and check if secret:key is available, path {path+'/secret.json'}")
     sys.exit()
 client.run(key)

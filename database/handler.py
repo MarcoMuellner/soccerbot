@@ -1,14 +1,14 @@
 from django.db.utils import IntegrityError
-import datetime
-from datetime import timedelta,timezone
+from datetime import timedelta,timezone,datetime
 import logging
 import enum
-from typing import List
-from pytz import utc
-from django.db.models import Q
+from typing import List,Dict
+from pytz import utc,UTC
 
 from api.calls import getSpecificTeam,getAllFederations,getAllCountries,getAllCompetitions,getAllMatches,getAllSeasons
 from database.models import Federation,Competition,CompetitionWatcher,Season,Match
+from discord_handler.liveMatch import LiveMatch
+from discord_handler.client import toDiscordChannelName
 
 logger = logging.getLogger(__name__)
 
@@ -108,46 +108,57 @@ def createMatchDayObject(query,watcher):
     :return: new MatchdayObject with start and endtime as well as the matchdaystring
     """
     return MatchDayObject(
-        startTime=query.first().date - timedelta(hours=3),
-        endTime=query.last().date + timedelta(hours=5),
+        startTime=query.first().date - timedelta(hours=1),
+        endTime=query.last().date + timedelta(hours=3),
         matchdayString = f"{watcher.competition.clear_name} Matchday {query.first().matchday}"
     )
 
-def getNextMatchDayObjects() -> List[MatchDayObject]:
+def compDict(competition : CompetitionWatcher) ->Dict[str,Dict]:
+    comp_name = competition.competition.clear_name
+    matchDict = {}
+    matchDayList = competition.current_season.match_set.values_list('matchday', flat=True).distinct()
+    for md in matchDayList:
+        matchDict[md] = {}
+        matchList = Match.objects.filter(matchday=md).filter(competition=competition.competition) \
+            .filter(season=competition.current_season).order_by('date')
+        passedTime = (datetime.utcnow() - timedelta(hours=3)).replace(tzinfo=UTC)
+        upcomingTime = (datetime.utcnow() + timedelta(hours=3)).replace(tzinfo=UTC)
+
+        matchDict[md]['start'] = (matchList.first().date - timedelta(hours=1)).replace(tzinfo=UTC)
+        matchDict[md]['end'] = (matchList.last().date + timedelta(hours=3)).replace(tzinfo=UTC)
+        matchDict[md]['channel_name'] = toDiscordChannelName(f"{comp_name} Matchday {md}")
+        matchDict[md]['channel_created'] = False
+        matchDict[md]['passedMatches'] = [LiveMatch(obj) for obj in matchList.filter(date__lt=passedTime)]
+        matchDict[md]['currentMatches'] = [LiveMatch(obj) for obj in matchList.filter(date__gt=passedTime)
+                                                           .filter(date__lt=upcomingTime)]
+        matchDict[md]['upcomingMatches'] = [LiveMatch(obj) for obj in matchList.filter(date__gt=upcomingTime)]
+    return matchDict
+
+def getNextMatchDayObjects() -> Dict[str,Dict[str,Dict]]:
     """
     Returns the next matchday objects between the current (i.e. time that the function is called) time and +24 hours.
     It also creates Matchday objects for currently played games
     :return: List of Matchday Objects containing the next relevant Matchday objects
     """
-    today = datetime.datetime.now(timezone.utc).today()
-    tomorrow = today + timedelta(days=1)
-    retList = []
-    for i in CompetitionWatcher.objects.all():
-        query = Match.objects.filter(competition=i.competition).filter(date__lte=utc.localize(tomorrow))\
-            .filter(date__gte=utc.localize(today)).filter(~Q(match_status=MatchStatus.Live.value)).order_by('date')
+    matchDict = {}
+    for competition in CompetitionWatcher.objects.all():
+        matchDict[competition.competition.clear_name] = compDict(competition)
+    return matchDict
 
-        query = Match.objects.filter(competition=i.competition).filter(match_status=MatchStatus.Live.value) | query
 
-        if len(query) != 0:
-            retList.append(createMatchDayObject(query,i))
-
-    return retList
 
 def getCurrentMatches() -> List[Match]:
     """
     Returns a list of matches that are currently or soon played
     :return:
     """
-    today = datetime.datetime.now(timezone.utc).today() -timedelta(hours=1)
-    later = today + timedelta(hours=1)
     retList = []
 
     for i in CompetitionWatcher.objects.all():
-        queryUpcoming = Match.objects.filter(competition=i.competition).filter(date__lte=utc.localize(later))\
-            .filter(date__gte=utc.localize(today)).order_by('date').filter(~Q(match_status=MatchStatus.Live.value))
-
+        updateMatchesSingleCompetition(i.competition,i.current_season)
         queryLive = Match.objects.filter(competition=i.competition).filter(match_status=MatchStatus.Live.value)
-        retList += queryUpcoming | queryLive
+        queryLineups = Match.objects.filter(competition=i.competition).filter(match_status=MatchStatus.LineUps.value)
+        retList +=  queryLive | queryLineups
     return retList
 
 
