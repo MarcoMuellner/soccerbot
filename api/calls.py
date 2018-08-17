@@ -85,7 +85,9 @@ def getAllFederations(**kwargs) -> Union[List, Federation]:
     """
     if len(kwargs.keys()) == 0:
         reqDict = makeAPICall(ApiCalls.federations)
-        return loop(getAllFederations, reqDict)
+        retList =  loop(getAllFederations, reqDict)
+        retList.append(Federation(id="FIFA",clear_name="Fédération Internationale de Football Association"))
+        return retList
 
     elif 'resDict' in kwargs.keys() and len(kwargs.keys()) == 1:
         apiResults = kwargs['resDict']
