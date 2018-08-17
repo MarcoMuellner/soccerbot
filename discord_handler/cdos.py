@@ -556,7 +556,7 @@ async def cdoSetUserPermissions(**kwargs):
         return CDOInteralResponseData("You need to mention a user to set its permission levels")
 
     for i in data:
-        if i.startswith("<@!"):
+        if i.startswith("<@"):
             del data[data.index(i)]
 
     if len(data) != 2:
