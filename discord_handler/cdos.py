@@ -61,7 +61,7 @@ def checkCompetitionParameter(cmdString: str) -> Union[Dict, str]:
 
 ################################### Commandos ########################################
 
-@markCommando("!addCompetition")
+@markCommando("addCompetition")
 async def cdoAddCompetition(**kwargs):
     """
     Adds a competition to be watched by soccerbot. It will be regularly checked for new games
@@ -114,7 +114,7 @@ async def cdoAddCompetition(**kwargs):
     return responseData
 
 
-@markCommando("!removeCompetition")
+@markCommando("removeCompetition")
 async def cdoRemoveCompetition(**kwargs):
     """
     Removes a competition from the watchlist.
@@ -144,7 +144,7 @@ async def cdoRemoveCompetition(**kwargs):
     return responseData
 
 
-@markCommando("!monitoredCompetitions")
+@markCommando("monitoredCompetitions")
 async def cdoShowMonitoredCompetitions(**kwargs):
     """
     Lists all watched competitions by soccerbot.
@@ -173,7 +173,7 @@ async def cdoShowMonitoredCompetitions(**kwargs):
     return CDOInteralResponseData(retString, addInfo, check)
 
 
-@markCommando("!listCompetitions")
+@markCommando("listCompetitions")
 async def cdoListCompetitionByCountry(**kwargs):
     """
     Lists all competitions for a given country. Needs the name of the country of country code as
@@ -232,7 +232,7 @@ async def cdoListCompetitionByCountry(**kwargs):
     return responseData
 
 
-@markCommando("!help")
+@markCommando("help")
 async def cdoGetHelp(**kwargs):
     """
     Returns all available Commandos and their documentation.
@@ -240,16 +240,22 @@ async def cdoGetHelp(**kwargs):
     """
     retString = "Available Commandos:\n"
     addInfo = OrderedDict()
+    try:
+        prefix = Settings.objects.get(name="prefix")
+        prefix = prefix.value
+    except ObjectDoesNotExist:
+        prefix = "!"
+
     for i in DiscordCommando.allCommandos():
         doc = i.docstring
         doc = re.sub(':.+\n', "", doc)
         doc = re.sub('\n+', "", doc)
-        addInfo[i.commando] = doc
+        addInfo[prefix + i.commando] = doc
 
     return CDOInteralResponseData(retString, addInfo)
 
 
-@markCommando("!changeEventIcons")
+@markCommando("changeEventIcons")
 async def cdoChangeIcons(**kwargs):
     """
     Allows for changing of icons for match Events. The command with no parameters will return all events,
@@ -293,7 +299,7 @@ async def cdoChangeIcons(**kwargs):
     return CDOInteralResponseData()
 
 
-@markCommando("!showRunningTasks")
+@markCommando("showRunningTasks")
 async def cdoShowRunningTasks(**kwargs):
     """
     Shows all currently running tasks on the server
@@ -309,7 +315,7 @@ async def cdoShowRunningTasks(**kwargs):
 
     return CDOInteralResponseData(responseString, addInfo)
 
-@markCommando("!scores")
+@markCommando("scores")
 async def cdoScores(**kwargs):
     """
     Returns the scores for a given competition/matchday/team
@@ -388,7 +394,7 @@ async def cdoScores(**kwargs):
         resp.additionalInfo = addInfo
         return resp
 
-@markCommando("!currentGames")
+@markCommando("currentGames")
 async def cdoCurrentGames(**kwargs):
     """
     Lists all current games within a matchday channel
@@ -409,7 +415,7 @@ async def cdoCurrentGames(**kwargs):
     resp.additionalInfo = addInfo
     return resp
 
-@markCommando("!upcomingGames")
+@markCommando("upcomingGames")
 async def cdoUpcomingGames(**kwargs):
     """
     Lists all upcoming games
@@ -431,7 +437,7 @@ async def cdoUpcomingGames(**kwargs):
     resp.additionalInfo = addInfo
     return resp
 
-@markCommando("!setStartCommando")
+@markCommando("setStartCommando")
 async def cdoSetStartCDO(**kwargs):
     """
     Sets a commandline argument to start the bot.
@@ -448,7 +454,7 @@ async def cdoSetStartCDO(**kwargs):
     obj.save()
     return CDOInteralResponseData(f"Setting startup command to {commandString}")
 
-@markCommando("!updateBot")
+@markCommando("updateBot")
 async def cdoUpdateBot(**kwargs):
     """
     Updates bot
@@ -459,7 +465,7 @@ async def cdoUpdateBot(**kwargs):
     p.wait()
     return CDOInteralResponseData(f"Updated Bot. Please restart to apply changes")
 
-@markCommando("!stopBot")
+@markCommando("stopBot")
 async def cdoStopBot(**kwargs):
     """
     Stops the execution of the bot
@@ -480,7 +486,7 @@ async def cdoStopBot(**kwargs):
     responseData.reactionFunc = check
     return responseData
 
-@markCommando("!restartBot")
+@markCommando("restartBot")
 async def cdoRestartBot(**kwargs):
     """
     Restart Kommando
@@ -498,8 +504,29 @@ async def cdoRestartBot(**kwargs):
         return CDOInteralResponseData("You need to set the startup Command with !setStartCommando before this"
                                       "commando is available")
 
+@markCommando("setPrefix")
+async def cdoSetPrefix(**kwargs):
+    """
+    Sets the prefix for the commands
+    :param kwargs:
+    :return:
+    """
+    data = kwargs['msg'].content.split(" ")
+    if len(data) == 0:
+        return CDOInteralResponseData("You need to set a command to be executed to start the bot")
 
-@markCommando("!test")
+    commandString = kwargs['msg'].content.replace(data[0] + " ", "")
+    try:
+        prefix = Settings.objects.get(name="prefix")
+        prefix.value = commandString
+    except ObjectDoesNotExist:
+        prefix = Settings(name="prefix",value=commandString)
+
+    prefix.save()
+    return CDOInteralResponseData(f"New prefix is {prefix.value}")
+
+
+@markCommando("test")
 async def cdoTest(**kwargs):
     """
     Test Kommando

@@ -6,7 +6,7 @@ from discord import Channel, Embed, Message
 from django.core.exceptions import ObjectDoesNotExist
 
 from discord_handler.client import client
-from database.models import DiscordUsers
+from database.models import DiscordUsers,Settings
 
 logger = logging.getLogger(__name__)
 
@@ -112,8 +112,14 @@ async def cmdHandler(msg: Message) -> str:
     :param msg: message from the discord channel
     :return:
     """
+    try:
+        prefix = Settings.objects.get(name="prefix")
+        prefix = prefix.value
+    except ObjectDoesNotExist:
+        prefix = "!"
+
     for cdos in DiscordCommando.allCommandos():
-        if msg.content.startswith(cdos.commando):
+        if msg.content.startswith(prefix+cdos.commando):
             if msg.author.bot:
                 logger.info("Ignoring {msg.content}, because bot")
                 return
