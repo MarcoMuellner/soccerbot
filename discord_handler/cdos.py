@@ -517,7 +517,6 @@ async def cdoRestartBot(**kwargs):
         logger.info(cmdList)
         p = subprocess.Popen(cmdList)
         logger.info(f"ID of subprocess : {p.pid}")
-        client.loop.create_task(shutdown())
         return CDOInteralResponseData("Shutting down in 10 seconds. Restart will take around 30 seconds")
     except ObjectDoesNotExist:
         return CDOInteralResponseData("You need to set the startup Command with !setStartCommando before this"
