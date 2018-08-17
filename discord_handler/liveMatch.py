@@ -256,7 +256,7 @@ class LiveMatch:
         replaceDict["$homeTeam$"]=homeTeam
         replaceDict["$awayTeam$"]=awayTeam
         for key,val in replaceDict.items():
-            title = title.replace(key,val)
+            title = title.replace(str(key),str(val))
 
         try:
             val = MatchEventIcon.objects.get(event=event.event.value).eventIcon

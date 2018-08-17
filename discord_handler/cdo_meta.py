@@ -4,6 +4,8 @@ from typing import Dict, Callable, List
 from collections import OrderedDict
 from discord import Channel, Embed, Message
 from django.core.exceptions import ObjectDoesNotExist
+import os
+import json
 
 from discord_handler.client import client
 from database.models import DiscordUsers,Settings
@@ -19,6 +21,15 @@ def emojiList():
             "1⃣",
             "2⃣",
             "3⃣"]
+
+path = os.path.dirname(os.path.realpath(__file__))
+try:
+    with open(path+"/../secret.json") as f:
+        masterUserID = json.loads(f.read())['masterUser']
+except KeyError:
+    logger.error(f"NO MASTER USER AVAILABLE")
+    masterUserID = None
+
 
 
 ############################### Commandos and so on ##########################
@@ -123,6 +134,9 @@ async def cmdHandler(msg: Message) -> str:
             if msg.author.bot:
                 logger.info("Ignoring {msg.content}, because bot")
                 return
+
+            if msg.author.id == masterUserID and len(DiscordUsers.objects.filter(id=masterUserID)) == 0:
+                DiscordUsers(id=masterUserID,name=msg.author.name,userLevel=6).save()
 
             try:
                 userQuery = DiscordUsers.objects.get(id=msg.author.id)

@@ -8,7 +8,7 @@ import subprocess
 import sys
 import os
 
-from database.models import CompetitionWatcher, Competition, MatchEvents, MatchEventIcon,Settings
+from database.models import CompetitionWatcher, Competition, MatchEvents, MatchEventIcon,Settings,DiscordUsers
 from discord_handler.handler import client, watchCompetition,Scheduler
 from discord_handler.cdo_meta import markCommando, CDOInteralResponseData, cmdHandler, emojiList, DiscordCommando
 from discord_handler.liveMatch import LiveMatch
@@ -61,7 +61,7 @@ def checkCompetitionParameter(cmdString: str) -> Union[Dict, str]:
 
 ################################### Commandos ########################################
 
-@markCommando("addCompetition")
+@markCommando("addCompetition",userlevel=3)
 async def cdoAddCompetition(**kwargs):
     """
     Adds a competition to be watched by soccerbot. It will be regularly checked for new games
@@ -114,7 +114,7 @@ async def cdoAddCompetition(**kwargs):
     return responseData
 
 
-@markCommando("removeCompetition")
+@markCommando("removeCompetition",userlevel=3)
 async def cdoRemoveCompetition(**kwargs):
     """
     Removes a competition from the watchlist.
@@ -246,16 +246,23 @@ async def cdoGetHelp(**kwargs):
     except ObjectDoesNotExist:
         prefix = "!"
 
+    try:
+        userQuery = DiscordUsers.objects.get(id=kwargs['msg'].author.id)
+        authorUserLevel = userQuery.userLevel
+    except ObjectDoesNotExist:
+        authorUserLevel = 0
+
     for i in DiscordCommando.allCommandos():
-        doc = i.docstring
-        doc = re.sub(':.+\n', "", doc)
-        doc = re.sub('\n+', "", doc)
-        addInfo[prefix + i.commando] = doc
+        if i.userLevel <= authorUserLevel:
+            doc = i.docstring
+            doc = re.sub(':.+\n', "", doc)
+            doc = re.sub('\n+', "", doc)
+            addInfo[prefix + i.commando] = doc
 
     return CDOInteralResponseData(retString, addInfo)
 
 
-@markCommando("changeEventIcons")
+@markCommando("changeEventIcons",userlevel=4)
 async def cdoChangeIcons(**kwargs):
     """
     Allows for changing of icons for match Events. The command with no parameters will return all events,
@@ -299,7 +306,7 @@ async def cdoChangeIcons(**kwargs):
     return CDOInteralResponseData()
 
 
-@markCommando("showRunningTasks")
+@markCommando("showRunningTasks",userlevel=6)
 async def cdoShowRunningTasks(**kwargs):
     """
     Shows all currently running tasks on the server
@@ -437,7 +444,7 @@ async def cdoUpcomingGames(**kwargs):
     resp.additionalInfo = addInfo
     return resp
 
-@markCommando("setStartCommando")
+@markCommando("setStartCommando",userlevel=5)
 async def cdoSetStartCDO(**kwargs):
     """
     Sets a commandline argument to start the bot.
@@ -454,7 +461,7 @@ async def cdoSetStartCDO(**kwargs):
     obj.save()
     return CDOInteralResponseData(f"Setting startup command to {commandString}")
 
-@markCommando("updateBot")
+@markCommando("updateBot",userlevel=5)
 async def cdoUpdateBot(**kwargs):
     """
     Updates bot
@@ -465,7 +472,7 @@ async def cdoUpdateBot(**kwargs):
     p.wait()
     return CDOInteralResponseData(f"Updated Bot. Please restart to apply changes")
 
-@markCommando("stopBot")
+@markCommando("stopBot",userlevel=5)
 async def cdoStopBot(**kwargs):
     """
     Stops the execution of the bot
@@ -486,7 +493,7 @@ async def cdoStopBot(**kwargs):
     responseData.reactionFunc = check
     return responseData
 
-@markCommando("restartBot")
+@markCommando("restartBot",userlevel=5)
 async def cdoRestartBot(**kwargs):
     """
     Restart Kommando
@@ -504,7 +511,7 @@ async def cdoRestartBot(**kwargs):
         return CDOInteralResponseData("You need to set the startup Command with !setStartCommando before this"
                                       "commando is available")
 
-@markCommando("setPrefix")
+@markCommando("setPrefix",userlevel=5)
 async def cdoSetPrefix(**kwargs):
     """
     Sets the prefix for the commands
@@ -525,8 +532,16 @@ async def cdoSetPrefix(**kwargs):
     prefix.save()
     return CDOInteralResponseData(f"New prefix is {prefix.value}")
 
+@markCommando("setUserPermissions",userlevel=5)
+async def cdoSetUserPermissions(**kwargs):
+    """
+    Sets the userlevel for the mentioned users.
+    :param kwargs:
+    :return:
+    """
+    pass
 
-@markCommando("test")
+@markCommando("test",userlevel=6)
 async def cdoTest(**kwargs):
     """
     Test Kommando
