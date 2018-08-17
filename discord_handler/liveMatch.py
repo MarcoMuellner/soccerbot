@@ -1,19 +1,24 @@
 import asyncio
-from discord import Channel,Embed
-from typing import Dict,Union,Tuple,List
+import json
+
+from discord import Channel, Embed
+from typing import Dict, Union, Tuple, List
 from collections import OrderedDict
 from django.core.exceptions import ObjectDoesNotExist
 import logging
 from json.decoder import JSONDecodeError
-from datetime import datetime,timedelta
+from datetime import datetime, timedelta
 from pytz import UTC
+import os
 
-from database.models import Match,MatchEvents,MatchEventIcon
-from api.calls import makeMiddlewareCall,DataCalls
-from discord_handler.client import client,toDiscordChannelName
+from database.models import Match, MatchEvents, MatchEventIcon
+from api.calls import makeMiddlewareCall, DataCalls
+from discord_handler.client import client, toDiscordChannelName
 from support.helper import task
 
 logger = logging.getLogger(__name__)
+path = os.path.dirname(os.path.realpath(__file__))
+
 
 class MatchEventData:
     def __init__(self, event: MatchEvents, minute: str, team: str, player: str, playerTo: str):
@@ -25,7 +30,10 @@ class MatchEventData:
 
 
 class LiveMatch:
-    def __init__(self,match : Match):
+    eventStyleSheet = {}
+    lineupStyleSheet = {}
+
+    def __init__(self, match: Match):
         self.match = match
         self.passed = False
         self.running = False
@@ -35,6 +43,36 @@ class LiveMatch:
         self.title = f"**{homeTeam}** - : - **{awayTeam}**"
         self.goalList = []
         self.runningStarted = False
+
+    @staticmethod
+    def styleSheetEvents(key: str = None) -> Union[Dict, str]:
+        if LiveMatch.eventStyleSheet == {}:
+            with open(path + "/../stylesheets/game_events.json") as f:
+                LiveMatch.eventStyleSheet = json.loads(f.read())
+
+        if key == None:
+            return LiveMatch.eventStyleSheet
+        else:
+            try:
+                return LiveMatch.eventStyleSheet[key]
+            except KeyError:
+                logger.error(f"Key {key} not available in stylesheet")
+                return ""
+
+    @staticmethod
+    def styleSheetLineups(key: str = None) -> Union[Dict, str]:
+        if LiveMatch.eventStyleSheet == {}:
+            with open(path + "/../stylesheets/lineups.json") as f:
+                LiveMatch.eventStyleSheet = json.loads(f.read())
+
+        if key == None:
+            return LiveMatch.eventStyleSheet
+        else:
+            try:
+                return LiveMatch.eventStyleSheet[key]
+            except KeyError:
+                logger.error(f"Key {key} not available in stylesheet")
+                return ""
 
     @task
     async def runMatchThread(self):
@@ -98,7 +136,7 @@ class LiveMatch:
                     for channel in client.get_all_channels():
                         if channel.name == channelName:
                             self.started = True
-                            self.title,goalString = await LiveMatch.sendMatchEvent(channel, self.match, i)
+                            self.title, goalString = await LiveMatch.sendMatchEvent(channel, self.match, i)
                             self.goalList.append(goalString)
                             try:
                                 eventList.remove(i)
@@ -149,28 +187,43 @@ class LiveMatch:
             def listPlayers(position):
                 lineupString = ""
                 for startingPlayer in lineup[teamString][position]:
-                    lineupString += f"**{startingPlayer['number']}** - {startingPlayer['name']}"
+                    lineupString = LiveMatch.styleSheetLineups("PlayerTemplate")
+                    lineupString = lineupString.replace("$number$",startingPlayer['number'])
+                    lineupString = lineupString.replace("$player$",startingPlayer['name'])
                     if startingPlayer['gk']:
-                        lineupString += f" (GK) "
+                        lineupString.replace("$gkTemplate$",LiveMatch.styleSheetLineups("GKTemplate"))
+                    else:
+                        lineupString.replace("$gkTemplate$","")
                     if startingPlayer['captain']:
-                        lineupString += f"(C) "
-                    lineupString += "\n"
+                        lineupString.replace("$captainTemplate$", LiveMatch.styleSheetLineups("CaptainTemplate"))
+                    else:
+                        lineupString.replace("$captainTemplate$", "")
                 return lineupString
 
-            lineupString = "**Starting lineup:**\n"
-            lineupString += listPlayers('starting')
-            # lineupString += "\n**Bench:**\n"
-            # lineupString += listPlayers('bench')
-            lineupString += f"\n\n**Coach:\n{lineup[teamString]['coach'][0]['name']}**\n\n\n  "
+            lineupString = LiveMatch.styleSheetLineups("Layout")
+            lineupString = lineupString.replace("$playerTemplate$",listPlayers('starting'))
+            coachString = LiveMatch.styleSheetLineups("CoachTemplate")
+            coachString.replace("$coach$",lineup[teamString]['coach'][0]['name'])
+            lineupString = lineupString.replace("$coachTemplate$",coachString)
             return lineupString
 
         homeString = getLineupPlayerString('home')
         awayString = getLineupPlayerString('away')
 
-        embObj = Embed(title="Lineups", description=f"**{match.home_team.clear_name} vs {match.away_team.clear_name}**")
+        title = LiveMatch.styleSheetLineups("cardTitle")
+        description = LiveMatch.styleSheetLineups("cardDescription")
+        description = description.replace("$homeTeam$",match.home_team.clear_name)
+        description = description.replace("$away_team$", match.away_team.clear_name)
 
-        embObj.add_field(name=match.home_team.clear_name, value=homeString)
-        embObj.add_field(name=match.away_team.clear_name, value=awayString)
+        embObj = Embed(title=title,
+                       description=description)
+
+        teamTitle = LiveMatch.styleSheetLineups("TeamTitle")
+        homeTeamTitle = teamTitle.replace("$team$",match.home_team.clear_name)
+        awayTeamTitle = teamTitle.replace("$team$",match.away_team.clear_name)
+
+        embObj.add_field(name=homeTeamTitle, value=homeString)
+        embObj.add_field(name=awayTeamTitle, value=awayString)
 
         try:
             await client.send_message(channel, embed=embObj)
@@ -181,56 +234,53 @@ class LiveMatch:
                     await client.send_message(channel, embed=embObj)
 
     @staticmethod
-    async def beautifyEvent(event,match):
+    async def beautifyEvent(event, match):
         data = makeMiddlewareCall(DataCalls.liveData + f"/{match.id}")['match']
         homeTeam = data['teamHomeName']
         awayTeam = data['teamAwayName']
 
         if event.event == MatchEvents.goal:
             if event.team == homeTeam:
-                goalString = f"[{data['scoreHome']}] : {data['scoreAway']}"
+                goalString = LiveMatch.styleSheetEvents(MatchEvents.goalTallyHomeScore.value)
             else:
-                goalString = f"{data['scoreHome']} : [{data['scoreAway']}]"
+                goalString = LiveMatch.styleSheetEvents(MatchEvents.goalTallyAwayScore.value)
         else:
-            goalString = f"{data['scoreHome']} : {data['scoreAway']}"
+            goalString = LiveMatch.styleSheetEvents(MatchEvents.goalTally.value)
 
-        title = f"**{homeTeam}** {goalString} **{awayTeam}**"
+        title = LiveMatch.styleSheetEvents(MatchEvents.title.value)
+
+        replaceDict = OrderedDict()
+        replaceDict["$tally$"] = goalString
+        replaceDict["$homeScore$"]=data['scoreHome']
+        replaceDict["$awayScore$"]=data['scoreAway']
+        replaceDict["$homeTeam$"]=homeTeam
+        replaceDict["$awayTeam$"]=awayTeam
+        for key,val in replaceDict.items():
+            title = title.replace(key,val)
+
         try:
             val = MatchEventIcon.objects.get(event=event.event.value).eventIcon
         except ObjectDoesNotExist:
             val = ""
-        content = f"{val}{event.minute}"
+
+        replaceDict = {
+            "$symbol$":val,
+            "$minute$":event.minute,
+            "$player$":event.player,
+            "$playerTo$": event.playerTo,
+            "$team$":event.team,
+        }
+
+        content = LiveMatch.styleSheetEvents(event.event.value)
+
+        for key,val in replaceDict.items():
+            content = content.replace(key,val)
 
         goalListing = ""
+        if event.event == MatchEvents.goal:
+            goalListing = content + f" {event.player}"
 
-        if event.event == MatchEvents.kickoffFirstHalf:
-            content += " **KICKOFF** The match is underway!"
-        elif event.event == MatchEvents.kickoffSecondHalf:
-            content += " **KICKOFF** Second Half!"
-        elif event.event == MatchEvents.firstHalfEnd:
-            content += " **HALF TIME!**"
-        elif event.event == MatchEvents.secondHalfEnd:
-            content += " Second half has ended."
-        elif event.event == MatchEvents.matchOver:
-            content += "**FULL TIME**!"
-        elif event.event == MatchEvents.goal:
-            goalListing = content+ f" {event.player}"
-            content += f" **GOAL**! {event.player} scores for **{event.team}**"
-        elif event.event == MatchEvents.yellowCard:
-            content += f" **YELLOW CARD:** {event.player}(**{event.team}**)"
-        elif event.event == MatchEvents.yellowRedCard:
-            content += f" **SECOND YELLOW CARD**: {event.player}(**{event.team}**)"
-        elif event.event == MatchEvents.redCard:
-            content += f" **RED CARD**: {event.player} (**{event.team}**)"
-        elif event.event == MatchEvents.substitution:
-            content += f" **SUBSTITUTION** **{event.team}**:{event.player} **IN**, {event.playerTo} **OUT**"
-        elif event.event == MatchEvents.missedPenalty:
-            content += f" **PENALTY MISSED!** {event.player} has missed a penalty **({event.team})"
-        else:
-            logger.error(f"Event {event.event} not handled. No message is send to server!")
-            return
-
-        return title,content,goalListing
+        return title, content, goalListing
 
     @staticmethod
     async def sendMatchEvent(channel: Channel, match: Match, event: MatchEventData):
@@ -243,7 +293,7 @@ class LiveMatch:
         itself contains the minute, team and player(s) the event applies to.
         """
 
-        title,content,goalString = await LiveMatch.beautifyEvent(event,match)
+        title, content, goalString = await LiveMatch.beautifyEvent(event, match)
         embObj = Embed(title=title, description=content)
         embObj.set_author(name=match.competition.clear_name)
 
@@ -255,7 +305,7 @@ class LiveMatch:
                 if i.name == channel.name:
                     await client.send_message(i, embed=embObj)
 
-        return title,goalString
+        return title, goalString
 
     @staticmethod
     def parseEvents(data: list, pastEvents=list) -> Tuple[List[MatchEventData], List]:
@@ -290,11 +340,11 @@ class LiveMatch:
                     eventData.event = MatchEvents.missedPenalty
                 elif event['eventCode'] == 14:
                     ev = MatchEvents.firstHalfEnd if event[
-                                                         'phaseDescriptionShort'] == "1H" else MatchEvents.secondHalfEnd
+                                                 'phaseDescriptionShort'] == "1H" else MatchEvents.secondHalfEnd
                     eventData.event = ev
                 elif event['eventCode'] == 13:
                     ev = MatchEvents.kickoffFirstHalf if event[
-                                                             'phaseDescriptionShort'] == "1H" else MatchEvents.kickoffSecondHalf
+                                                     'phaseDescriptionShort'] == "1H" else MatchEvents.kickoffSecondHalf
                     eventData.event = ev
                 else:
                     logger.error(f"EventId {event['eventCode']} with descr {event['eventDescription']} not handled!")
@@ -303,4 +353,3 @@ class LiveMatch:
                 retEvents.append(eventData)
             pastEvents = data
         return retEvents, pastEvents
-

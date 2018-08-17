@@ -1,0 +1,20 @@
+{
+    "Kickoff_first_half": "**KICKOFF** The match is underway!",
+    "Kickoff_second_half": "**KICKOFF** Second Half!",
+    "First_half_ended": "**HALF TIME!*",
+    "Second_half_ended": "Second half has ended.",
+    "Match_over": "**FULL TIME**",
+    "Goal": "**GOAL**! $player$ scores for **$team$**",
+    "Yellow_card": "**YELLOW CARD:** $player$(**$team$**)",
+    "Red_card": "**RED CARD**: $player$ (**$team$**)",
+    "Yellow_red_card": "**SECOND YELLOW CARD**: $player$($team$)",
+    "Substitution": "**SUBSTITUTION** **$team$**:$player$ **IN**, $playerTo$ **OUT**",
+    "Missed_penalty": "**PENALTY MISSED!** $player$ has missed a penalty **($team$)",
+    "Own_goal": "**OWN GOAL**",
+    "Scored_penalty": "**PENALTY SCORED!**"
+
+    "Goal_tally_Home_Team_scored":"[$homeScore$] : $awayScore$",
+    "Goal_tally_Away_Team_scored":"$homeScore$ : [$awayScore$]",
+    "Goal_tally":"$homeScore$ : $awayScore$",
+    "title":"**$homeTeam$** $tally$ **$awayTeam$**"
+}

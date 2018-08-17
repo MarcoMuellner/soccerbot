@@ -2,20 +2,25 @@ from django.db import models
 from enum import Enum
 
 class MatchEvents(Enum):
-    none = 0
-    kickoffFirstHalf = 1
-    kickoffSecondHalf = 2
-    firstHalfEnd = 3
-    secondHalfEnd = 4
-    matchOver = 5
-    goal = 6
-    yellowCard = 7
-    redCard = 8
-    substitution = 9
-    missedPenalty = 10
-    ownGoal = 11
-    scoredPenalty = 12
-    yellowRedCard = 13
+    none = ""
+    kickoffFirstHalf = "Kickoff_first_half"
+    kickoffSecondHalf = "Kickoff_second_half"
+    firstHalfEnd = "First_half_ended"
+    secondHalfEnd = "Second_half_ended"
+    matchOver = "Match_over"
+    goal = "Goal"
+    yellowCard = "Yellow_card"
+    redCard = "Red_card"
+    yellowRedCard = "Yellow_red_card"
+    substitution = "Substitution"
+    missedPenalty = "Missed_penalty"
+    ownGoal = "Own_goal"
+    scoredPenalty = "Scored_penalty"
+
+    goalTallyHomeScore = "Goal_tally_Home_Team_scored"
+    goalTallyAwayScore = "Goal_tally_Away_Team_scored"
+    goalTally = "Goal_tally"
+    title = "title"
 
 
 class Federation(models.Model):
