@@ -89,31 +89,36 @@ class Scheduler:
         while True:
             Scheduler.matchSchedulerRunning.set()
             Scheduler.maintananceSynchronizer.wait()
-            for competition,matchObject in Scheduler.matchDayObject.items():
-                for md,data in matchObject.items():
-                    currentTime = datetime.utcnow().replace(tzinfo=UTC)
-                    if data['start'] < currentTime and data['end'] > currentTime:
-                        await asyncCreateChannel(data['channel_name'])
-                        for i in data['upcomingMatches']:
-                            if not i.runningStarted:
-                                client.loop.create_task(i.runMatchThread())
-                            data['currentMatches'].append(i)
-                            data['upcomingMatches'].remove(i)
+            try:
+                for competition,matchObject in Scheduler.matchDayObject.items():
+                    for md,data in matchObject.items():
+                        currentTime = datetime.utcnow().replace(tzinfo=UTC)
+                        if data['start'] < currentTime and data['end'] > currentTime:
+                            await asyncCreateChannel(data['channel_name'])
+                            for i in data['upcomingMatches']:
+                                if not i.runningStarted:
+                                    client.loop.create_task(i.runMatchThread())
+                                data['currentMatches'].append(i)
+                                data['upcomingMatches'].remove(i)
 
-                        await asyncio.sleep(5)
+                            await asyncio.sleep(5)
 
-                        for i in data['currentMatches']:
-                            if not i.runningStarted:
-                                client.loop.create_task(i.runMatchThread())
-                            if i.passed:
-                                data['passedMatches'].append(i)
-                                data['currentMatches'].remove(i)
+                            for i in data['currentMatches']:
+                                if not i.runningStarted:
+                                    client.loop.create_task(i.runMatchThread())
+                                if i.passed:
+                                    data['passedMatches'].append(i)
+                                    data['currentMatches'].remove(i)
 
-                            if not i.passed and not i.running:
-                                data['upcomingMatches'].append(i)
-                                data['currentMatches'].remove(i)
-                    elif data['end'] < currentTime:
-                        await asyncDeleteChannel(data['channel_name'])
+                                if not i.passed and not i.running:
+                                    data['upcomingMatches'].append(i)
+                                    data['currentMatches'].remove(i)
+                        elif data['end'] < currentTime:
+                            await asyncDeleteChannel(data['channel_name'])
+            except RuntimeError:
+                logger.error("Dict size changed!")
+                await asyncio.sleep(5)
+                continue
             Scheduler.matchSchedulerRunning.clear()
             await asyncio.sleep(60)
 

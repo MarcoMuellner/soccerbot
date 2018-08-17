@@ -63,13 +63,13 @@ class LiveMatch:
     def styleSheetLineups(key: str = None) -> Union[Dict, str]:
         if LiveMatch.eventStyleSheet == {}:
             with open(path + "/../stylesheets/lineups.json") as f:
-                LiveMatch.eventStyleSheet = json.loads(f.read())
+                LiveMatch.lineupStyleSheet = json.loads(f.read())
 
         if key == None:
-            return LiveMatch.eventStyleSheet
+            return LiveMatch.lineupStyleSheet
         else:
             try:
-                return LiveMatch.eventStyleSheet[key]
+                return LiveMatch.lineupStyleSheet[key]
             except KeyError:
                 logger.error(f"Key {key} not available in stylesheet")
                 return ""
@@ -114,7 +114,7 @@ class LiveMatch:
 
             if not lineupsPosted and data["match"]["hasLineup"]:
                 logger.info(f"Posting lineups for {self.title}")
-                await asyncio.sleep(20)
+                await asyncio.sleep(5)
                 try:
                     for channel in client.get_all_channels():
                         if channel.name == channelName:
@@ -185,25 +185,26 @@ class LiveMatch:
 
         def getLineupPlayerString(teamString):
             def listPlayers(position):
-                lineupString = ""
+                fullLineupString = ""
                 for startingPlayer in lineup[teamString][position]:
                     lineupString = LiveMatch.styleSheetLineups("PlayerTemplate")
-                    lineupString = lineupString.replace("$number$",startingPlayer['number'])
+                    lineupString = lineupString.replace("$number$",str(startingPlayer['number']))
                     lineupString = lineupString.replace("$player$",startingPlayer['name'])
                     if startingPlayer['gk']:
-                        lineupString.replace("$gkTemplate$",LiveMatch.styleSheetLineups("GKTemplate"))
+                        lineupString = lineupString.replace("$gkTemplate$",LiveMatch.styleSheetLineups("GKTemplate"))
                     else:
-                        lineupString.replace("$gkTemplate$","")
+                        lineupString = lineupString.replace("$gkTemplate$","")
                     if startingPlayer['captain']:
-                        lineupString.replace("$captainTemplate$", LiveMatch.styleSheetLineups("CaptainTemplate"))
+                        lineupString = lineupString.replace("$captainTemplate$", LiveMatch.styleSheetLineups("CaptainTemplate"))
                     else:
-                        lineupString.replace("$captainTemplate$", "")
-                return lineupString
+                        lineupString =  lineupString.replace("$captainTemplate$", "")
+                    fullLineupString +=lineupString
+                return fullLineupString
 
             lineupString = LiveMatch.styleSheetLineups("Layout")
             lineupString = lineupString.replace("$playerTemplate$",listPlayers('starting'))
             coachString = LiveMatch.styleSheetLineups("CoachTemplate")
-            coachString.replace("$coach$",lineup[teamString]['coach'][0]['name'])
+            coachString = coachString.replace("$coach$",lineup[teamString]['coach'][0]['name'])
             lineupString = lineupString.replace("$coachTemplate$",coachString)
             return lineupString
 
@@ -212,7 +213,7 @@ class LiveMatch:
 
         title = LiveMatch.styleSheetLineups("cardTitle")
         description = LiveMatch.styleSheetLineups("cardDescription")
-        description = description.replace("$homeTeam$",match.home_team.clear_name)
+        description = description.replace("$home_team$",match.home_team.clear_name)
         description = description.replace("$away_team$", match.away_team.clear_name)
 
         embObj = Embed(title=title,
@@ -274,7 +275,7 @@ class LiveMatch:
         content = LiveMatch.styleSheetEvents(event.event.value)
 
         for key,val in replaceDict.items():
-            content = content.replace(key,val)
+            content = content.replace(key,str(val))
 
         goalListing = ""
         if event.event == MatchEvents.goal:

@@ -4,7 +4,7 @@
   "TeamTitle":"**$team$**",
   "GKTemplate":" **(GK)**",
   "CaptainTemplate":" **(C)**",
-  "PlayerTemplate":"**$number$** - **$player$** $gkTemplate$ $captainTemplate$",
+  "PlayerTemplate":"\n**$number$** - **$player$** $gkTemplate$ $captainTemplate$",
   "CoachTemplate":"**Coach:**\n$coach$",
   "Layout":"_Starting lineup:_\n\n$playerTemplate$\n\n$coachTemplate$"
 }
