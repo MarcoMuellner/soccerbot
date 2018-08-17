@@ -69,6 +69,10 @@ class LiveMatch:
                 break
 
             self.running = True
+            if data["match"]["isLive"]:
+                self.started = True
+            else:
+                self.started = False
 
             if not lineupsPosted and data["match"]["hasLineup"]:
                 logger.info(f"Posting lineups for {self.title}")
