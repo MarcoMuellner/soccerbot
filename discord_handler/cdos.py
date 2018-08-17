@@ -513,7 +513,9 @@ async def cdoRestartBot(**kwargs):
     try:
         Settings.objects.get(name="startCommando")
         logger.info(f"Command: {sys.executable} {path+'/../restart.py'}")
-        p = subprocess.Popen([sys.executable,path+"/../restart.py"])
+        cmdList = [sys.executable,path+"/../restart.py"]
+        logger.info(cmdList)
+        p = subprocess.Popen(cmdList)
         logger.info(f"ID of subprocess : {p.pid}")
         client.loop.create_task(shutdown())
         return CDOInteralResponseData("Shutting down in 10 seconds. Restart will take around 30 seconds")

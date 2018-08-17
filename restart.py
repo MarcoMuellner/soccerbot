@@ -2,6 +2,12 @@ import time
 from django.core.wsgi import get_wsgi_application
 import os
 import subprocess
+import logging
+
+from loghandler.loghandler import setup_logging
+
+setup_logging()
+logger = logging.getLogger(__name__)
 
 # Django specific settings
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
@@ -10,10 +16,12 @@ application = get_wsgi_application()
 
 from database.models import Settings
 
+logger.info("sleeping ...")
 time.sleep(25)
+logger.info("waking ...")
 
 
 startCommand = Settings.objects.get(name="startCommando")
 startCommand = startCommand.value.split(" ")
-print(startCommand)
+logger.info(startCommand)
 p = subprocess.Popen(startCommand)
