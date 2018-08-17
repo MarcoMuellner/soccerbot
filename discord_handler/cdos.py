@@ -239,7 +239,7 @@ async def cdoGetHelp(**kwargs):
     Returns all available Commandos and their documentation.
     :return:
     """
-    retString = "Available Commandos:\n"
+    retString = "Available HELLO THERE Commandos:\n"
     addInfo = OrderedDict()
     try:
         prefix = Settings.objects.get(name="prefix")
