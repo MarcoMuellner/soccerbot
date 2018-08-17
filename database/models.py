@@ -109,8 +109,10 @@ class CompetitionWatcher(models.Model):
     applicable_server = models.ForeignKey(DiscordServer, verbose_name="Id of the discord server",on_delete=models.CASCADE)
     current_matchday = models.IntegerField(default=1,
                                            verbose_name="Current matchday of a given competition with season")
-
-
     def __str__(self):
         return f"Competition: {self.competition.clear_name}, Season {self.current_season.clear_name}" \
                f", Matchday {self.current_matchday}, Applicable server: {self.applicable_server.name}"
+
+class Settings(models.Model):
+    name = models.CharField(max_length=255,verbose_name="Maximum length of command")
+    value = models.CharField(max_length=2048,verbose_name="Actual Command to be executed")

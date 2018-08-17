@@ -4,17 +4,22 @@ import logging
 from collections import OrderedDict
 from django.core.exceptions import ObjectDoesNotExist
 from json.decoder import JSONDecodeError
+import subprocess
+import sys
+import os
 
-from database.models import CompetitionWatcher, Competition, MatchEvents, MatchEventIcon
+from database.models import CompetitionWatcher, Competition, MatchEvents, MatchEventIcon,Settings
 from discord_handler.handler import client, watchCompetition,Scheduler
 from discord_handler.cdo_meta import markCommando, CDOInteralResponseData, cmdHandler, emojiList, DiscordCommando
 from discord_handler.liveMatch import LiveMatch
 from api.calls import getLiveMatches,makeMiddlewareCall,DataCalls,getTeamsSearchedByName
+from support.helper import shutdown
 
 from support.helper import Task
 
 logger = logging.getLogger(__name__)
 
+path = os.path.dirname(os.path.realpath(__file__))
 """
 Concering commandos: Commandos are automatically added by marking it with the markCommando decorator. This 
 decorator also has as a parameter the given Commando that is wished to be used for this Commando. Commandos in 
@@ -425,6 +430,73 @@ async def cdoUpcomingGames(**kwargs):
     resp = CDOInteralResponseData(respStr)
     resp.additionalInfo = addInfo
     return resp
+
+@markCommando("!setStartCommando")
+async def cdoSetStartCDO(**kwargs):
+    """
+    Sets a commandline argument to start the bot.
+    :param kwargs:
+    :return:
+    """
+    data = kwargs['msg'].content.split(" ")
+    if len(data) == 0:
+        return CDOInteralResponseData("You need to set a command to be executed to start the bot")
+
+    commandString = kwargs['msg'].content.replace(data[0] + " ", "")
+
+    obj = Settings(name="startCommando",value=commandString)
+    obj.save()
+    return CDOInteralResponseData(f"Setting startup command to {commandString}")
+
+@markCommando("!updateBot")
+async def cdoUpdateBot(**kwargs):
+    """
+    Updates bot
+    :param kwargs:
+    :return:
+    """
+    p = subprocess.Popen([sys.executable, path + "/../update.py"])
+    p.wait()
+    return CDOInteralResponseData(f"Updated Bot. Please restart to apply changes")
+
+@markCommando("!stopBot")
+async def cdoStopBot(**kwargs):
+    """
+    Stops the execution of the bot
+    :param kwargs:
+    :return:
+    """
+    responseData = CDOInteralResponseData()
+    retString = f"To confirm the shutdown, please react with {emojiList()[0]} to this message."
+    responseData.response = retString
+
+    def check(reaction, user):
+        if reaction.emoji == emojiList()[0]:
+            client.loop.create_task(client.send_message(kwargs['msg'].channel, "Bot is shutting down in 10 seconds"))
+            client.loop.create_task(shutdown())
+            return True
+        return False
+
+    responseData.reactionFunc = check
+    return responseData
+
+@markCommando("!restartBot")
+async def cdoRestartBot(**kwargs):
+    """
+    Restart Kommando
+    :param kwargs:
+    :return:
+    """
+    try:
+        Settings.objects.get(name="startCommando")
+        logger.info(f"Command: {sys.executable} {path+'/../restart.py'}")
+        p = subprocess.Popen([sys.executable,path+"/../restart.py"])
+        logger.info(f"ID of subprocess : {p.pid}")
+        client.loop.create_task(shutdown())
+        return CDOInteralResponseData("Shutting down in 10 seconds. Restart will take around 30 seconds")
+    except ObjectDoesNotExist:
+        return CDOInteralResponseData("You need to set the startup Command with !setStartCommando before this"
+                                      "commando is available")
 
 
 @markCommando("!test")

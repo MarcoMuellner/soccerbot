@@ -1,8 +1,8 @@
 import logging
 logger = logging.getLogger(__name__)
-from inspect import getmembers, iscoroutine
-import re
+import asyncio
 import logging
+import sys
 from typing import Callable
 from datetime import datetime,timezone
 
@@ -45,3 +45,8 @@ def task(fun:Callable):
         Task.removeTask(task)
         return res
     return func_wrapper
+
+async def shutdown():
+    await asyncio.sleep(10)
+    logger.info("Shutting down!")
+    sys.exit()
