@@ -46,7 +46,7 @@ async def removeOldChannels():
     deleteChannelList = []
     for i in client.get_all_channels():
         if "-matchday-" in i.name:
-            logger.info("Deleting old channel {i.name}")
+            logger.info(f"Deleting old channel {i.name}")
             deleteChannelList.append((i.server, i.name))
 
     for i in deleteChannelList:
