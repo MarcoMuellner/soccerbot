@@ -38,8 +38,12 @@ class LiveMatch:
         self.passed = False
         self.running = False
         self.started = False
-        homeTeam = match.home_team.clear_name
-        awayTeam = match.away_team.clear_name
+        try:
+            homeTeam = match.home_team.clear_name
+            awayTeam = match.away_team.clear_name
+        except AttributeError:
+            homeTeam = ""
+            awayTeam = ""
         self.title = f"**{homeTeam}** - : - **{awayTeam}**"
         self.goalList = []
         self.runningStarted = False
