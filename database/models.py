@@ -2,20 +2,25 @@ from django.db import models
 from enum import Enum
 
 class MatchEvents(Enum):
-    none = 0
-    kickoffFirstHalf = 1
-    kickoffSecondHalf = 2
-    firstHalfEnd = 3
-    secondHalfEnd = 4
-    matchOver = 5
-    goal = 6
-    yellowCard = 7
-    redCard = 8
-    substitution = 9
-    missedPenalty = 10
-    ownGoal = 11
-    scoredPenalty = 12
-    yellowRedCard = 13
+    none = ""
+    kickoffFirstHalf = "Kickoff_first_half"
+    kickoffSecondHalf = "Kickoff_second_half"
+    firstHalfEnd = "First_half_ended"
+    secondHalfEnd = "Second_half_ended"
+    matchOver = "Match_over"
+    goal = "Goal"
+    yellowCard = "Yellow_card"
+    redCard = "Red_card"
+    yellowRedCard = "Yellow_red_card"
+    substitution = "Substitution"
+    missedPenalty = "Missed_penalty"
+    ownGoal = "Own_goal"
+    scoredPenalty = "Scored_penalty"
+
+    goalTallyHomeScore = "Goal_tally_Home_Team_scored"
+    goalTallyAwayScore = "Goal_tally_Away_Team_scored"
+    goalTally = "Goal_tally"
+    title = "title"
 
 
 class Federation(models.Model):
@@ -64,7 +69,7 @@ class Team(models.Model):
         return f"ID: {self.id}, Clear_Name: {self.clear_name.encode('utf-8')}"
 
 class MatchEventIcon(models.Model):
-    event = models.IntegerField(verbose_name="Event", primary_key=True)
+    event = models.CharField(max_length=50,verbose_name="Event", primary_key=True)
     eventIcon = models.CharField(max_length=50,default="",verbose_name="Icon for the event")
 
 
@@ -104,8 +109,10 @@ class CompetitionWatcher(models.Model):
     applicable_server = models.ForeignKey(DiscordServer, verbose_name="Id of the discord server",on_delete=models.CASCADE)
     current_matchday = models.IntegerField(default=1,
                                            verbose_name="Current matchday of a given competition with season")
-
-
     def __str__(self):
         return f"Competition: {self.competition.clear_name}, Season {self.current_season.clear_name}" \
                f", Matchday {self.current_matchday}, Applicable server: {self.applicable_server.name}"
+
+class Settings(models.Model):
+    name = models.CharField(max_length=255,verbose_name="Maximum length of command")
+    value = models.CharField(max_length=2048,verbose_name="Actual Command to be executed")

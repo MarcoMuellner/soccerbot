@@ -3,8 +3,10 @@ import json
 import logging.config
 import discord
 
+path = os.path.dirname(os.path.realpath(__file__)) + "/"
+
 def setup_logging(
-    default_path='loghandler/logsettings.json', 
+    default_path=path+'logsettings.json',
     default_level=logging.DEBUG,
 ):
     '''Setup logging configuration
@@ -20,10 +22,13 @@ def setup_logging(
     handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
     logger.addHandler(handler)
 
-    path = default_path
-    if os.path.exists(path):
-        with open(path, 'rt') as f:
+    pathLogSettings = default_path
+    if os.path.exists(pathLogSettings):
+        with open(pathLogSettings, 'rt') as f:
             config = json.load(f)
+        for i in ['info_file_handler','debug_file_handler','error_file_handler']:
+            config['handlers'][i]['filename'] = path + "../" + config['handlers'][i]['filename']
+
         logging.config.dictConfig(config)
     else:
         logging.basicConfig(level=default_level)

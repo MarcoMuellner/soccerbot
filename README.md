@@ -46,3 +46,6 @@ python __main__.py
 you can start your server. You obviously have to add it to your discord
 server.
 
+If you want to run it in production mode, it is strongly recommended
+to add it as a systemctl job.
+

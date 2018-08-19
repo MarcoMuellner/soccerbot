@@ -4,9 +4,11 @@ from typing import Dict, Callable, List
 from collections import OrderedDict
 from discord import Channel, Embed, Message
 from django.core.exceptions import ObjectDoesNotExist
+import os
+import json
 
 from discord_handler.client import client
-from database.models import DiscordUsers
+from database.models import DiscordUsers,Settings
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +21,15 @@ def emojiList():
             "1⃣",
             "2⃣",
             "3⃣"]
+
+path = os.path.dirname(os.path.realpath(__file__))
+try:
+    with open(path+"/../secret.json") as f:
+        masterUserID = json.loads(f.read())['masterUser']
+except KeyError:
+    logger.error(f"NO MASTER USER AVAILABLE")
+    masterUserID = None
+
 
 
 ############################### Commandos and so on ##########################
@@ -112,11 +123,20 @@ async def cmdHandler(msg: Message) -> str:
     :param msg: message from the discord channel
     :return:
     """
+    try:
+        prefix = Settings.objects.get(name="prefix")
+        prefix = prefix.value
+    except ObjectDoesNotExist:
+        prefix = "!"
+
     for cdos in DiscordCommando.allCommandos():
-        if msg.content.startswith(cdos.commando):
+        if msg.content.startswith(prefix+cdos.commando):
             if msg.author.bot:
                 logger.info("Ignoring {msg.content}, because bot")
                 return
+
+            if msg.author.id == masterUserID and len(DiscordUsers.objects.filter(id=masterUserID)) == 0:
+                DiscordUsers(id=masterUserID,name=msg.author.name,userLevel=6).save()
 
             try:
                 userQuery = DiscordUsers.objects.get(id=msg.author.id)
@@ -171,7 +191,7 @@ class GrpGeneral:
     name = "General"
 
 
-def markCommando(cmd: str, group=GrpGeneral, userlevel=None):
+def markCommando(cmd: str, group=GrpGeneral, defaultUserLevel=None):
     def internal_func_wrapper(func: callable):
         async def func_wrapper(**kwargs):
             responseDataInternal = await func(**kwargs)
@@ -184,7 +204,7 @@ def markCommando(cmd: str, group=GrpGeneral, userlevel=None):
                 await client.wait_for_reaction(message=msg, check=responseDataInternal.reactionFunc)
             return
 
-        DiscordCommando.addCommando(DiscordCommando(cmd, func_wrapper, func.__doc__, group, userlevel))
+        DiscordCommando.addCommando(DiscordCommando(cmd, func_wrapper, func.__doc__, group, defaultUserLevel))
         return func_wrapper
 
     return internal_func_wrapper

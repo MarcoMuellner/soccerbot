@@ -23,7 +23,7 @@ async def createChannel(server: Server, channelName: str):
     """
     for i in client.get_all_channels():
         if i.name == toDiscordChannelName(channelName) and i.server == server:
-            logger.info(f"Channel {channelName} already available ")
+            logger.debug(f"Channel {channelName} already available ")
             return
     logger.info(f"Creating channel {channelName} on {server.name}")
     await client.create_channel(server, channelName)
@@ -37,7 +37,7 @@ async def deleteChannel(server: Server, channelName: str):
     """
     for i in client.get_all_channels():
         if i.name == toDiscordChannelName(channelName) and i.server == server:
-            logger.info(f"Deleting channel {toDiscordChannelName(channelName)} on {server.name}")
+            logger.debug(f"Deleting channel {toDiscordChannelName(channelName)} on {server.name}")
             await client.delete_channel(i)
             break
 
@@ -46,7 +46,7 @@ async def removeOldChannels():
     deleteChannelList = []
     for i in client.get_all_channels():
         if "-matchday-" in i.name:
-            logger.info("Deleting old channel {i.name}")
+            logger.info(f"Deleting old channel {i.name}")
             deleteChannelList.append((i.server, i.name))
 
     for i in deleteChannelList:
@@ -89,31 +89,38 @@ class Scheduler:
         while True:
             Scheduler.matchSchedulerRunning.set()
             Scheduler.maintananceSynchronizer.wait()
-            for competition,matchObject in Scheduler.matchDayObject.items():
-                for md,data in matchObject.items():
-                    currentTime = datetime.utcnow().replace(tzinfo=UTC)
-                    if data['start'] < currentTime and data['end'] > currentTime:
-                        await asyncCreateChannel(data['channel_name'])
-                        for i in data['upcomingMatches']:
-                            if not i.runningStarted:
-                                client.loop.create_task(i.runMatchThread())
-                            data['currentMatches'].append(i)
-                            data['upcomingMatches'].remove(i)
+            try:
+                for competition,matchObject in Scheduler.matchDayObject.items():
+                    for md,data in matchObject.items():
+                        currentTime = datetime.utcnow().replace(tzinfo=UTC)
+                        if data['start'] < currentTime and data['end'] > currentTime:
+                            await asyncCreateChannel(data['channel_name'])
+                            for i in data['upcomingMatches']:
+                                if not i.runningStarted:
+                                    client.loop.create_task(i.runMatchThread())
+                                    i.lock.wait()
+                                data['currentMatches'].append(i)
+                                data['upcomingMatches'].remove(i)
 
-                        await asyncio.sleep(5)
+                            await asyncio.sleep(5)
+                            for i in data['currentMatches']:
+                                if not i.runningStarted:
+                                    client.loop.create_task(i.runMatchThread())
+                                if i.passed:
+                                    data['passedMatches'].append(i)
+                                    data['currentMatches'].remove(i)
 
-                        for i in data['currentMatches']:
-                            if not i.runningStarted:
-                                client.loop.create_task(i.runMatchThread())
-                            if i.passed:
-                                data['passedMatches'].append(i)
-                                data['currentMatches'].remove(i)
+                                if not i.passed and not i.running:
+                                    data['upcomingMatches'].append(i)
+                                    data['currentMatches'].remove(i)
 
-                            if not i.passed and not i.running:
-                                data['upcomingMatches'].append(i)
-                                data['currentMatches'].remove(i)
-                    elif data['end'] < currentTime:
-                        await asyncDeleteChannel(data['channel_name'])
+                            await asyncio.sleep(5)
+                        elif data['end'] < currentTime:
+                            await asyncDeleteChannel(data['channel_name'])
+            except RuntimeError:
+                logger.error("Dict size changed!")
+                await asyncio.sleep(5)
+                continue
             Scheduler.matchSchedulerRunning.clear()
             await asyncio.sleep(60)
 
@@ -152,6 +159,10 @@ class Scheduler:
             if match.started:
                 retDict[match.title] = match.goalList
 
+        for match in matches['upcomingMatches']:
+            if match.started:
+                retDict[match.title] = match.goalList
+
         return retDict
 
     @staticmethod
@@ -163,6 +174,10 @@ class Scheduler:
                     if match.started:
                         matchList.append(match)
 
+                for match in data['upcomingMatches']:
+                    if match.started:
+                        matchList.append(match)
+
         return matchList
 
     @staticmethod
@@ -171,7 +186,8 @@ class Scheduler:
         for competition, matchObject in Scheduler.matchDayObject.items():
             for md, data in matchObject.items():
                 for match in data['upcomingMatches']:
-                    matchList.append(match)
+                    if not match.started:
+                        matchList.append(match)
                 for match in data['currentMatches']:
                     if not match.started:
                         matchList.append(match)
@@ -192,7 +208,7 @@ async def asyncCreateChannel(channelName: str,sleepPeriod: float = None):
     :param sleepPeriod: Period to wait before channel can be created
     :param channelName: Name of the channel that will be created
     """
-    logger.info(f"Initializing create Channel task for {channelName} in {sleepPeriod}")
+    logger.debug(f"Initializing create Channel task for {channelName} in {sleepPeriod}")
     if sleepPeriod != None:
         await asyncio.sleep(sleepPeriod)
     await createChannel(list(client.servers)[0], channelName)
@@ -204,7 +220,7 @@ async def asyncDeleteChannel( channelName: str,sleepPeriod: float = None):
     :param sleepPeriod: Period to wait before channel can be deleted
     :param channelName: Name of the channel that will be deleted
     """
-    logger.info(f"Initializing delete Channel task for {channelName} in {sleepPeriod}")
+    logger.debug(f"Initializing delete Channel task for {channelName} in {sleepPeriod}")
     if sleepPeriod != None:
         await asyncio.sleep(sleepPeriod)
     await deleteChannel(list(client.servers)[0], channelName)

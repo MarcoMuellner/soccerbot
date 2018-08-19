@@ -1,0 +1,10 @@
+{
+  "cardTitle":"Lineups",
+  "cardDescription":"**$home_team$** vs **$away_team$**",
+  "TeamTitle":"**$team$**",
+  "GKTemplate":" **(GK)**",
+  "CaptainTemplate":" **(C)**",
+  "PlayerTemplate":"\n**$number$** - **$player$** $gkTemplate$ $captainTemplate$",
+  "CoachTemplate":"**Coach:**\n$coach$",
+  "Layout":"_Starting lineup:_\n\n$playerTemplate$\n\n$coachTemplate$"
+}

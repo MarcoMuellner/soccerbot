@@ -66,30 +66,3 @@ def testCreateMatchDayObject(preUpdate):
         assert isinstance(result,MatchDayObject)
 
 utc=pytz.UTC
-
-def testGetNextMatchDayObjects(preUpdate):
-    with HTTMock(unifiedHttMock):
-        comp, season = preUpdate
-        server = DiscordServer(name="temp")
-        server.save()
-        compWatcher = CompetitionWatcher(competition=comp,
-                                         current_season=season, applicable_server=server,
-                                         current_matchday=1)
-        compWatcher.save()
-        today = datetime.utcnow()+timedelta(hours=5)
-
-        for i in Match.objects.all():
-            i.date = today
-            i.save()
-
-        result = getNextMatchDayObjects()
-        assert len(result) != 0
-        for i in result:
-            assert isinstance(i,MatchDayObject)
-          #  assert i.startTime < utc.localize(today) # for some reason this does not work
-          #  assert i.endTime > utc.localize(today)# for some reason this does not work
-            assert i.matchdayString != ""
-
-        getCurrentMatches()
-
-
