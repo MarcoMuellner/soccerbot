@@ -15,7 +15,7 @@ with open(path+"/secret.json") as f:
     user = data["git_user"]
     pw = data["git_pw"]
 
-spawnAndWait(["git","-C",f"{path}", "pull" ,f"https://{user}:{pw}@github.com/muma7490/soccerbot.git","master"])
+spawnAndWait(["git","-C",f"{path}", "pull"])
 spawnAndWait([sys.executable,path+"/manage.py","migrate"])
 spawnAndWait([sys.executable,"-m", "pip", "install", "-r", f"{path}/requirements.txt"])
 

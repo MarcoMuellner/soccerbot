@@ -49,3 +49,9 @@ server.
 If you want to run it in production mode, it is strongly recommended
 to add it as a systemctl job.
 
+## Acknowledgments
+
+Special thanks to @Nascimento#3578 and the [football](https://discord.gg/wKhSQEt)
+discord server, who gave a huge amount of input, helped with development
+and provided me with most of the ideas implemented in this bot.
+
