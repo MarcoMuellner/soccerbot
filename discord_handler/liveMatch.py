@@ -342,7 +342,18 @@ class LiveMatch:
         if data != pastEvents:
             diff = [i for i in data if i not in pastEvents]
 
-            diff = list(set(diff)) # unique elements!
+            diffStr =[]
+
+            for i in diff:
+                diffStr.append(json.dumps(i))
+
+            diffStr = list(set(diffStr)) #uniqueElements
+
+            diff = []
+
+            for i in diffStr:
+                diff.append(json.loads(i))
+
             for event in reversed(diff):
                 eventData = MatchEventData(event=MatchEvents.none,
                                            minute=event['minute'],
