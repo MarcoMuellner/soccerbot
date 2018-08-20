@@ -26,7 +26,7 @@ path = os.path.dirname(os.path.realpath(__file__))
 try:
     with open(path+"/../secret.json") as f:
         masterUserID = json.loads(f.read())['masterUser']
-except KeyError:
+except (KeyError,FileNotFoundError):
     logger.error(f"NO MASTER USER AVAILABLE")
     masterUserID = None
 
