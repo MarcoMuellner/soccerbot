@@ -14,7 +14,7 @@ from discord_handler.handler import client, watchCompetition,Scheduler
 from discord_handler.cdo_meta import markCommando, CDOInteralResponseData, cmdHandler, emojiList, DiscordCommando
 from discord_handler.liveMatch import LiveMatch
 from api.calls import getLiveMatches,makeMiddlewareCall,DataCalls,getTeamsSearchedByName
-from support.helper import shutdown
+from support.helper import shutdown,checkoutVersion,getVersions,currentVersion
 
 from support.helper import Task
 
@@ -478,9 +478,21 @@ async def cdoUpdateBot(**kwargs):
     :param kwargs:
     :return:
     """
-    p = subprocess.Popen([sys.executable, path + "/../update.py"])
-    p.wait()
-    return CDOInteralResponseData(f"Updated Bot. Please restart to apply changes")
+    def spawnAndWait(listObj):
+        p = subprocess.Popen(listObj)
+        p.wait()
+    data = kwargs['msg'.split(" ")]
+    if len(data) != 2:
+        return CDOInteralResponseData("Exactly one parameter is allowed. Pass the version or master")
+
+    if data[1] != "master" and data[1] not in getVersions():
+        return CDOInteralResponseData(f"Version {data[1]} not available")
+
+    checkoutVersion(data[1])
+    spawnAndWait([sys.executable, path + "/../manage.py", "migrate"])
+    spawnAndWait([sys.executable, "-m", "pip", "install", "-r", f"{path}/../requirements.txt"])
+
+    return CDOInteralResponseData(f"Updated Bot to {data[1]}. Please restart to apply changes")
 
 @markCommando("stopBot", defaultUserLevel=5)
 async def cdoStopBot(**kwargs):
@@ -608,6 +620,31 @@ async def cdoGetUserPermissions(**kwargs):
     retObj = CDOInteralResponseData("UserLevels:")
     retObj.additionalInfo = addInfo
     return retObj
+
+@markCommando("versions",defaultUserLevel=5)
+async def cdoVersions(**kwargs):
+    """
+    Shows all available versions for the bot
+    :param kwargs:
+    :return:
+    """
+    retString = ""
+    for i in getVersions():
+        retString += f"Version: **{i}**\n"
+
+    return CDOInteralResponseData(retString)
+
+@markCommando("about",defaultUserLevel=0)
+async def cdoAbout(**kwargs):
+    """
+    About the bot
+    :param kwargs:
+    :return:
+    """
+    retstring = "**Soccerbot - a live threading experience**\n\n"
+    retstring += f"Current version: {currentVersion()}\n"
+    retstring += f"State: good"
+    return CDOInteralResponseData(retstring)
 
 
 
