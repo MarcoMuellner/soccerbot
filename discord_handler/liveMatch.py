@@ -97,6 +97,7 @@ class LiveMatch:
         pastEvents = []
         eventList = []
         sleepTime = 600
+        endCycles = 10
 
         matchid = self.match.id
         channelName = toDiscordChannelName(f"{self.match.competition.clear_name} Matchday {self.match.matchday}")
@@ -156,12 +157,16 @@ class LiveMatch:
                     logger.warning("Size of channels has changed!")
                     break
 
-            if data["match"]["isFinished"]:
-                logger.info(f"Match {match} finished!")
-                break
-
             if self.lock.is_set():
                 self.lock.clear()
+
+            if data["match"]["isFinished"]:
+                if endCycles <= 0:
+                    logger.info(f"Match {match} finished!")
+                    break
+                endCycles -= 1
+
+
 
             await asyncio.sleep(sleepTime)
 
@@ -247,6 +252,7 @@ class LiveMatch:
                 if channel.name == i.name:
                     await client.send_message(channel, embed=embObj)
 
+    #todo should this really be async?
     @staticmethod
     async def beautifyEvent(event, match):
         data = makeMiddlewareCall(DataCalls.liveData + f"/{match.id}")['match']

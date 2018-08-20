@@ -8,7 +8,7 @@
     "Yellow_card": "$symbol$ **$minute$**:**YELLOW CARD:** $player$(**$team$**)",
     "Red_card": "$symbol$ **$minute$**:**RED CARD**: $player$ (**$team$**)",
     "Yellow_red_card": "$symbol$ **$minute$**:**SECOND YELLOW CARD**: $player$($team$)",
-    "Substitution": "$symbol$ **$minute$**:**SUBSTITUTION** **$team$**:$player$ :Subin:, $playerTo$ :Subout:",
+    "Substitution": "$symbol$ **$minute$**:**SUBSTITUTION** **$team$**:$player$ **IN**, $playerTo$ **OUT**",
     "Missed_penalty": "$symbol$ **$minute$**:**PENALTY MISSED!** $player$ has missed a penalty **($team$)",
     "Own_goal": "$symbol$ **$minute$**:**OWN GOAL**",
     "Scored_penalty": "$symbol$ **$minute$**:**PENALTY SCORED!**",
