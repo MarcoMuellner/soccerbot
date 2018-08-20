@@ -141,6 +141,7 @@ class LiveMatch:
             newEvents, pastEvents = LiveMatch.parseEvents(data["match"]["events"], pastEvents)
             eventList += newEvents
 
+
             for i in eventList:
                 try:
                     for channel in client.get_all_channels():
@@ -340,6 +341,8 @@ class LiveMatch:
         retEvents = []
         if data != pastEvents:
             diff = [i for i in data if i not in pastEvents]
+
+            diff = list(set(diff)) # unique elements!
             for event in reversed(diff):
                 eventData = MatchEventData(event=MatchEvents.none,
                                            minute=event['minute'],
