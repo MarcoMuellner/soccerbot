@@ -245,7 +245,7 @@ def markCommando(cmd: str, group=GrpGeneral, defaultUserLevel=None):
                         embObj = getEmbObj(responseData)
 
                         if index is not None and length is not None:
-                            embObj.set_footer(text=f"Page {index+1}/{length}")
+                            embObj.set_footer(text=f"Page {index+2}/{length+1}")
 
                         client.loop.create_task(editPagingMessage(reaction.message,embObj))
                     return False

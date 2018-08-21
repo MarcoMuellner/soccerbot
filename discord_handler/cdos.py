@@ -465,7 +465,7 @@ async def cdoUpcomingGames(**kwargs):
     count = 0
     addInfoList = []
     for match in matchList:
-        addInfo[match.title] = f"{match.match.date} (UTC)"
+        addInfo[match.title] = f"{match.match.date.strftime('%d %b %Y, %H:%M')} (UTC)"
         count +=1
         if count == 10:
             addInfoList.append(addInfo)

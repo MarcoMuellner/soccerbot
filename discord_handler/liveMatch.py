@@ -146,7 +146,7 @@ class LiveMatch:
                 if not lineupsPosted:
                     logger.info(f"Lineups not yet available for {self.title}")
 
-            newEvents, pastEvents = LiveMatch.parseEvents(data["match"]["events"], pastEvents)
+            newEvents, pastEvents = LiveMatch.parseEvents(data["match"], pastEvents)
             eventList += newEvents
 
 
@@ -171,7 +171,7 @@ class LiveMatch:
 
             if data["match"]["isFinished"]:
                 if endCycles <= 0:
-                    logger.info(f"Match {match} finished!")
+                    logger.info(f"Match {self.match} finished!")
                     break
                 endCycles -= 1
 
@@ -342,7 +342,7 @@ class LiveMatch:
         return title, goalString
 
     @staticmethod
-    def parseEvents(data: list, pastEvents=list) -> Tuple[List[MatchEventData], List]:
+    def parseEvents(data: Dict[str,Union[str,List]], pastEvents=list) -> Tuple[List[MatchEventData], List]:
         """
         Parses the event list from the middleware api. The code below should be self explanatory, every eventCode
         represents a certain event.
@@ -352,8 +352,9 @@ class LiveMatch:
         including the new ones.
         """
         retEvents = []
-        if data != pastEvents:
-            diff = [i for i in data if i not in pastEvents]
+        dataEvents = data['events']
+        if dataEvents != pastEvents:
+            diff = [i for i in dataEvents if i not in pastEvents]
 
             diffStr =[]
 
@@ -386,8 +387,11 @@ class LiveMatch:
                 elif event['eventCode'] == 5:
                     eventData.event = MatchEvents.missedPenalty
                 elif event['eventCode'] == 14:
-                    ev = MatchEvents.firstHalfEnd if event[
-                                                 'phaseDescriptionShort'] == "1H" else MatchEvents.secondHalfEnd
+                    if not data['isFinished']:
+                        ev = MatchEvents.firstHalfEnd if event[
+                                                     'phaseDescriptionShort'] == "1H" else MatchEvents.secondHalfEnd
+                    else:
+                        ev = MatchEvents.matchOver
                     eventData.event = ev
                 elif event['eventCode'] == 13:
                     ev = MatchEvents.kickoffFirstHalf if event[
@@ -398,5 +402,5 @@ class LiveMatch:
                     logger.error(f"TeamName: {event['teamName']}")
                     continue
                 retEvents.append(eventData)
-            pastEvents = data
+            pastEvents = dataEvents
         return retEvents, pastEvents
