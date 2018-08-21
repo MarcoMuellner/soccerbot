@@ -298,10 +298,10 @@ class LiveMatch:
 
         for i in foundEmojis:
             if i.replace(":","") in LiveMatch.emojiSet.keys():
-                logger.debug(f"Replacing {i} for {LiveMatch.emojiSet[i.replace('':'','')]}")
+                logger.debug(f"Replacing {i} for {LiveMatch.emojiSet[i.replace(':','')]}")
                 content.replace(i,LiveMatch.emojiSet[i.replace(":","")])
             else:
-                logger.debug(f"{i} not in emojilist, replacing it with nothing")
+                logger.warning(f"{i} not in emojilist, replacing it with nothing")
                 content.replace(i, "")
 
         for key,val in replaceDict.items():
