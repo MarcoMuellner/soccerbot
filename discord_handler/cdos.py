@@ -740,6 +740,63 @@ async def cdoAbout(**kwargs):
     retstring += f"State: good"
     return CDOInteralResponseData(retstring)
 
+@markCommando("log",defaultUserLevel=6)
+async def cdoLog(**kwargs):
+    """
+    Posts the last lines of a given logfile
+    :param kwargs:
+    :return:
+    """
+
+    fileList = ["debug","info","errors"]
+    data = kwargs['msg'].content.split(" ")
+    if len(data) != 2:
+        return CDOInteralResponseData("Data needs to contain logname and length")
+
+    if data[1] not in fileList:
+        return CDOInteralResponseData(f"Possible logfiles are {fileList}")
+
+    with open(data[1]+".log") as f:
+        fileContent = f.read()
+
+    respStr = "LogContent: "
+
+    addInfo = OrderedDict()
+    try:
+        addInfo[f"Lines 1 to 1000"] = fileContent[0:200]
+    except IndexError:
+        addInfo[f"Lines 1 to {len(fileContent)}"] = fileContent[0:len(fileContent) -1]
+
+    class pageContent:
+        index = 1
+        @staticmethod
+        def page(page):
+            oldIndex = pageContent.index
+            pageString = respStr + f" _(page {pageContent.index+1})_"
+            if page == pageNav.forward:
+                pageContent.index +=1
+            else:
+                pageContent.index -=1
+
+            lowerIndex = (pageContent.index - 1) * 1000
+            upperIndex = (pageContent.index) * 1000
+            addInfo = OrderedDict()
+            try:
+                addInfo[f"Lines {lowerIndex} to {upperIndex}"] = fileContent[lowerIndex:upperIndex]
+            except IndexError:
+                addInfo[f"Lines {lowerIndex} to {len(fileContent)}"] = fileContent[lowerIndex:len(fileContent) - 1]
+            try:
+                return CDOInteralResponseData(pageString,addInfo)
+            except IndexError:
+                pageContent.index = oldIndex
+                return CDOInteralResponseData(pageString, addInfo)
+
+    response = CDOInteralResponseData(respStr,addInfo)
+    if len(fileContent) != 0:
+        response.paging = pageContent.page
+
+    return response
+
 
 
 @markCommando("test", defaultUserLevel=6)
