@@ -2,10 +2,11 @@ from inspect import getmembers, isroutine
 import logging
 from typing import Dict, Callable, List
 from collections import OrderedDict
-from discord import Channel, Embed, Message
+from discord import Channel, Embed, Message, Reaction,User
 from django.core.exceptions import ObjectDoesNotExist
 import os
 import json
+from enum import Enum
 
 from discord_handler.client import client
 from database.models import DiscordUsers,Settings
@@ -15,6 +16,9 @@ logger = logging.getLogger(__name__)
 discordCommandos = []
 commandoGroups = []
 
+class pageNav(Enum):
+    forward = 1
+    previous = 2
 
 def emojiList():
     return ["0⃣",
@@ -85,10 +89,11 @@ class DiscordCommando:
 ############################### Response objects ##########################
 
 class CDOInteralResponseData:
-    def __init__(self, response: str = "", additionalInfo: OrderedDict = OrderedDict(), reactionFunc=None):
+    def __init__(self, response: str = "", additionalInfo: OrderedDict = OrderedDict(), reactionFunc=None, paging = None):
         self.response = response
         self.additionalInfo = additionalInfo
         self.reactionFunc = reactionFunc
+        self.paging = paging
 
 
 class CDOFullResponseData:
@@ -96,6 +101,7 @@ class CDOFullResponseData:
         self.channel = channel
         self.cdo = cdo
         self.response = internalResponse.response
+        self.paging = internalResponse.paging
         self.additionalInfo = internalResponse.additionalInfo
 
     def __str__(self):
@@ -104,8 +110,16 @@ class CDOFullResponseData:
 
 ############################### Meta functions ##########################
 
-async def sendResponse(responseData):
-    logger.info(responseData)
+async def editPagingMessage(message : Message,embObj):
+    await client.edit_message(message,embed=embObj)
+    await resetPaging(message)
+
+async def resetPaging(message : Message):
+    await client.clear_reactions(message)
+    await client.add_reaction(message=message, emoji='⏪')
+    await client.add_reaction(message=message, emoji='⏩')
+
+def getEmbObj(responseData):
     title = f"Commando {responseData.cdo}"
     content = responseData.response
 
@@ -114,7 +128,14 @@ async def sendResponse(responseData):
     for key, val in responseData.additionalInfo.items():
         embObj.add_field(name=key, value=val, inline=True)
 
-    await client.send_message(responseData.channel, embed=embObj)
+    return embObj
+
+async def sendResponse(responseData):
+    logger.info(responseData)
+
+    embObj = getEmbObj(responseData)
+
+    return await client.send_message(responseData.channel, embed=embObj)
 
 
 async def cmdHandler(msg: Message) -> str:
@@ -200,8 +221,25 @@ def markCommando(cmd: str, group=GrpGeneral, defaultUserLevel=None):
 
             responseData = CDOFullResponseData(kwargs['msg'].channel, kwargs['cdo'], responseDataInternal)
             msg = await sendResponse(responseData)
+
             if responseDataInternal.reactionFunc is not None:
                 await client.wait_for_reaction(message=msg, check=responseDataInternal.reactionFunc)
+            elif responseDataInternal.paging is not None:
+                await resetPaging(msg)
+                def pagingCheck(reaction: Reaction, user: User):
+                    if reaction.count == 2:
+                        if reaction.emoji == '⏩':
+                            direction = pageNav.forward
+                        else:
+                            direction = pageNav.previous
+
+                        data = responseDataInternal.paging(direction)
+                        responseData = CDOFullResponseData(reaction.message.channel, kwargs['cdo'], data)
+                        embObj = getEmbObj(responseData)
+
+                        client.loop.create_task(editPagingMessage(reaction.message,embObj))
+                    return False
+                await client.wait_for_reaction(message=msg,check=pagingCheck)
             return
 
         DiscordCommando.addCommando(DiscordCommando(cmd, func_wrapper, func.__doc__, group, defaultUserLevel))

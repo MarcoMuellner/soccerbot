@@ -1,4 +1,3 @@
-import re
 from typing import Dict, Union
 import logging
 from collections import OrderedDict
@@ -8,10 +7,12 @@ import subprocess
 import sys
 import os
 import re
+from discord import Reaction,User
 
 from database.models import CompetitionWatcher, Competition, MatchEvents, MatchEventIcon,Settings,DiscordUsers
 from discord_handler.handler import client, watchCompetition,Scheduler
-from discord_handler.cdo_meta import markCommando, CDOInteralResponseData, cmdHandler, emojiList, DiscordCommando
+from discord_handler.cdo_meta import markCommando, CDOInteralResponseData, cmdHandler, emojiList\
+    , DiscordCommando,resetPaging,pageNav
 from discord_handler.liveMatch import LiveMatch
 from api.calls import getLiveMatches,makeMiddlewareCall,DataCalls,getTeamsSearchedByName
 from support.helper import shutdown,checkoutVersion,getVersions,currentVersion
@@ -239,7 +240,7 @@ async def cdoGetHelp(**kwargs):
     Returns all available Commandos and their documentation.
     :return:
     """
-    retString = "Available Commandos:\n"
+    retString = "Available Commandos:"
     addInfo = OrderedDict()
     try:
         prefix = Settings.objects.get(name="prefix")
@@ -253,6 +254,8 @@ async def cdoGetHelp(**kwargs):
     except ObjectDoesNotExist:
         authorUserLevel = 0
 
+    addInfoList = []
+    count = 0
     for i in DiscordCommando.allCommandos():
         if i.userLevel <= authorUserLevel:
             doc = i.docstring
@@ -263,8 +266,37 @@ async def cdoGetHelp(**kwargs):
             else:
                 level = ""
             addInfo[prefix + i.commando + level] = doc
+            count +=1
+            if count ==5:
+                addInfoList.append(addInfo)
+                addInfo = OrderedDict()
+                count = 0
 
-    return CDOInteralResponseData(retString, addInfo)
+    if addInfo != OrderedDict():
+        addInfoList.append(addInfo)
+
+    responseData = CDOInteralResponseData(retString, addInfoList[0])
+
+    class pageContent:
+        index = 0
+        @staticmethod
+        def page(page):
+            oldIndex = pageContent.index
+            pageString = retString + f" _(page {pageContent.index+1})_"
+            if page == pageNav.forward:
+                pageContent.index +=1
+            else:
+                pageContent.index -=1
+            try:
+                return CDOInteralResponseData(pageString,addInfoList[pageContent.index])
+            except IndexError:
+                pageContent.index = oldIndex
+                return CDOInteralResponseData(pageString, addInfoList[pageContent.index])
+
+
+    responseData.paging = pageContent.page
+
+    return responseData
 
 
 @markCommando("changeEventIcons", defaultUserLevel=4)
@@ -420,8 +452,18 @@ async def cdoCurrentGames(**kwargs):
     """
     matchList = Scheduler.startedMatches()
     addInfo = OrderedDict()
+    addInfoList = []
+    count = 0
     for match in matchList:
         addInfo[match.title] = f"{match.match.date} (UTC)"
+        count +=1
+        if count == 10:
+            addInfoList.append(addInfo)
+            addInfo = OrderedDict()
+            count = 0
+
+    if addInfo != OrderedDict():
+        addInfoList.append(addInfo)
 
     if addInfo == OrderedDict():
         respStr = "No running matches"
@@ -429,7 +471,28 @@ async def cdoCurrentGames(**kwargs):
         respStr = "Running matches:"
 
     resp = CDOInteralResponseData(respStr)
-    resp.additionalInfo = addInfo
+    if addInfoList != []:
+        resp.additionalInfo = addInfo[0]
+
+    class pageContent:
+        index = 0
+        @staticmethod
+        def page(page):
+            oldIndex = pageContent.index
+            pageString = respStr + f" _(page {pageContent.index+1})_"
+            if page == pageNav.forward:
+                pageContent.index +=1
+            else:
+                pageContent.index -=1
+            try:
+                return CDOInteralResponseData(pageString,addInfoList[pageContent.index])
+            except IndexError:
+                pageContent.index = oldIndex
+                return CDOInteralResponseData(pageString, addInfoList[pageContent.index])
+
+    if addInfoList != []:
+        resp.paging = pageContent.page
+
     return resp
 
 @markCommando("upcomingGames")
@@ -442,16 +505,47 @@ async def cdoUpcomingGames(**kwargs):
 
     matchList = Scheduler.upcomingMatches()
     addInfo = OrderedDict()
+    count = 0
+    addInfoList = []
     for match in matchList:
         addInfo[match.title] = f"{match.match.date} (UTC)"
+        count +=1
+        if count == 10:
+            addInfoList.append(addInfo)
+            addInfo = OrderedDict()
+            count = 0
 
-    if addInfo == OrderedDict():
+    if addInfo != OrderedDict():
+        addInfoList.append(addInfo)
+
+    if addInfoList == []:
         respStr = "No upcoming matches"
     else:
         respStr = "Upcoming matches:"
 
     resp = CDOInteralResponseData(respStr)
-    resp.additionalInfo = addInfo
+    if addInfoList != []:
+        resp.additionalInfo = addInfoList[0]
+
+
+    class pageContent:
+        index = 0
+        @staticmethod
+        def page(page):
+            oldIndex = pageContent.index
+            pageString = respStr + f" _(page {pageContent.index+1})_"
+            if page == pageNav.forward:
+                pageContent.index +=1
+            else:
+                pageContent.index -=1
+            try:
+                return CDOInteralResponseData(pageString,addInfoList[pageContent.index])
+            except IndexError:
+                pageContent.index = oldIndex
+                return CDOInteralResponseData(pageString, addInfoList[pageContent.index])
+
+    if addInfoList != []:
+        resp.paging = pageContent.page
     return resp
 
 @markCommando("setStartCommando", defaultUserLevel=5)
@@ -656,11 +750,16 @@ async def cdoTest(**kwargs):
     :return:
     """
     msg = await client.send_message(kwargs['msg'].channel, 'React with thumbs up or thumbs down.')
+    await client.add_reaction(message=msg, emoji='⏪')
+    await client.add_reaction(message=msg,emoji='⏩')
 
-    def check(reaction, user):
+    def check(reaction : Reaction, user : User):
+        print(reaction.count)
+        if reaction.count == 2:
+            client.loop.create_task(resetPaging(reaction.message))
         e = str(reaction.emoji)
         print(e)
-        print(e == emojiList[0])
+        print(e == emojiList()[0])
         return False
 
     res = await client.wait_for_reaction(message=msg, check=check)
