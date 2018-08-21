@@ -28,6 +28,10 @@ class MatchEventData:
         self.player = player
         self.playerTo = playerTo
 
+    def __str__(self):
+        return f"Event: {self.event}, minute {self.minute}, team {self.team}, player {self.player}" \
+               f", playerTo {self.playerTo}"
+
 
 class LiveMatch:
     eventStyleSheet = {}
@@ -89,7 +93,7 @@ class LiveMatch:
         :param match: Match object.  Will  post to discord channels if the object is a database.models.Match object
         """
         if self.runningStarted:
-            logger.error(f"Match {self.title} already started!")
+            logger.warning(f"Match {self.title} already started!")
             return
         else:
             logger.info(f"Starting match {self.title}")
@@ -109,7 +113,7 @@ class LiveMatch:
             except JSONDecodeError:
                 break
 
-            if data["match"]["isFinished"]:
+            if data["match"]["isFinished"] and not self.running:
                 logger.info(f"Match {self.match} allready passed")
                 break
 
@@ -166,8 +170,6 @@ class LiveMatch:
                     logger.info(f"Match {match} finished!")
                     break
                 endCycles -= 1
-
-
 
             await asyncio.sleep(sleepTime)
 
@@ -324,6 +326,7 @@ class LiveMatch:
             await asyncio.sleep(10)
             for i in client.get_all_channels():
                 if i.name == channel.name:
+                    logger.debug(f"Sending {embObj} to {i.name}")
                     await client.send_message(i, embed=embObj)
 
         return title, goalString

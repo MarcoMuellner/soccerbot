@@ -2,7 +2,7 @@ from django.db.utils import IntegrityError
 from datetime import timedelta,timezone,datetime
 import logging
 import enum
-from typing import List,Dict
+from typing import List,Dict,Union
 from pytz import utc,UTC
 
 from api.calls import getSpecificTeam,getAllFederations,getAllCountries,getAllCompetitions,getAllMatches,getAllSeasons
@@ -113,7 +113,7 @@ def createMatchDayObject(query,watcher):
         matchdayString = f"{watcher.competition.clear_name} Matchday {query.first().matchday}"
     )
 
-def compDict(competition : CompetitionWatcher) ->Dict[str,Dict]:
+def compDict(competition : CompetitionWatcher) ->Dict[str,Dict[str,Union[List[LiveMatch],str]]]:
     comp_name = competition.competition.clear_name
     matchDict = {}
     matchDayList = competition.current_season.match_set.values_list('matchday', flat=True).distinct()

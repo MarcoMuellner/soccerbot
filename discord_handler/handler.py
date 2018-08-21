@@ -43,7 +43,11 @@ async def deleteChannel(server: Server, channelName: str):
 
 
 async def removeOldChannels():
+    """
+    Removes all channels with the name *-matchday-* in them.
+    """
     deleteChannelList = []
+    #these two loops are split up, as the it raises an error when the dict changes.
     for i in client.get_all_channels():
         if "-matchday-" in i.name:
             logger.info(f"Deleting old channel {i.name}")
@@ -52,13 +56,11 @@ async def removeOldChannels():
     for i in deleteChannelList:
         await deleteChannel(i[0], i[1])
 
-
-schedulerInitRunning = asyncio.Event(loop=client.loop)
-
 class Scheduler:
     matchDayObject = {}
     matchSchedulerRunning = asyncio.Event(loop=client.loop)
     maintananceSynchronizer = asyncio.Event(loop=client.loop)
+
     @staticmethod
     @task
     async def maintananceScheduler():
@@ -66,12 +68,14 @@ class Scheduler:
         Starts the scheduler task, which will automatically create channels adnd update databases. Currently this is
         always done at 24:00 UTC. Should be called via create_task!
         """
+        logger.debug("Waiting for client ready.")
         await client.wait_until_ready()
+        logger.debug("Client ready, starting loop")
         while True:
             # take synchronization object, during update no live thread should run!
             Scheduler.maintananceSynchronizer.set()
             targetTime = datetime.utcnow().replace(hour=0, minute=0, second=0) + timedelta(days=1)
-            logger.info("Maintaining data")
+            logger.info("Data maintanance running ...")
 
             # update competitions, seasons etc. Essentially the data that is always there
             updateOverlayData()
@@ -79,44 +83,68 @@ class Scheduler:
             updateMatches()
 
             Scheduler.maintananceSynchronizer.clear()
+            logger.info(f"Sleeping for {targetTime}")
             await asyncio.sleep(calculateSleepTime(targetTime))
 
     @staticmethod
     @task
     async def matchScheduler():
+        """
+        Parses all available matches for a given matchday and starts them if necessary.
+        """
+        logger.debug("Waiting for client ready.")
         await client.wait_until_ready()
-        Scheduler.matchDayObject = getNextMatchDayObjects()
+        logger.debug("Client ready, starting loop")
+        Scheduler.matchDayObject = getNextMatchDayObjects() #add competition adds new competitions to this.
+
         while True:
             Scheduler.matchSchedulerRunning.set()
             Scheduler.maintananceSynchronizer.wait()
+
             try:
                 for competition,matchObject in Scheduler.matchDayObject.items():
                     for md,data in matchObject.items():
+                        logger.debug(f"Checking {competition}:{matchObject} for {md}")
                         currentTime = datetime.utcnow().replace(tzinfo=UTC)
+                        logger.debug(f"CurrentTime {currentTime}, startTime {data['start']} endTime {data['end']}")
+
                         if data['start'] < currentTime and data['end'] > currentTime:
+                            logger.debug("Current time within boundaries, starting match")
                             await asyncCreateChannel(data['channel_name'])
+                            logger.debug("Looking into upcoming matches: ")
                             for i in data['upcomingMatches']:
+                                logger.debug(f"Match {i}, flag runningStarted {i.runningStarted}")
                                 if not i.runningStarted:
+                                    logger.debug(f"Starting task {i}")
                                     client.loop.create_task(i.runMatchThread())
+                                    logger.debug(f"Waiting for {i} to have started")
                                     i.lock.wait()
+                                    logger.debug(f"{i} started")
                                 data['currentMatches'].append(i)
                                 data['upcomingMatches'].remove(i)
 
                             await asyncio.sleep(5)
+
+                            logger.debug("Looking into currentMatches")
                             for i in data['currentMatches']:
+                                logger.debug(f"Match {i}, flags runningStarted {i.runningStarted}, passed {i.passed}")
+
                                 if not i.runningStarted:
+                                    logger.debug(f"Starting i, as it is not started but in currentMatches")
                                     client.loop.create_task(i.runMatchThread())
+                                    logger.debug(f"Watiting for {i} to have started")
+                                    i.lock.wait()
+
                                 if i.passed:
+                                    logger.debug(f"{i} has passed, moving it to passedMatches")
                                     data['passedMatches'].append(i)
                                     data['currentMatches'].remove(i)
 
-                                if not i.passed and not i.running:
-                                    data['upcomingMatches'].append(i)
-                                    data['currentMatches'].remove(i)
-
                             await asyncio.sleep(5)
+
                         elif data['end'] < currentTime:
                             await asyncDeleteChannel(data['channel_name'])
+
             except RuntimeError:
                 logger.error("Dict size changed!")
                 await asyncio.sleep(5)
@@ -126,12 +154,14 @@ class Scheduler:
 
     @staticmethod
     def addCompetition(competition : CompetitionWatcher):
+        logger.debug(f"Adding {competition} to Scheduler")
         Scheduler.matchSchedulerRunning.wait()
         Scheduler.matchDayObject[competition.competition.clear_name] = compDict(competition)
 
     @staticmethod
     @task
     async def removeCompetition(competition : CompetitionWatcher):
+        logger.debug(f"Removing {competition} from Scheduler")
         Scheduler.matchSchedulerRunning.wait()
         #todo clear up channels
         del Scheduler.matchDayObject[competition.competition.clear_name]
@@ -220,7 +250,6 @@ async def asyncDeleteChannel( channelName: str,sleepPeriod: float = None):
     :param sleepPeriod: Period to wait before channel can be deleted
     :param channelName: Name of the channel that will be deleted
     """
-    logger.debug(f"Initializing delete Channel task for {channelName} in {sleepPeriod}")
     if sleepPeriod != None:
         await asyncio.sleep(sleepPeriod)
     await deleteChannel(list(client.servers)[0], channelName)
