@@ -282,16 +282,17 @@ async def cdoGetHelp(**kwargs):
         @staticmethod
         def page(page):
             oldIndex = pageContent.index
-            pageString = retString + f" _(page {pageContent.index+1})_"
             if page == pageNav.forward:
                 pageContent.index +=1
             else:
                 pageContent.index -=1
             try:
-                return CDOInteralResponseData(pageString,addInfoList[pageContent.index])
+                dataResp = CDOInteralResponseData(retString,addInfoList[pageContent.index])
             except IndexError:
                 pageContent.index = oldIndex
-                return CDOInteralResponseData(pageString, addInfoList[pageContent.index])
+                dataResp = CDOInteralResponseData(retString, addInfoList[pageContent.index])
+
+            return (dataResp,pageContent.index,len(addInfoList))
 
 
     responseData.paging = pageContent.page
@@ -434,16 +435,17 @@ async def cdoCurrentGames(**kwargs):
         @staticmethod
         def page(page):
             oldIndex = pageContent.index
-            pageString = respStr + f" _(page {pageContent.index+1})_"
             if page == pageNav.forward:
                 pageContent.index +=1
             else:
                 pageContent.index -=1
             try:
-                return CDOInteralResponseData(pageString,addInfoList[pageContent.index])
+                dataResp =  CDOInteralResponseData(respStr,addInfoList[pageContent.index])
             except IndexError:
                 pageContent.index = oldIndex
-                return CDOInteralResponseData(pageString, addInfoList[pageContent.index])
+                dataResp = CDOInteralResponseData(respStr, addInfoList[pageContent.index])
+
+            return (dataResp,pageContent.index,len(addInfoList))
 
     if addInfoList != []:
         resp.paging = pageContent.page
@@ -488,16 +490,17 @@ async def cdoUpcomingGames(**kwargs):
         @staticmethod
         def page(page):
             oldIndex = pageContent.index
-            pageString = respStr + f" _(page {pageContent.index+1})_"
             if page == pageNav.forward:
                 pageContent.index +=1
             else:
                 pageContent.index -=1
             try:
-                return CDOInteralResponseData(pageString,addInfoList[pageContent.index])
+                dataResp =  CDOInteralResponseData(respStr,addInfoList[pageContent.index])
             except IndexError:
                 pageContent.index = oldIndex
-                return CDOInteralResponseData(pageString, addInfoList[pageContent.index])
+                dataResp =  CDOInteralResponseData(respStr, addInfoList[pageContent.index])
+
+            return (dataResp,pageContent.index,len(addInfoList))
 
     if addInfoList != []:
         resp.paging = pageContent.page
@@ -727,7 +730,6 @@ async def cdoLog(**kwargs):
         @staticmethod
         def page(page):
             oldIndex = pageContent.index
-            pageString = respStr + f" _(page {pageContent.index+1})_"
             if page == pageNav.forward:
                 pageContent.index +=1
             else:
@@ -741,10 +743,10 @@ async def cdoLog(**kwargs):
             except IndexError:
                 addInfo[f"Lines {lowerIndex} to {len(fileContent)}"] = fileContent[lowerIndex:len(fileContent) - 1]
             try:
-                return CDOInteralResponseData(pageString,addInfo)
+                return CDOInteralResponseData(respStr,addInfo)
             except IndexError:
                 pageContent.index = oldIndex
-                return CDOInteralResponseData(pageString, addInfo)
+                return CDOInteralResponseData(respStr, addInfo)
 
     response = CDOInteralResponseData(respStr,addInfo)
     if len(fileContent) != 0:

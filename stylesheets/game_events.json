@@ -1,7 +1,7 @@
 {
     "Kickoff_first_half": ":KickOff:  **$minute$**:**KICKOFF** The match is underway!",
     "Kickoff_second_half": ":StartSecondHalf:  **$minute$**:**KICKOFF** Second Half!",
-    "First_half_ended": ":EndFirstHalf:  **$minute$**:**HALF TIME!*",
+    "First_half_ended": ":EndFirstHalf:  **$minute$**:**HALF TIME!**",
     "Second_half_ended": ":EndSecondHalf:  **$minute$**:Second half has ended.",
     "Match_over": ":whistle:  **$minute$**:**FULL TIME**",
     "Goal": ":GoalScored:  **$minute$**:**GOAL**! $player$ (**$team$**)",

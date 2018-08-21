@@ -226,6 +226,7 @@ def markCommando(cmd: str, group=GrpGeneral, defaultUserLevel=None):
                 await client.wait_for_reaction(message=msg, check=responseDataInternal.reactionFunc)
             elif responseDataInternal.paging is not None:
                 await resetPaging(msg)
+
                 def pagingCheck(reaction: Reaction, user: User):
                     if reaction.count == 2:
                         if reaction.emoji == '⏩':
@@ -233,9 +234,18 @@ def markCommando(cmd: str, group=GrpGeneral, defaultUserLevel=None):
                         else:
                             direction = pageNav.previous
 
-                        data = responseDataInternal.paging(direction)
+                        try:
+                            data,index,length = responseDataInternal.paging(direction)
+                        except ValueError:
+                            data = responseDataInternal.paging(direction)
+                            index = None
+                            length = None
+
                         responseData = CDOFullResponseData(reaction.message.channel, kwargs['cdo'], data)
                         embObj = getEmbObj(responseData)
+
+                        if index is not None and length is not None:
+                            embObj.set_footer(text=f"Page {index+1}/{length}")
 
                         client.loop.create_task(editPagingMessage(reaction.message,embObj))
                     return False

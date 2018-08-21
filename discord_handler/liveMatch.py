@@ -37,7 +37,7 @@ class MatchEventData:
 class LiveMatch:
     eventStyleSheet = {}
     lineupStyleSheet = {}
-    emojiSet = dict([(i.name,str(i)) for i in client.get_all_emojis()])
+    emojiSet = {}
 
     def __init__(self, match: Match):
         self.match = match
@@ -55,6 +55,8 @@ class LiveMatch:
         self.runningStarted = False
         self.lock = asyncio.Event(loop=client.loop)
         self.lock.set()
+        if LiveMatch.emojiSet == {}:
+            LiveMatch.emojiSet = dict([(i.name,str(i)) for i in client.get_all_emojis()])
 
     @staticmethod
     def styleSheetEvents(key: str = None) -> Union[Dict, str]:
@@ -299,10 +301,10 @@ class LiveMatch:
         for i in foundEmojis:
             if i.replace(":","") in LiveMatch.emojiSet.keys():
                 logger.debug(f"Replacing {i} for {LiveMatch.emojiSet[i.replace(':','')]}")
-                content.replace(i,LiveMatch.emojiSet[i.replace(":","")])
+                content = content.replace(i,LiveMatch.emojiSet[i.replace(":","")])
             else:
                 logger.warning(f"{i} not in emojilist, replacing it with nothing")
-                content.replace(i, "")
+                content = content.replace(i, "")
 
         for key,val in replaceDict.items():
             content = content.replace(key,str(val))
