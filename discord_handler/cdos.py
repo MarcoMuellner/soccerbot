@@ -298,51 +298,6 @@ async def cdoGetHelp(**kwargs):
 
     return responseData
 
-
-@markCommando("changeEventIcons", defaultUserLevel=4)
-async def cdoChangeIcons(**kwargs):
-    """
-    Allows for changing of icons for match Events. The command with no parameters will return all events,
-    with the event alone the currently set icon and with event and icon it will set the icon to the event.
-    :return:
-    """
-    data = kwargs['msg'].content.split(" ")
-
-    if len(data) == 1:
-        responseString = "Available events:"
-        addInfo = OrderedDict()
-        for tag in MatchEvents:
-            try:
-                query = MatchEventIcon.objects.get(event=tag.value)
-                val = query.eventIcon
-            except ObjectDoesNotExist:
-                val = "No icon set"
-
-            addInfo[str(tag).replace("MatchEvents.", "")] = val
-        return CDOInteralResponseData(responseString, addInfo)
-
-    if len(data) == 2:
-        for tag in MatchEvents:
-            if data[1] in str(tag):
-                try:
-                    query = MatchEventIcon.objects.get(event=tag.value)
-                    val = query.eventIcon
-                except ObjectDoesNotExist:
-                    val = "No icon set"
-                return CDOInteralResponseData(f"**{data[1]}** : {val}")
-
-        return CDOInteralResponseData(f"Event **{data[1]}** is not available")
-
-    if len(data) == 3:
-        for tag in MatchEvents:
-            if data[1] in str(tag):
-                MatchEventIcon(tag.value, data[2]).save()
-                return CDOInteralResponseData(f"Set **{data[1]}** to {data[2]}")
-        return CDOInteralResponseData(f"Event **{data[1]}** is not available")
-
-    return CDOInteralResponseData()
-
-
 @markCommando("showRunningTasks", defaultUserLevel=6)
 async def cdoShowRunningTasks(**kwargs):
     """
@@ -806,7 +761,7 @@ async def cdoTest(**kwargs):
     :param kwargs:
     :return:
     """
-    msg = await client.send_message(kwargs['msg'].channel, 'React with thumbs up or thumbs down.')
+    msg = await client.send_message(kwargs['msg'].channel, 'React <:yellow_card:478130458090012672> with thumbs up or thumbs down.')
     await client.add_reaction(message=msg, emoji='⏪')
     await client.add_reaction(message=msg,emoji='⏩')
 

@@ -10,6 +10,7 @@ from json.decoder import JSONDecodeError
 from datetime import datetime, timedelta
 from pytz import UTC
 import os
+import re
 
 from database.models import Match, MatchEvents, MatchEventIcon
 from api.calls import makeMiddlewareCall, DataCalls
@@ -36,6 +37,7 @@ class MatchEventData:
 class LiveMatch:
     eventStyleSheet = {}
     lineupStyleSheet = {}
+    emojiSet = dict([(i.name,str(i)) for i in client.get_all_emojis()])
 
     def __init__(self, match: Match):
         self.match = match
@@ -281,13 +283,7 @@ class LiveMatch:
         for key,val in replaceDict.items():
             title = title.replace(str(key),str(val))
 
-        try:
-            val = MatchEventIcon.objects.get(event=event.event.value).eventIcon
-        except ObjectDoesNotExist:
-            val = ""
-
         replaceDict = {
-            "$symbol$":val,
             "$minute$":event.minute,
             "$player$":event.player,
             "$playerTo$": event.playerTo,
@@ -295,6 +291,18 @@ class LiveMatch:
         }
 
         content = LiveMatch.styleSheetEvents(event.event.value)
+
+        foundEmojis = re.findall(r':[\w\d_-]+:',content)
+
+        logger.debug(f"found emojis : {foundEmojis}")
+
+        for i in foundEmojis:
+            if i.replace(":","") in LiveMatch.emojiSet.keys():
+                logger.debug(f"Replacing {i} for {LiveMatch.emojiSet[i.replace('':'','')]}")
+                content.replace(i,LiveMatch.emojiSet[i.replace(":","")])
+            else:
+                logger.debug(f"{i} not in emojilist, replacing it with nothing")
+                content.replace(i, "")
 
         for key,val in replaceDict.items():
             content = content.replace(key,str(val))
