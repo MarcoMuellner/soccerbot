@@ -34,6 +34,9 @@ class MatchEventData:
         return f"ID: {self.id} Event: {self.event}, minute {self.minute}, team {self.team}, player {self.player}" \
                f", playerTo {self.playerTo}"
 
+    def __eq__(self, other):
+        return other.id == self.id
+
 
 class LiveMatch:
     eventStyleSheet = {}

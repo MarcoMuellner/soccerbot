@@ -378,16 +378,18 @@ async def cdoTopScorer(**kwargs):
     :return:
     """
     data = kwargs['msg'].content.split(" ")
-    if len(data) != 2:
+    if len(data) < 2:
         return CDOInteralResponseData("You need to tell me the competition, mate!")
 
-    competition = Competition.objects.filter(clear_name=data[1]).first()
+    searchString = kwargs['msg'].content.replace(data[0] + " ", "")
+
+    competition = Competition.objects.filter(clear_name=searchString).first()
     if competition == None:
-        return CDOInteralResponseData(f"Sorry, can't find {data[1]}")
+        return CDOInteralResponseData(f"Sorry, can't find {searchString}")
 
     addInfo = await getTopScorers(competition)
 
-    return CDOInteralResponseData(f"Top scorers for {data[1]}",addInfo)
+    return CDOInteralResponseData(f"Top scorers for {searchString}",addInfo)
 
 @markCommando("currentGames")
 async def cdoCurrentGames(**kwargs):
