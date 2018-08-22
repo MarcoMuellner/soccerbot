@@ -22,6 +22,7 @@ class ApiCalls:
     countries = 'countries'
     live = "live/football"
     teamSearch = "teams/search"
+    topScorer = "topseasonplayerstatistics/season"
 
 
 class DataCalls:

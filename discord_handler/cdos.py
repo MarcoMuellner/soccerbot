@@ -15,6 +15,7 @@ from discord_handler.cdo_meta import markCommando, CDOInteralResponseData, cmdHa
     , DiscordCommando,resetPaging,pageNav
 from discord_handler.liveMatch import LiveMatch
 from api.calls import getLiveMatches,makeMiddlewareCall,DataCalls,getTeamsSearchedByName
+from api.stats import getTopScorers
 from support.helper import shutdown,checkoutVersion,getVersions,currentVersion
 
 from support.helper import Task
@@ -368,6 +369,25 @@ async def cdoScores(**kwargs):
         resp = CDOInteralResponseData(f"Current scores for {matchObj}")
         resp.additionalInfo = addInfo
         return resp
+
+@markCommando("topScorer")
+async def cdoTopScorer(**kwargs):
+    """
+    Shows the topscorer for a given competition
+    :param kwargs:
+    :return:
+    """
+    data = kwargs['msg'].content.split(" ")
+    if len(data) != 2:
+        return CDOInteralResponseData("You need to tell me the competition, mate!")
+
+    competition = Competition.objects.filter(clear_name=data[1]).first()
+    if competition == None:
+        return CDOInteralResponseData(f"Sorry, can't find {data[1]}")
+
+    addInfo = await getTopScorers(competition)
+
+    return CDOInteralResponseData(f"Top scorers for {data[1]}",addInfo)
 
 @markCommando("currentGames")
 async def cdoCurrentGames(**kwargs):
