@@ -148,20 +148,16 @@ class LiveMatch:
                     logger.info(f"Lineups not yet available for {self.title}")
 
             newEvents, pastEvents = LiveMatch.parseEvents(data["match"], pastEvents)
-            eventList += newEvents
 
 
-            for i in eventList:
+            for i in newEvents:
                 try:
                     for channel in client.get_all_channels():
                         if channel.name == channelName:
                             self.started = True
                             self.title, goalString = await LiveMatch.sendMatchEvent(channel, self.match, i)
                             self.goalList.append(goalString)
-                            try:
-                                eventList.remove(i)
-                            except ValueError:
-                                pass
+
                             logger.info(f"Posting event: {i}")
                 except RuntimeError:
                     logger.warning("Size of channels has changed!")
@@ -354,10 +350,6 @@ class LiveMatch:
         """
         fullEventList = []
         dataEvents = data['events']
-        if pastEvents != [] and pastEvents is not None:
-            idList = [i.id for i in pastEvents]
-        else:
-            idList = []
 
         for event in reversed(dataEvents):
             eventData = MatchEventData(
@@ -394,9 +386,8 @@ class LiveMatch:
                 logger.error(f"EventId {event['eventCode']} with descr {event['eventDescription']} not handled!")
                 logger.error(f"TeamName: {event['teamName']}")
                 continue
-            if eventData not in fullEventList and eventData.id not in idList:
+            if eventData not in fullEventList:
                 fullEventList.append(eventData)
-                idList.append(eventData.id)
 
         retEvents = [i for i in fullEventList if i not in pastEvents]
         pastEvents = fullEventList
