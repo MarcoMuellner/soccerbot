@@ -34,7 +34,26 @@ except (KeyError,FileNotFoundError):
     logger.error(f"NO MASTER USER AVAILABLE")
     masterUserID = None
 
+############################### Response objects ##########################
 
+class CDOInteralResponseData:
+    def __init__(self, response: str = "", additionalInfo: OrderedDict = OrderedDict(), reactionFunc=None, paging = None):
+        self.response = response
+        self.additionalInfo = additionalInfo
+        self.reactionFunc = reactionFunc
+        self.paging = paging
+
+
+class CDOFullResponseData:
+    def __init__(self, channel: Channel, cdo: str, internalResponse: CDOInteralResponseData):
+        self.channel = channel
+        self.cdo = cdo
+        self.response = internalResponse.response
+        self.paging = internalResponse.paging
+        self.additionalInfo = internalResponse.additionalInfo
+
+    def __str__(self):
+        return f"Posting {self.response} to {self.cdo} with addInfo {self.additionalInfo} to {self.channel}"
 
 ############################### Commandos and so on ##########################
 class CommandoGroup:
@@ -85,27 +104,50 @@ class DiscordCommando:
     def __str__(self):
         return f"Cmd {self.cmd_group}:{self.commando}, userLevel {self.userLevel}"
 
+class Page:
+    def __init__(self,cdoResp : CDOInteralResponseData,cdo : str):
+        self.addInfoList = []
+        self.cdoResp = cdoResp
+        count = 0
+        tmpDict = OrderedDict()
+        for key,val in cdoResp.additionalInfo.items():
+            tmpDict[key] = val
+            count += 1
+            if count >=5:
+                self.addInfoList.append(CDOInteralResponseData(response=cdoResp.response,additionalInfo=tmpDict))
+                tmpDict = OrderedDict()
+                count = 0
 
-############################### Response objects ##########################
-
-class CDOInteralResponseData:
-    def __init__(self, response: str = "", additionalInfo: OrderedDict = OrderedDict(), reactionFunc=None, paging = None):
-        self.response = response
-        self.additionalInfo = additionalInfo
-        self.reactionFunc = reactionFunc
-        self.paging = paging
-
-
-class CDOFullResponseData:
-    def __init__(self, channel: Channel, cdo: str, internalResponse: CDOInteralResponseData):
-        self.channel = channel
+        if tmpDict != OrderedDict():
+            self.addInfoList.append(CDOInteralResponseData(response=cdoResp.response,additionalInfo=tmpDict))
+        self.index = 0
+        self.length = len(self.addInfoList)
         self.cdo = cdo
-        self.response = internalResponse.response
-        self.paging = internalResponse.paging
-        self.additionalInfo = internalResponse.additionalInfo
+        pass
 
-    def __str__(self):
-        return f"Posting {self.response} to {self.cdo} with addInfo {self.additionalInfo} to {self.channel}"
+    def getInitialData(self) -> CDOInteralResponseData:
+        return self.addInfoList[0]
+
+    def reactFunc(self,reaction : Reaction, user : User):
+        if self.cdoResp.reactionFunc is not None:
+            self.cdoResp.reactionFunc(reaction,user)
+        if reaction.count == 2:
+            if reaction.emoji == '⏩' and self.index - 2 < self.length:
+                self.index +=1
+            elif reaction.emoji == '⏪' and self.index +1 > 0:
+                self.index -=1
+            else:
+                pass
+
+            responseData = CDOFullResponseData(reaction.message.channel,self.cdo,self.addInfoList[self.index])
+            embObj = getEmbObj(responseData)
+            embObj.set_footer(text=f"Page {self.index+2}/{self.length+1}")
+
+            client.loop.create_task(editPagingMessage(reaction.message, embObj))
+        pass
+
+
+
 
 
 ############################### Meta functions ##########################
@@ -219,37 +261,18 @@ def markCommando(cmd: str, group=GrpGeneral, defaultUserLevel=None):
             if not isinstance(responseDataInternal, CDOInteralResponseData):
                 raise TypeError("Commandos need to return a CDOInteralResponseData type!")
 
-            responseData = CDOFullResponseData(kwargs['msg'].channel, kwargs['cdo'], responseDataInternal)
-            msg = await sendResponse(responseData)
+            if len(responseDataInternal.additionalInfo) < 5:
+                responseData = CDOFullResponseData(kwargs['msg'].channel, kwargs['cdo'], responseDataInternal)
+                msg = await sendResponse(responseData)
 
-            if responseDataInternal.reactionFunc is not None:
-                await client.wait_for_reaction(message=msg, check=responseDataInternal.reactionFunc)
-            elif responseDataInternal.paging is not None:
+                if responseDataInternal.reactionFunc is not None:
+                    await client.wait_for_reaction(message=msg, check=responseDataInternal.reactionFunc)
+            else:
+                pageObj = Page(responseDataInternal,cmd)
+                responseData = CDOFullResponseData(kwargs['msg'].channel,cmd,pageObj.getInitialData())
+                msg = await sendResponse(responseData)
                 await resetPaging(msg)
-
-                def pagingCheck(reaction: Reaction, user: User):
-                    if reaction.count == 2:
-                        if reaction.emoji == '⏩':
-                            direction = pageNav.forward
-                        else:
-                            direction = pageNav.previous
-
-                        try:
-                            data,index,length = responseDataInternal.paging(direction)
-                        except ValueError:
-                            data = responseDataInternal.paging(direction)
-                            index = None
-                            length = None
-
-                        responseData = CDOFullResponseData(reaction.message.channel, kwargs['cdo'], data)
-                        embObj = getEmbObj(responseData)
-
-                        if index is not None and length is not None:
-                            embObj.set_footer(text=f"Page {index+2}/{length+1}")
-
-                        client.loop.create_task(editPagingMessage(reaction.message,embObj))
-                    return False
-                await client.wait_for_reaction(message=msg,check=pagingCheck)
+                await client.wait_for_reaction(message=msg,check=pageObj.reactFunc)
             return
 
         DiscordCommando.addCommando(DiscordCommando(cmd, func_wrapper, func.__doc__, group, defaultUserLevel))

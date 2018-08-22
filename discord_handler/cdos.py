@@ -254,8 +254,6 @@ async def cdoGetHelp(**kwargs):
     except ObjectDoesNotExist:
         authorUserLevel = 0
 
-    addInfoList = []
-    count = 0
     for i in DiscordCommando.allCommandos():
         if i.userLevel <= authorUserLevel:
             doc = i.docstring
@@ -266,36 +264,8 @@ async def cdoGetHelp(**kwargs):
             else:
                 level = ""
             addInfo[prefix + i.commando + level] = doc
-            count +=1
-            if count ==5:
-                addInfoList.append(addInfo)
-                addInfo = OrderedDict()
-                count = 0
 
-    if addInfo != OrderedDict():
-        addInfoList.append(addInfo)
-
-    responseData = CDOInteralResponseData(retString, addInfoList[0])
-
-    class pageContent:
-        index = 0
-        @staticmethod
-        def page(page):
-            oldIndex = pageContent.index
-            if page == pageNav.forward:
-                pageContent.index +=1
-            else:
-                pageContent.index -=1
-            try:
-                dataResp = CDOInteralResponseData(retString,addInfoList[pageContent.index])
-            except IndexError:
-                pageContent.index = oldIndex
-                dataResp = CDOInteralResponseData(retString, addInfoList[pageContent.index])
-
-            return (dataResp,pageContent.index,len(addInfoList))
-
-
-    responseData.paging = pageContent.page
+    responseData = CDOInteralResponseData(retString, addInfo)
 
     return responseData
 
@@ -408,47 +378,15 @@ async def cdoCurrentGames(**kwargs):
     """
     matchList = Scheduler.startedMatches()
     addInfo = OrderedDict()
-    addInfoList = []
-    count = 0
     for match in matchList:
-        addInfo[match.title] = f"{match.match.date} (UTC)"
-        count +=1
-        if count == 10:
-            addInfoList.append(addInfo)
-            addInfo = OrderedDict()
-            count = 0
-
-    if addInfo != OrderedDict():
-        addInfoList.append(addInfo)
+        addInfo[match.title] = f"{match.match.date.strftime('%d %b %Y, %H:%M')} (UTC)"
 
     if addInfo == OrderedDict():
         respStr = "No running matches"
     else:
         respStr = "Running matches:"
 
-    resp = CDOInteralResponseData(respStr)
-    if addInfoList != []:
-        resp.additionalInfo = addInfo[0]
-
-    class pageContent:
-        index = 0
-        @staticmethod
-        def page(page):
-            oldIndex = pageContent.index
-            if page == pageNav.forward:
-                pageContent.index +=1
-            else:
-                pageContent.index -=1
-            try:
-                dataResp =  CDOInteralResponseData(respStr,addInfoList[pageContent.index])
-            except IndexError:
-                pageContent.index = oldIndex
-                dataResp = CDOInteralResponseData(respStr, addInfoList[pageContent.index])
-
-            return (dataResp,pageContent.index,len(addInfoList))
-
-    if addInfoList != []:
-        resp.paging = pageContent.page
+    resp = CDOInteralResponseData(respStr,addInfo)
 
     return resp
 
@@ -462,48 +400,15 @@ async def cdoUpcomingGames(**kwargs):
 
     matchList = Scheduler.upcomingMatches()
     addInfo = OrderedDict()
-    count = 0
-    addInfoList = []
     for match in matchList:
         addInfo[match.title] = f"{match.match.date.strftime('%d %b %Y, %H:%M')} (UTC)"
-        count +=1
-        if count == 10:
-            addInfoList.append(addInfo)
-            addInfo = OrderedDict()
-            count = 0
 
-    if addInfo != OrderedDict():
-        addInfoList.append(addInfo)
-
-    if addInfoList == []:
+    if addInfo == OrderedDict():
         respStr = "No upcoming matches"
     else:
         respStr = "Upcoming matches:"
 
-    resp = CDOInteralResponseData(respStr)
-    if addInfoList != []:
-        resp.additionalInfo = addInfoList[0]
-
-
-    class pageContent:
-        index = 0
-        @staticmethod
-        def page(page):
-            oldIndex = pageContent.index
-            if page == pageNav.forward:
-                pageContent.index +=1
-            else:
-                pageContent.index -=1
-            try:
-                dataResp =  CDOInteralResponseData(respStr,addInfoList[pageContent.index])
-            except IndexError:
-                pageContent.index = oldIndex
-                dataResp =  CDOInteralResponseData(respStr, addInfoList[pageContent.index])
-
-            return (dataResp,pageContent.index,len(addInfoList))
-
-    if addInfoList != []:
-        resp.paging = pageContent.page
+    resp = CDOInteralResponseData(respStr,addInfo)
     return resp
 
 @markCommando("setStartCommando", defaultUserLevel=5)
@@ -725,32 +630,7 @@ async def cdoLog(**kwargs):
     except IndexError:
         addInfo[f"Lines 1 to {len(fileContent)}"] = fileContent[0:len(fileContent) -1]
 
-    class pageContent:
-        index = 1
-        @staticmethod
-        def page(page):
-            oldIndex = pageContent.index
-            if page == pageNav.forward:
-                pageContent.index +=1
-            else:
-                pageContent.index -=1
-
-            lowerIndex = (pageContent.index - 1) * 1000
-            upperIndex = (pageContent.index) * 1000
-            addInfo = OrderedDict()
-            try:
-                addInfo[f"Lines {lowerIndex} to {upperIndex}"] = fileContent[lowerIndex:upperIndex]
-            except IndexError:
-                addInfo[f"Lines {lowerIndex} to {len(fileContent)}"] = fileContent[lowerIndex:len(fileContent) - 1]
-            try:
-                return CDOInteralResponseData(respStr,addInfo)
-            except IndexError:
-                pageContent.index = oldIndex
-                return CDOInteralResponseData(respStr, addInfo)
-
     response = CDOInteralResponseData(respStr,addInfo)
-    if len(fileContent) != 0:
-        response.paging = pageContent.page
 
     return response
 

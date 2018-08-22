@@ -22,7 +22,8 @@ path = os.path.dirname(os.path.realpath(__file__))
 
 
 class MatchEventData:
-    def __init__(self, event: MatchEvents, minute: str, team: str, player: str, playerTo: str):
+    def __init__(self,id : int, event: MatchEvents, minute: str, team: str, player: str, playerTo: str):
+        self.id = id
         self.event = event
         self.minute = minute
         self.team = team
@@ -30,7 +31,7 @@ class MatchEventData:
         self.playerTo = playerTo
 
     def __str__(self):
-        return f"Event: {self.event}, minute {self.minute}, team {self.team}, player {self.player}" \
+        return f"ID: {self.id} Event: {self.event}, minute {self.minute}, team {self.team}, player {self.player}" \
                f", playerTo {self.playerTo}"
 
 
@@ -342,7 +343,7 @@ class LiveMatch:
         return title, goalString
 
     @staticmethod
-    def parseEvents(data: Dict[str,Union[str,List]], pastEvents=list) -> Tuple[List[MatchEventData], List]:
+    def parseEvents(data: Dict[str, Union[str, List]], pastEvents : List[MatchEventData] = None) -> Tuple[List[MatchEventData], List]:
         """
         Parses the event list from the middleware api. The code below should be self explanatory, every eventCode
         represents a certain event.
@@ -351,56 +352,53 @@ class LiveMatch:
         :return: Returns two lists: the events that are new, as well as a full list of all events that already happened
         including the new ones.
         """
-        retEvents = []
+        fullEventList = []
         dataEvents = data['events']
-        if dataEvents != pastEvents:
-            diff = [i for i in dataEvents if i not in pastEvents]
+        if pastEvents != [] and pastEvents is not None:
+            idList = [i.id for i in pastEvents]
+        else:
+            idList = []
 
-            diffStr =[]
-
-            for i in diff:
-                diffStr.append(json.dumps(i))
-
-            diffStr = list(set(diffStr)) #uniqueElements
-
-            diff = []
-
-            for i in diffStr:
-                diff.append(json.loads(i))
-
-            for event in reversed(diff):
-                eventData = MatchEventData(event=MatchEvents.none,
-                                           minute=event['minute'],
-                                           team=event['teamName'],
-                                           player=event['playerName'],
-                                           playerTo=event['playerToName'],
-                                           )
-                if event['eventCode'] == 3:  # Goal!
-                    eventData.event = MatchEvents.goal
-                elif event['eventCode'] == 4:  # Substitution!
-                    eventData.event = MatchEvents.substitution
-                elif event['eventCode'] == 1:
-                    ev = MatchEvents.yellowCard if event['eventDescriptionShort'] == "Y" else MatchEvents.redCard
-                    eventData.event = ev
-                elif event['eventCode'] == 2:
-                    eventData.event = MatchEvents.yellowRedCard
-                elif event['eventCode'] == 5:
-                    eventData.event = MatchEvents.missedPenalty
-                elif event['eventCode'] == 14:
-                    if not data['isFinished']:
-                        ev = MatchEvents.firstHalfEnd if event[
-                                                     'phaseDescriptionShort'] == "1H" else MatchEvents.secondHalfEnd
-                    else:
-                        ev = MatchEvents.matchOver
-                    eventData.event = ev
-                elif event['eventCode'] == 13:
-                    ev = MatchEvents.kickoffFirstHalf if event[
-                                                     'phaseDescriptionShort'] == "1H" else MatchEvents.kickoffSecondHalf
-                    eventData.event = ev
+        for event in reversed(dataEvents):
+            eventData = MatchEventData(
+                                       id=event['id'],
+                                       event=MatchEvents.none,
+                                       minute=event['minute'],
+                                       team=event['teamName'],
+                                       player=event['playerName'],
+                                       playerTo=event['playerToName'],
+                                       )
+            if event['eventCode'] == 3:  # Goal!
+                eventData.event = MatchEvents.goal
+            elif event['eventCode'] == 4:  # Substitution!
+                eventData.event = MatchEvents.substitution
+            elif event['eventCode'] == 1:
+                ev = MatchEvents.yellowCard if event['eventDescriptionShort'] == "Y" else MatchEvents.redCard
+                eventData.event = ev
+            elif event['eventCode'] == 2:
+                eventData.event = MatchEvents.yellowRedCard
+            elif event['eventCode'] == 5:
+                eventData.event = MatchEvents.missedPenalty
+            elif event['eventCode'] == 14:
+                if not data['isFinished']:
+                    ev = MatchEvents.firstHalfEnd if event[
+                                                         'phaseDescriptionShort'] == "1H" else MatchEvents.secondHalfEnd
                 else:
-                    logger.error(f"EventId {event['eventCode']} with descr {event['eventDescription']} not handled!")
-                    logger.error(f"TeamName: {event['teamName']}")
-                    continue
-                retEvents.append(eventData)
-            pastEvents = dataEvents
-        return retEvents, pastEvents
+                    ev = MatchEvents.matchOver
+                eventData.event = ev
+            elif event['eventCode'] == 13:
+                ev = MatchEvents.kickoffFirstHalf if event[
+                                                         'phaseDescriptionShort'] == "1H" else MatchEvents.kickoffSecondHalf
+                eventData.event = ev
+            else:
+                logger.error(f"EventId {event['eventCode']} with descr {event['eventDescription']} not handled!")
+                logger.error(f"TeamName: {event['teamName']}")
+                continue
+            if eventData not in fullEventList and eventData.id not in idList:
+                fullEventList.append(eventData)
+                idList.append(eventData.id)
+
+        retEvents = [i for i in fullEventList if i not in pastEvents]
+        pastEvents = fullEventList
+
+        return retEvents,pastEvents
