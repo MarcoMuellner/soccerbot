@@ -261,7 +261,13 @@ class LiveMatch:
 
     #todo should this really be async?
     @staticmethod
-    async def beautifyEvent(event, match):
+    async def beautifyEvent(event : MatchEventData, match : Match) ->Tuple[str,str,list]:
+        """
+        Creates the string for a given event and match.
+        :param event:
+        :param match:
+        :return:
+        """
         data = makeMiddlewareCall(DataCalls.liveData + f"/{match.id}")['match']
         homeTeam = data['teamHomeName']
         awayTeam = data['teamAwayName']

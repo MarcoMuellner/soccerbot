@@ -10,6 +10,11 @@ from api.calls import makeAPICall,getAllSeasons,ApiCalls,makeMiddlewareCall,Data
 logger = logging.getLogger(__name__)
 
 async def getTopScorers(competition : Competition) -> OrderedDict:
+    """
+    Returns the topScorers for a given league by its competition.
+    :param competition: competition Object. Needs to be valid, no further check is done
+    :return: OrderedDict that can be directly fed into a CDOInternalResponse
+    """
     season = Season.objects.filter(competition=competition)
     if season == None or len(season) == 0:
         getAndSaveData(getAllSeasons,idCompetitions=competition.id)
@@ -33,6 +38,12 @@ async def getTopScorers(competition : Competition) -> OrderedDict:
         return OrderedDict()
 
 async def getLeagueTable(competition : Competition) -> str:
+    """
+    Creates a nicely structured league table for a given competition. Competition needs to be
+    valid, no further check on that object is done
+    :param competition: Competition for which you are looking for
+    :return: string containing the league in a nicely formatted way
+    """
     try:
         data = makeMiddlewareCall(DataCalls.standings+f"/{competition.id}")
     except JSONDecodeError:

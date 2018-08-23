@@ -114,6 +114,25 @@ def createMatchDayObject(query,watcher):
     )
 
 def compDict(competition : CompetitionWatcher) ->Dict[str,Dict[str,Union[List[LiveMatch],str]]]:
+    """
+    Creates Matchday objects that in turn are used by the Scheduler to check which and where
+    matches should be created. This function assumes that all relevant matches are already in the
+    database.
+    For a given competition, the data is split up into its matchdays, given by the api. From there
+    it creates an entry into the dict, that represents the matchdays for a given competition.
+    Each matchday has the following entries:
+    - start: The datetime a matchday "starts". This is one hour before the first match of the matchday.
+    - end: The datetime a matchday "ends". This is three hours after the last match of a the matchday has ended.
+    - channel_name: The channel in which these matches will post their updates.
+    - channel_created: A flag that shows if the channel is created or not. Convinience for users outside
+    of this function
+    - passedMatches,currentMatches,upcomingMatches: Lists containing the actual LiveMatch objects (representing)
+    a single match). See the class docu for further explanation there. passedMatches are Matches that are already
+    passed from the point at this function is called, upcomingMatches are the upcoming ones and currentMatches are the
+    currently running ones.
+    :param competition: The competition for which you want to add the games.
+    :return:
+    """
     comp_name = competition.competition.clear_name
     matchDict = {}
     matchDayList = competition.current_season.match_set.values_list('matchday', flat=True).distinct()
@@ -136,9 +155,9 @@ def compDict(competition : CompetitionWatcher) ->Dict[str,Dict[str,Union[List[Li
 
 def getNextMatchDayObjects() -> Dict[str,Dict[str,Dict]]:
     """
-    Returns the next matchday objects between the current (i.e. time that the function is called) time and +24 hours.
-    It also creates Matchday objects for currently played games
-    :return: List of Matchday Objects containing the next relevant Matchday objects
+    Returns all Matchday objects for the current season for all competitions monitored by
+    CompetitionWatcher. See the compDict function for a more proper explanation.
+    :return: List of Matchday Objects
     """
     matchDict = {}
     for competition in CompetitionWatcher.objects.all():

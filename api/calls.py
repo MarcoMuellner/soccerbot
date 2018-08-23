@@ -323,6 +323,12 @@ def getLiveMatches(competitionID : int = None, teamID : int = None) -> List[int]
     return resultList
 
 def getTeamsSearchedByName(name : str) -> List:
+    """
+    With this function you can search a team given by a name directly from api. Will return a
+    List of teams that match your description
+    :param name: Teamname
+    :return: List of Teams
+    """
     payload = {"name":name}
     reqDict = makeAPICall(ApiCalls.teamSearch,payload=payload)
     return reqDict
