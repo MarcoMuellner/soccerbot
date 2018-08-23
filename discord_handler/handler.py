@@ -84,7 +84,12 @@ class Scheduler:
 
             Scheduler.maintananceSynchronizer.clear()
             logger.info(f"Sleeping for {targetTime}")
-            await asyncio.sleep(calculateSleepTime(targetTime))
+            while True:
+                if datetime.utcnow() > targetTime:
+                    logger.info("Running maintanance scheduler again")
+                    break
+                else:
+                    asyncio.sleep(300);
 
     @staticmethod
     @task
