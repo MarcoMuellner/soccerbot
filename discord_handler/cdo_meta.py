@@ -37,11 +37,13 @@ except (KeyError,FileNotFoundError):
 ############################### Response objects ##########################
 
 class CDOInteralResponseData:
-    def __init__(self, response: str = "", additionalInfo: OrderedDict = OrderedDict(), reactionFunc=None, paging = None):
+    def __init__(self, response: str = "", additionalInfo: OrderedDict = OrderedDict()
+                 , reactionFunc=None, paging = None,onlyText = False):
         self.response = response
         self.additionalInfo = additionalInfo
         self.reactionFunc = reactionFunc
         self.paging = paging
+        self.onlyText = onlyText
 
 
 class CDOFullResponseData:
@@ -105,15 +107,20 @@ class DiscordCommando:
         return f"Cmd {self.cmd_group}:{self.commando}, userLevel {self.userLevel}"
 
 class Page:
-    def __init__(self,cdoResp : CDOInteralResponseData,cdo : str):
+    def __init__(self,cdoResp : CDOInteralResponseData,cdo : str,paging = None):
         self.addInfoList = []
         self.cdoResp = cdoResp
+        if paging != None:
+            maxCount = paging
+        else:
+            maxCount = 5
+
         count = 0
         tmpDict = OrderedDict()
         for key,val in cdoResp.additionalInfo.items():
             tmpDict[key] = val
             count += 1
-            if count >=5:
+            if count >=maxCount:
                 self.addInfoList.append(CDOInteralResponseData(response=cdoResp.response,additionalInfo=tmpDict))
                 tmpDict = OrderedDict()
                 count = 0
@@ -172,12 +179,14 @@ def getEmbObj(responseData):
 
     return embObj
 
-async def sendResponse(responseData):
+async def sendResponse(responseData : CDOFullResponseData,onlyText = False):
     logger.info(responseData)
 
-    embObj = getEmbObj(responseData)
-
-    return await client.send_message(responseData.channel, embed=embObj)
+    if not onlyText:
+        embObj = getEmbObj(responseData)
+        return await client.send_message(responseData.channel, embed=embObj)
+    else:
+        return await client.send_message(responseData.channel,content=responseData.response)
 
 
 async def cmdHandler(msg: Message) -> str:
@@ -263,12 +272,12 @@ def markCommando(cmd: str, group=GrpGeneral, defaultUserLevel=None):
 
             if len(responseDataInternal.additionalInfo) < 5:
                 responseData = CDOFullResponseData(kwargs['msg'].channel, kwargs['cdo'], responseDataInternal)
-                msg = await sendResponse(responseData)
+                msg = await sendResponse(responseData,responseDataInternal.onlyText)
 
                 if responseDataInternal.reactionFunc is not None:
                     await client.wait_for_reaction(message=msg, check=responseDataInternal.reactionFunc)
             else:
-                pageObj = Page(responseDataInternal,cmd)
+                pageObj = Page(responseDataInternal,cmd,paging=responseDataInternal.paging)
                 responseData = CDOFullResponseData(kwargs['msg'].channel,cmd,pageObj.getInitialData())
                 msg = await sendResponse(responseData)
                 await resetPaging(msg)

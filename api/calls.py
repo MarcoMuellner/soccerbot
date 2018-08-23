@@ -2,7 +2,7 @@ import requests
 import json
 from typing import Dict, List, Callable, Union
 from dateutil import parser
-from pytz import utc
+import re
 
 from database.models import Federation,Competition,Association,Match,Season,Team
 
@@ -28,6 +28,7 @@ class ApiCalls:
 class DataCalls:
     data_home = 'https://data.fifa.com/'
     liveData = "matches/en/live/info"
+    standings = "livescores/de/standings/bycup"
 
 
 def loop(func: Callable, reqList: List) -> List:
@@ -71,7 +72,10 @@ def makeMiddlewareCall(keyword: str, payload: Dict = None) -> Dict:
     """
     params = payload if payload != None else {}
     req = requests.get(DataCalls.data_home + keyword, params=params)
-    return json.loads(req.content.decode().replace("_matchInfoCallBack", "").replace("(", "").replace(")", ""))
+    data = req.content.decode()
+    data = re.sub(r"_\w+\(","",data)
+    data = data.replace(")","")
+    return json.loads(data)
 
 
 def getAllFederations(**kwargs) -> Union[List, Federation]:

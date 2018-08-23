@@ -15,7 +15,7 @@ from discord_handler.cdo_meta import markCommando, CDOInteralResponseData, cmdHa
     , DiscordCommando,resetPaging,pageNav
 from discord_handler.liveMatch import LiveMatch
 from api.calls import getLiveMatches,makeMiddlewareCall,DataCalls,getTeamsSearchedByName
-from api.stats import getTopScorers
+from api.stats import getTopScorers, getLeagueTable
 from support.helper import shutdown,checkoutVersion,getVersions,currentVersion
 
 from support.helper import Task
@@ -389,7 +389,34 @@ async def cdoTopScorer(**kwargs):
 
     addInfo = await getTopScorers(competition)
 
-    return CDOInteralResponseData(f"Top scorers for {searchString}",addInfo)
+    if addInfo == OrderedDict():
+        return CDOInteralResponseData(f"Sorry no data available for {searchString}")
+    else:
+        return CDOInteralResponseData(f"Top scorers for {searchString}",addInfo,paging=1)
+
+@markCommando("standing")
+async def cdoStanding(**kwargs):
+    """
+    Shows the standing for a given competition
+    :param kwargs:
+    :return:
+    """
+    data = kwargs['msg'].content.split(" ")
+    if len(data) < 2:
+        return CDOInteralResponseData("You need to tell me the competition, mate!")
+
+    searchString = kwargs['msg'].content.replace(data[0] + " ", "")
+
+    competition = Competition.objects.filter(clear_name=searchString).first()
+    if competition == None:
+        return CDOInteralResponseData(f"Sorry, can't find {searchString}")
+
+    retStr = await getLeagueTable(competition)
+    if retStr == "":
+        return CDOInteralResponseData(f"Sorry, no standing available for {searchString}")
+    else:
+        retStr = "```" + retStr + "```"
+        return CDOInteralResponseData(retStr,onlyText=True)
 
 @markCommando("currentGames")
 async def cdoCurrentGames(**kwargs):
