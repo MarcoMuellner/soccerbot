@@ -89,6 +89,9 @@ class Scheduler:
                     logger.info("Running maintanance scheduler again")
                     break
                 else:
+                    logger.debug(f"{datetime.utcnow().strftime('%d %b %Y, %H:%M')} "
+                                 f"is earlier than {targetTime.strftime('%d %b %Y, %H:%M')},"
+                                 f"sleeping for another 5 minutes")
                     asyncio.sleep(300);
 
     @staticmethod
