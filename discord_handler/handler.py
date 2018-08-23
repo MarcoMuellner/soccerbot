@@ -104,7 +104,7 @@ class Scheduler:
             try:
                 for competition,matchObject in Scheduler.matchDayObject.items():
                     for md,data in matchObject.items():
-                        logger.debug(f"Checking {competition}:{matchObject} for {md}")
+                        logger.debug(f"Checking {competition} for {md}")
                         currentTime = datetime.utcnow().replace(tzinfo=UTC)
                         logger.debug(f"CurrentTime {currentTime}, startTime {data['start']} endTime {data['end']}")
 
@@ -144,7 +144,6 @@ class Scheduler:
 
                         elif data['end'] < currentTime:
                             await asyncDeleteChannel(data['channel_name'])
-                            await asyncio.sleep(10)
                 await asyncio.sleep(10)
 
             except RuntimeError:
