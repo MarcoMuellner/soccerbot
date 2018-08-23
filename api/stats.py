@@ -38,7 +38,7 @@ async def getLeagueTable(competition : Competition) -> str:
     except JSONDecodeError:
         return ""
     table = Texttable()
-    tableData = [["Rk","Team","G","W","L","D","Pts"]]
+    tableData = [["Rk","Team","M","W","L","D","Pts"]]
 
     for i in data['competitionsStanding'][0]['listStandings']:
         tableData.append([i['rank'],i['teamName'],i['matches'],i['matchesWon'],i['matchesLost'],

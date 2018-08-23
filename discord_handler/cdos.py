@@ -415,7 +415,6 @@ async def cdoStanding(**kwargs):
     if retStr == "":
         return CDOInteralResponseData(f"Sorry, no standing available for {searchString}")
     else:
-        retStr = "```" + retStr + "```"
         return CDOInteralResponseData(retStr,onlyText=True)
 
 @markCommando("currentGames")

@@ -144,6 +144,8 @@ class Scheduler:
 
                         elif data['end'] < currentTime:
                             await asyncDeleteChannel(data['channel_name'])
+                            await asyncio.sleep(10)
+                await asyncio.sleep(10)
 
             except RuntimeError:
                 logger.error("Dict size changed!")
