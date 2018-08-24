@@ -45,6 +45,18 @@ async def on_message(message : discord.Message):
     except discord.errors.HTTPException:
         pass
 
+@client.event
+async def on_message_edit(before : discord.Message, after : discord.Message):
+    """
+    Edited messages come here
+    :param message:
+    :return:
+    """
+    try:
+        await cmdHandler(after)
+    except discord.errors.HTTPException:
+        pass
+
 logger.info("------------------Soccerbot is starting-----------------------")
 path = os.path.dirname(os.path.realpath(__file__))
 
