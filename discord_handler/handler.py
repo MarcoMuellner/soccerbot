@@ -3,12 +3,13 @@ from datetime import timedelta, datetime
 import asyncio
 from discord import Server
 from pytz import UTC
-from typing import Tuple,Dict
+from typing import Tuple,Dict,List
 from collections import OrderedDict
 
 from database.models import CompetitionWatcher,  DiscordServer, Season, Competition
 from database.handler import updateOverlayData, updateMatches, getNextMatchDayObjects, getCurrentMatches
 from database.handler import updateMatchesSingleCompetition, getAllSeasons, getAndSaveData,compDict
+from discord_handler.liveMatch import LiveMatch
 from support.helper import task
 from discord_handler.client import client,toDiscordChannelName
 
@@ -173,7 +174,10 @@ class Scheduler:
         logger.debug(f"Removing {competition} from Scheduler")
         Scheduler.matchSchedulerRunning.wait()
         #todo clear up channels
-        del Scheduler.matchDayObject[competition.competition.clear_name]
+        try:
+            del Scheduler.matchDayObject[competition.competition.clear_name]
+        except KeyError:
+            pass
 
     @staticmethod
     def findCompetitionMatchdayByChannel(channelName : str) -> Tuple[str,int]:
@@ -205,7 +209,7 @@ class Scheduler:
         return retDict
 
     @staticmethod
-    def startedMatches():
+    def startedMatches()->List[LiveMatch]:
         matchList = []
         for competition, matchObject in Scheduler.matchDayObject.items():
             for md, data in matchObject.items():
@@ -220,7 +224,7 @@ class Scheduler:
         return matchList
 
     @staticmethod
-    def upcomingMatches():
+    def upcomingMatches() ->List[LiveMatch]:
         matchList = []
         for competition, matchObject in Scheduler.matchDayObject.items():
             for md, data in matchObject.items():

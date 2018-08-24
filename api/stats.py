@@ -34,7 +34,7 @@ async def getTopScorers(competition : Competition) -> OrderedDict:
             addInfo[f"{i['Rank']}.: "+ i['PlayerInfo']['PlayerName'][0]['Description']] = goalStr
 
         return addInfo
-    except KeyError:
+    except (KeyError,TypeError) as  e:
         return OrderedDict()
 
 async def getLeagueTable(competition : Competition) -> str:

@@ -34,131 +34,102 @@ associated, it will use the GrpGeneral object as its group. Also, if no userleve
 the userlevel of the group is used.
 """
 
-
-def checkCompetitionParameter(cmdString: str) -> Union[Dict, str]:
-    """
-    Reads competition parameters, i.e. competition and country code
-    :param cmdString: string from message
-    :return: Either error message or dict with competition string and country code
-    """
-    parameterSplit = cmdString.split("#")
-    data = parameterSplit[0].split(" ")
-    competition_string = ""
-
-    for i in data[1:]:
-        if competition_string == "":
-            competition_string += i
-        else:
-            competition_string += " " + i
-
-    logger.debug(f"Competition: {competition_string}, full: {parameterSplit}")
-
-    if len(data) < 2:
-        return "Add competition needs the competition as a Parameter!"
-
-    try:
-        return {"competition": competition_string, "association": parameterSplit[1]}
-    except IndexError:
-        return {"competition": competition_string, "association": None}
-
-
 ################################### Commandos ########################################
 
-@markCommando("addCompetition", defaultUserLevel=3)
+@markCommando("add", defaultUserLevel=3)
 async def cdoAddCompetition(**kwargs):
     """
     Adds a competition to be watched by soccerbot. It will be regularly checked for new games
     :return: Answer message
     """
     responseData = CDOInteralResponseData()
-    parameter = checkCompetitionParameter(kwargs['msg'].content)
-
-    if isinstance(parameter, str):
-        responseData.response = "Error within Commando!"
-        logger.error("Parameter is not string instance, please check logic!")
-        return responseData
+    if "parameter0" in kwargs.keys():
+        parameter = kwargs['parameter0']
     else:
-        competition_string = parameter["competition"]
-        association = parameter["association"]
+        return CDOInteralResponseData("You need to give me a competition, mate")
 
-    comp = Competition.objects.filter(clear_name=competition_string)
+    comp = Competition.objects.filter(clear_name=parameter)
 
     logger.debug(f"Available competitions: {comp}")
-
     if len(comp) == 0:
-        responseData.response = f"Can't find competition {competition_string}"
-        return responseData
+        return CDOInteralResponseData(f"Can't find competition {parameter}")
 
     if len(comp) != 1:
-        if association == None:
-            names = [existing_com.clear_name for existing_com in comp]
-            countryCodes = [existing_com.association for existing_com in comp]
-            name_code = list(zip(names, countryCodes))
-            responseData.response = f"Found competitions {name_code} with that name. Please be more specific (add #ENG for example)."
+        if "parameter1" not in kwargs.keys():
+            name_code = [f"{existing_com.clear_name},{existing_com.association_id}" for existing_com in comp]
+            responseData.response = f"Found competitions {name_code} with that name. Please add a second parameter " \
+                                    f"with the country code. For example: " \
+                                    f"**{kwargs['prefix']}{kwargs['cdo']} Premier League,ENG**"
             return responseData
         else:
-            comp = Competition.objects.filter(clear_name=competition_string, association=association)
-            if len(comp) != 1:
-                names = [existing_com.clear_name for existing_com in comp]
-                countryCodes = [existing_com.association for existing_com in comp]
-                name_code = list(zip(names, countryCodes))
-                responseData.response = f"Found competitions {name_code} with that name. Please be more specific (add #ENG for example)."
-                return responseData
+            comp = comp.filter(association=kwargs['parameter1'])
+            if len(comp) > 1:
+                return CDOInteralResponseData(f"Sorry, we still couldn't find a unique competition. Found competitions "
+                                              f"are {[(i.clear_name,i.association) for i in comp]}")
+            elif len(comp) <1:
+                return CDOInteralResponseData(f"Sorry no competition was found with {parameter},{kwargs['parameter1']}")
 
     watcher = CompetitionWatcher.objects.filter(competition=comp.first())
 
     logger.debug(f"Watcher objects: {watcher}")
 
     if len(watcher) != 0:
-        return CDOInteralResponseData(f"Allready watching {competition_string}")
+        return CDOInteralResponseData(f"Allready watching {parameter}")
 
     client.loop.create_task(watchCompetition(comp.first(), kwargs['msg'].server))
-    responseData.response = f"Start watching competition {competition_string}"
+    responseData.response = f"Start watching competition {parameter}"
     return responseData
 
 
-@markCommando("removeCompetition", defaultUserLevel=3)
+@markCommando("remove", defaultUserLevel=3)
 async def cdoRemoveCompetition(**kwargs):
     """
     Removes a competition from the watchlist.
     :return: Answer message
     """
     responseData = CDOInteralResponseData()
-    parameter = checkCompetitionParameter(kwargs['msg'].content)
-    if isinstance(parameter, str):
-        return parameter
+    if "parameter0" in kwargs.keys():
+        parameter = kwargs['parameter0']
     else:
-        competition_string = parameter["competition"]
-        association = parameter["association"]
+        return CDOInteralResponseData("You need to give me a competition, mate")
 
-    watcher = CompetitionWatcher.objects.filter(competition__clear_name=competition_string)
+    watcher = CompetitionWatcher.objects.filter(competition__clear_name=parameter)
 
     if len(watcher) == 0:
-        responseData.response = f"Competition {competition_string} was not monitored"
+        responseData.response = f"Competition {parameter} was not monitored"
         return responseData
 
     if len(watcher) > 1:
-        watcher = watcher.filter(competition__association=association)
+        if "parameter1" in kwargs.keys():
+            watcher = watcher.filter(competition__association=kwargs['parameter1'])
+        else:
+            nameCode = [f"{i.competition.clear_name},{i.competition.association}" for i in watcher]
+            return CDOInteralResponseData(f"We have multiple competitions that match {parameter}, "
+                                          f"naming "
+                                          f"{nameCode}"
+                                          f", please provide an association with a second parameter. For example: "
+                                          f"**{kwargs['prefix']}removeCompetition Premier League,ENG**")
 
     logger.info(f"Deleting {watcher}")
     await Scheduler.removeCompetition(watcher.first())
     watcher.delete()
-    responseData.response = f"Removed {competition_string} from monitoring"
+    responseData.response = f"Removed {parameter} from monitoring"
     return responseData
 
 
-@markCommando("monitoredCompetitions")
+@markCommando("monitored")
 async def cdoShowMonitoredCompetitions(**kwargs):
     """
     Lists all watched competitions by soccerbot.
     :return: Answer message
     """
-    retString = f"Monitored competitions (react with number emojis to remove.Only the first {len(emojiList())} can " \
+    retString = f"{kwargs['prefix']}{kwargs['cdo']} " \
+                f"(react with number emojis to remove.Only the first {len(emojiList())} can " \
                 f"be added this way):\n\n"
     addInfo = OrderedDict()
     compList = []
     for watchers in CompetitionWatcher.objects.all():
-        compList.append(watchers.competition.clear_name)
+        compList.append(watchers.competition)
         try:
             addInfo[watchers.competition.association.clear_name] +=(f"\n{watchers.competition.clear_name}")
         except KeyError:
@@ -168,7 +139,7 @@ async def cdoShowMonitoredCompetitions(**kwargs):
         if reaction.emoji in emojiList():
             index = emojiList().index(reaction.emoji)
             if index < len(compList):
-                kwargs['msg'].content = f"!removeCompetition {compList[index]}"
+                kwargs['msg'].content = f"{kwargs['prefix']}removeCompetition {compList[index].clear_name},{compList[index].association_id}"
                 client.loop.create_task(cmdHandler(kwargs['msg']))
                 return True
         return False
@@ -176,7 +147,7 @@ async def cdoShowMonitoredCompetitions(**kwargs):
     return CDOInteralResponseData(retString, addInfo, check)
 
 
-@markCommando("listCompetitions")
+@markCommando("list")
 async def cdoListCompetitionByCountry(**kwargs):
     """
     Lists all competitions for a given country. Needs the name of the country of country code as
@@ -184,19 +155,11 @@ async def cdoListCompetitionByCountry(**kwargs):
     :return:
     """
     responseData = CDOInteralResponseData()
-    data = kwargs['msg'].content.split(" ")
+    if "parameter0" not in kwargs.keys():
+        return CDOInteralResponseData(f"{kwargs['prefix']}{kwargs['cdo']} needs the country "
+                                      f"or countrycode as parameter")
 
-    if len(data) == 0:
-        responseData.response = "List competition needs the country or countrycode as parameter"
-        return responseData
-
-    association = ""
-
-    for i in data[1:]:
-        if association == "":
-            association += i
-        else:
-            association += " " + i
+    association = kwargs['parameter0']
 
     competition = Competition.objects.filter(association__clear_name=association)
 
@@ -212,7 +175,7 @@ async def cdoListCompetitionByCountry(**kwargs):
 
     for comp in competition:
         retString += comp.clear_name + "\n"
-        compList.append(f"{comp.clear_name}#{comp.association.id}")
+        compList.append(f"{comp.clear_name},{comp.association.id}")
 
     retString += f"\n\nReact with according number emoji to add competitions. Only the first {len(emojiList())} can " \
                  f"be added this way"
@@ -243,11 +206,6 @@ async def cdoGetHelp(**kwargs):
     """
     retString = "Available Commandos:"
     addInfo = OrderedDict()
-    try:
-        prefix = Settings.objects.get(name="prefix")
-        prefix = prefix.value
-    except ObjectDoesNotExist:
-        prefix = "!"
 
     try:
         userQuery = DiscordUsers.objects.get(id=kwargs['msg'].author.id)
@@ -264,7 +222,7 @@ async def cdoGetHelp(**kwargs):
                 level = f" lvl:{i.userLevel}"
             else:
                 level = ""
-            addInfo[prefix + i.commando + level] = doc
+            addInfo[kwargs['prefix'] + i.commando + level] = doc
 
     responseData = CDOInteralResponseData(retString, addInfo)
 
@@ -293,12 +251,12 @@ async def cdoScores(**kwargs):
     :param kwargs:
     :return:
     """
-    data = kwargs['msg'].content.split(" ")
     channel = kwargs['msg'].channel
 
-    if len(data) == 1:
+    if "parameter0" not in kwargs.keys():
         if not "-matchday-" in channel.name:
-            return CDOInteralResponseData("!scores with no argument can only be called within matchday channels")
+            return CDOInteralResponseData(f"{kwargs['prefix']}{kwargs['cdo']} with no argument "
+                                          f"can only be called within matchday channels")
 
         comp,md = Scheduler.findCompetitionMatchdayByChannel(channel.name)
 
@@ -323,7 +281,7 @@ async def cdoScores(**kwargs):
         resp.additionalInfo = addInfo
         return resp
     else:
-        searchString = kwargs['msg'].content.replace(data[0] + " ","")
+        searchString = kwargs['parameter0']
         query = Competition.objects.filter(clear_name = searchString)
 
         if len(query) == 0:
@@ -370,6 +328,50 @@ async def cdoScores(**kwargs):
         resp.additionalInfo = addInfo
         return resp
 
+async def basicStatsFun(fun,onlyText,**kwargs):
+    """
+    Shows the topscorer for a given competition
+    :param kwargs:
+    :return:
+    """
+    if 'parameter0' not in kwargs.keys():
+        return CDOInteralResponseData("You need to tell me the competition, mate!")
+
+    searchString = kwargs['parameter0']
+
+    competition = Competition.objects.filter(clear_name=searchString)
+    if len(competition) == 0:
+        return CDOInteralResponseData(f"Sorry, can't find {searchString}")
+
+    if len(competition) > 1:
+        if 'parameter1' not in kwargs.keys():
+            def check(reaction, user):
+                if reaction.emoji in emojiList():
+                    index = emojiList().index(reaction.emoji)
+                    if index < len(competition):
+                        kwargs['msg'].content = f"{kwargs['prefix']}{kwargs['cdo']} " \
+                                                f"{competition[index].clear_name},{competition[index].association_id}"
+                        client.loop.create_task(cmdHandler(kwargs['msg']))
+                        return True
+                return False
+            compStr = ""
+            for i in competition:
+                compStr +=f"**{i.clear_name} , {i.association.clear_name}**\n"
+            return CDOInteralResponseData(f"Multiple competitions found with name {searchString}.\n\n{compStr}\n"
+                                          f"React with emojis to choose",reactionFunc=check)
+        else:
+            competition = competition.filter(association_id=kwargs['parameter1'])
+
+    addInfo = await fun(competition.first())
+
+    if addInfo == OrderedDict():
+        return CDOInteralResponseData(f"Sorry no data available for {searchString}")
+    else:
+        if onlyText:
+            return CDOInteralResponseData(addInfo, onlyText=True)
+        else:
+            return CDOInteralResponseData(f"Result for {searchString}",addInfo,paging=1)
+
 @markCommando("topScorer")
 async def cdoTopScorer(**kwargs):
     """
@@ -377,22 +379,7 @@ async def cdoTopScorer(**kwargs):
     :param kwargs:
     :return:
     """
-    data = kwargs['msg'].content.split(" ")
-    if len(data) < 2:
-        return CDOInteralResponseData("You need to tell me the competition, mate!")
-
-    searchString = kwargs['msg'].content.replace(data[0] + " ", "")
-
-    competition = Competition.objects.filter(clear_name=searchString).first()
-    if competition == None:
-        return CDOInteralResponseData(f"Sorry, can't find {searchString}")
-
-    addInfo = await getTopScorers(competition)
-
-    if addInfo == OrderedDict():
-        return CDOInteralResponseData(f"Sorry no data available for {searchString}")
-    else:
-        return CDOInteralResponseData(f"Top scorers for {searchString}",addInfo,paging=1)
+    return await basicStatsFun(getTopScorers,False,**kwargs)
 
 @markCommando("standing")
 async def cdoStanding(**kwargs):
@@ -401,33 +388,29 @@ async def cdoStanding(**kwargs):
     :param kwargs:
     :return:
     """
-    data = kwargs['msg'].content.split(" ")
-    if len(data) < 2:
-        return CDOInteralResponseData("You need to tell me the competition, mate!")
+    return await basicStatsFun(getLeagueTable,True,**kwargs)
 
-    searchString = kwargs['msg'].content.replace(data[0] + " ", "")
-
-    competition = Competition.objects.filter(clear_name=searchString).first()
-    if competition == None:
-        return CDOInteralResponseData(f"Sorry, can't find {searchString}")
-
-    retStr = await getLeagueTable(competition)
-    if retStr == "":
-        return CDOInteralResponseData(f"Sorry, no standing available for {searchString}")
-    else:
-        return CDOInteralResponseData(retStr,onlyText=True)
-
-@markCommando("currentGames")
+@markCommando("current")
 async def cdoCurrentGames(**kwargs):
     """
     Lists all current games within a matchday channel
     :param kwargs:
     :return:
     """
+
+    if "parameter0" in kwargs.keys():
+        competition = Competition.objects.filter(clear_name=kwargs['parameter0'])
+    else:
+        competition = None
+
     matchList = Scheduler.startedMatches()
     addInfo = OrderedDict()
     for match in matchList:
-        addInfo[match.title] = f"{match.match.date.strftime('%d %b %Y, %H:%M')} (UTC)"
+        if competition == None:
+            addInfo[match.title] = f"{match.match.date.strftime('%d %b %Y, %H:%M')} (UTC)"
+        else:
+            if match.match.competition == competition:
+                addInfo[match.title] = f"{match.match.date.strftime('%d %b %Y, %H:%M')} (UTC)"
 
     if addInfo == OrderedDict():
         respStr = "No running matches"
@@ -438,18 +421,26 @@ async def cdoCurrentGames(**kwargs):
 
     return resp
 
-@markCommando("upcomingGames")
+@markCommando("upcoming")
 async def cdoUpcomingGames(**kwargs):
     """
     Lists all upcoming games
     :param kwargs:
     :return:
     """
+    if "parameter0" in kwargs.keys():
+        competition = Competition.objects.filter(clear_name=kwargs['parameter0'])
+    else:
+        competition = None
 
     matchList = Scheduler.upcomingMatches()
     addInfo = OrderedDict()
     for match in matchList:
-        addInfo[match.title] = f"{match.match.date.strftime('%d %b %Y, %H:%M')} (UTC)"
+        if competition == None:
+            addInfo[match.title] = f"{match.match.date.strftime('%d %b %Y, %H:%M')} (UTC)"
+        else:
+            if match.match.competition == competition:
+                addInfo[match.title] = f"{match.match.date.strftime('%d %b %Y, %H:%M')} (UTC)"
 
     if addInfo == OrderedDict():
         respStr = "No upcoming matches"
@@ -459,24 +450,22 @@ async def cdoUpcomingGames(**kwargs):
     resp = CDOInteralResponseData(respStr,addInfo)
     return resp
 
-@markCommando("setStartCommando", defaultUserLevel=5)
+@markCommando("setStartCdo", defaultUserLevel=5)
 async def cdoSetStartCDO(**kwargs):
     """
     Sets a commandline argument to start the bot.
     :param kwargs:
     :return:
     """
-    data = kwargs['msg'].content.split(" ")
-    if len(data) == 0:
+    if kwargs['parameter0'] in kwargs.keys():
         return CDOInteralResponseData("You need to set a command to be executed to start the bot")
-
-    commandString = kwargs['msg'].content.replace(data[0] + " ", "")
+    commandString = kwargs['parameter0']
 
     obj = Settings(name="startCommando",value=commandString)
     obj.save()
     return CDOInteralResponseData(f"Setting startup command to {commandString}")
 
-@markCommando("updateBot", defaultUserLevel=5)
+@markCommando("update", defaultUserLevel=5)
 async def cdoUpdateBot(**kwargs):
     """
     Updates bot
@@ -499,7 +488,7 @@ async def cdoUpdateBot(**kwargs):
 
     return CDOInteralResponseData(f"Updated Bot to {data[1]}. Please restart to apply changes")
 
-@markCommando("stopBot", defaultUserLevel=5)
+@markCommando("stop", defaultUserLevel=5)
 async def cdoStopBot(**kwargs):
     """
     Stops the execution of the bot
@@ -520,7 +509,7 @@ async def cdoStopBot(**kwargs):
     responseData.reactionFunc = check
     return responseData
 
-@markCommando("restartBot", defaultUserLevel=5)
+@markCommando("restart", defaultUserLevel=5)
 async def cdoRestartBot(**kwargs):
     """
     Restart Kommando
@@ -539,18 +528,17 @@ async def cdoRestartBot(**kwargs):
         return CDOInteralResponseData("You need to set the startup Command with !setStartCommando before this"
                                       "commando is available")
 
-@markCommando("setPrefix", defaultUserLevel=5)
+@markCommando("prefix", defaultUserLevel=5)
 async def cdoSetPrefix(**kwargs):
     """
     Sets the prefix for the commands
     :param kwargs:
     :return:
     """
-    data = kwargs['msg'].content.split(" ")
-    if len(data) == 0:
+    if kwargs['parameter0'] in kwargs.keys():
         return CDOInteralResponseData("You need to set a command to be executed to start the bot")
 
-    commandString = kwargs['msg'].content.replace(data[0] + " ", "")
+    commandString = kwargs['parameter0']
     try:
         prefix = Settings.objects.get(name="prefix")
         prefix.value = commandString
@@ -560,60 +548,49 @@ async def cdoSetPrefix(**kwargs):
     prefix.save()
     return CDOInteralResponseData(f"New prefix is {prefix.value}")
 
-@markCommando("setUserPermissions", defaultUserLevel=5)
+@markCommando("setPermissions", defaultUserLevel=5)
 async def cdoSetUserPermissions(**kwargs):
     """
     Sets the userlevel for the mentioned users.
     :param kwargs:
     :return:
     """
-    data = list(kwargs['msg'].content.split(" "))
-
     if len(kwargs['msg'].mentions) == 0:
         return CDOInteralResponseData("You need to mention a user to set its permission levels")
 
-    for i in data:
-        if i.startswith("<@"):
-            del data[data.index(i)]
+    level = None
 
-    if len(data) != 2:
-        return CDOInteralResponseData("Wrong number of parameters. Needs !setUserPermissions *mentions* userLevel")
+    for key,val in kwargs.items():
+        if key.startswith("parameter"):
+            if val.startswith("<@"):
+                continue
+            else:
+                try:
+                    level = int(val)
+                except ValueError:
+                    continue
 
-    try:
-        userLevel = int(data[1])
-    except ValueError:
-        return CDOInteralResponseData("Userlevel needs to be a number between 0 and 5")
+    if level == None:
+        return CDOInteralResponseData(f"Wrong parameters! Needs {kwargs['prefix']}{kwargs['cdo']}"
+                                      f"*mentions* userLevel. userLevel needs to be a number between 0 and 5")
 
-    if userLevel > 5 or userLevel < 0:
+    if level > 5 or level < 0:
         return CDOInteralResponseData("Only user levels from 0 to 5 are available")
 
     retString = ""
     for user in kwargs['msg'].mentions:
-        DiscordUsers(id=user.id,name=user.name,userLevel=userLevel).save()
-        retString += f"Setting {user.name} with id {user.id} to user level {userLevel}\n"
+        DiscordUsers(id=user.id,name=user.name,userLevel=level).save()
+        retString += f"Setting {user.name} with id {user.id} to user level {level}\n"
 
     return CDOInteralResponseData(retString)
 
-@markCommando("getUserPermissions",defaultUserLevel=5)
+@markCommando("getPermissions",defaultUserLevel=5)
 async def cdoGetUserPermissions(**kwargs):
     """
     Gets the userlevel of a mentioned user
     :param kwargs:
     :return:
     """
-
-    data = list(kwargs['msg'].content.split(" "))
-
-    if len(kwargs['msg'].mentions) == 0:
-        return CDOInteralResponseData("You need to mention a user to set its permission levels")
-
-    for i in data:
-        if i.startswith("<@"):
-            del data[data.index(i)]
-
-    if len(data) != 1:
-        return CDOInteralResponseData("Wrong number of parameters. Needs !getUserPermissions *mentions* ")
-
     addInfo = OrderedDict()
     for user in kwargs['msg'].mentions:
         try:
@@ -621,6 +598,9 @@ async def cdoGetUserPermissions(**kwargs):
             addInfo[user.name] = f"User level: {user.userLevel}"
         except ObjectDoesNotExist:
             addInfo[user.name] = f"User level: 0"
+
+    if addInfo == OrderedDict():
+        return CDOInteralResponseData("You need to mention a user to get its permission status!")
 
     retObj = CDOInteralResponseData("UserLevels:")
     retObj.additionalInfo = addInfo
@@ -648,41 +628,10 @@ async def cdoAbout(**kwargs):
     """
     retstring = "**Soccerbot - a live threading experience**\n\n"
     retstring += f"Current version: {currentVersion()}\n"
-    retstring += f"State: good"
+    retstring += f"State: good \n"
+    retstring += f"More info: https://github.com/muma7490/soccerbot"
+
     return CDOInteralResponseData(retstring)
-
-@markCommando("log",defaultUserLevel=6)
-async def cdoLog(**kwargs):
-    """
-    Posts the last lines of a given logfile
-    :param kwargs:
-    :return:
-    """
-
-    fileList = ["debug","info","errors"]
-    data = kwargs['msg'].content.split(" ")
-    if len(data) != 2:
-        return CDOInteralResponseData("Data needs to contain logname and length")
-
-    if data[1] not in fileList:
-        return CDOInteralResponseData(f"Possible logfiles are {fileList}")
-
-    with open(data[1]+".log") as f:
-        fileContent = f.read()
-
-    respStr = "LogContent: "
-
-    addInfo = OrderedDict()
-    try:
-        addInfo[f"Lines 1 to 1000"] = fileContent[0:200]
-    except IndexError:
-        addInfo[f"Lines 1 to {len(fileContent)}"] = fileContent[0:len(fileContent) -1]
-
-    response = CDOInteralResponseData(respStr,addInfo)
-
-    return response
-
-
 
 @markCommando("test", defaultUserLevel=6)
 async def cdoTest(**kwargs):

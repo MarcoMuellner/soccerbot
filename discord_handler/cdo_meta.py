@@ -7,6 +7,7 @@ from django.core.exceptions import ObjectDoesNotExist
 import os
 import json
 from enum import Enum
+import re
 
 from discord_handler.client import client
 from database.models import DiscordUsers,Settings
@@ -139,16 +140,16 @@ class Page:
         if self.cdoResp.reactionFunc is not None:
             self.cdoResp.reactionFunc(reaction,user)
         if reaction.count == 2:
-            if reaction.emoji == '⏩' and self.index - 2 < self.length:
+            if reaction.emoji == '⏩' and self.index + 1 < self.length:
                 self.index +=1
-            elif reaction.emoji == '⏪' and self.index +1 > 0:
+            elif reaction.emoji == '⏪' and self.index - 1 > 0:
                 self.index -=1
             else:
                 pass
 
             responseData = CDOFullResponseData(reaction.message.channel,self.cdo,self.addInfoList[self.index])
             embObj = getEmbObj(responseData)
-            embObj.set_footer(text=f"Page {self.index+2}/{self.length+1}")
+            embObj.set_footer(text=f"Page {self.index+1}/{self.length}")
 
             client.loop.create_task(editPagingMessage(reaction.message, embObj))
         pass
@@ -178,6 +179,31 @@ def getEmbObj(responseData):
         embObj.add_field(name=key, value=val, inline=True)
 
     return embObj
+
+def getParameters(msgContent : str) -> Dict[str,str]:
+    """
+    Get parameters parses through a command call and returns all parameters. Inline parameters are simply added
+    after the command, positional parameters can be added via x=y.
+    :param msgContent: msgContent for the parameters
+    :return: A dictionary full of parameters that can be added to kwargs
+    """
+    retDict = {}
+    #optional parameters
+    optPar = re.findall(r"\w+=\w+",msgContent)
+    for i in optPar:
+        key,val = i.split("=")
+        retDict[key] = val
+        msgContent = msgContent.replace(i,"")
+    #inline parameters
+    msgContent = re.sub(r"\s*<@\w+>","",msgContent)
+    data = msgContent.split(",")
+    data[0] = data[0].replace(data[0].split(" ")[0] + " ", "") #remove Command
+    for index in range(0,len(data)):
+        if isinstance(data[index],list):
+            retDict[f"parameter{index}"] = data[index][0]
+        else:
+            retDict[f"parameter{index}"] = data[index]
+    return retDict
 
 async def sendResponse(responseData : CDOFullResponseData,onlyText = False):
     logger.info(responseData)
@@ -217,10 +243,20 @@ async def cmdHandler(msg: Message) -> str:
                 authorUserLevel = 0
 
             if cdos.userLevel <= authorUserLevel:
+                parseParameters = getParameters(msg.content)
                 logger.info(f"Handling {cdos.commando}")
+
+                try:
+                    prefix = Settings.objects.get(name="prefix")
+                    prefix = prefix.value
+                except ObjectDoesNotExist:
+                    prefix = "!"
+
                 kwargs = {'cdo': cdos.commando,
                           'msg': msg,
-                          'userLevel': authorUserLevel}
+                          'userLevel': authorUserLevel,
+                          'prefix':prefix}
+                kwargs.update(parseParameters)
 
                 return await cdos.fun(**kwargs)
             else:
