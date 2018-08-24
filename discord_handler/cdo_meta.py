@@ -197,12 +197,14 @@ def getParameters(msgContent : str) -> Dict[str,str]:
     #inline parameters
     msgContent = re.sub(r"\s*<@\w+>","",msgContent)
     data = msgContent.split(",")
-    data[0] = data[0].replace(data[0].split(" ")[0] + " ", "") #remove Command
+    data[0] = data[0].replace(data[0].split(" ")[0], "") #remove Command
+    if data[0] == "":
+        data.remove(data[0])
     for index in range(0,len(data)):
         if isinstance(data[index],list):
-            retDict[f"parameter{index}"] = data[index][0]
+            retDict[f"parameter{index}"] = data[index][0].strip()
         else:
-            retDict[f"parameter{index}"] = data[index]
+            retDict[f"parameter{index}"] = data[index].strip()
     return retDict
 
 async def sendResponse(responseData : CDOFullResponseData,onlyText = False,edit_msg : Message= None):

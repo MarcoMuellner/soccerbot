@@ -109,6 +109,9 @@ class CompetitionWatcher(models.Model):
     applicable_server = models.ForeignKey(DiscordServer, verbose_name="Id of the discord server",on_delete=models.CASCADE)
     current_matchday = models.IntegerField(default=1,
                                            verbose_name="Current matchday of a given competition with season")
+    unified_channel = models.CharField(max_length=255,verbose_name="Name of channel where "
+                                                                   "its posted if not in a matchday channel",
+                                       default=None,null=True)
     def __str__(self):
         return f"Competition: {self.competition.clear_name}, Season {self.current_season.clear_name}" \
                f", Matchday {self.current_matchday}, Applicable server: {self.applicable_server.name}"

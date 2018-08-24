@@ -152,7 +152,8 @@ class Scheduler:
                             await asyncio.sleep(5)
 
                         elif data['end'] < currentTime:
-                            await asyncDeleteChannel(data['channel_name'])
+                            if not data['custom_channel']:
+                                await asyncDeleteChannel(data['channel_name'])
                 await asyncio.sleep(10)
 
             except RuntimeError:
@@ -268,7 +269,7 @@ async def asyncDeleteChannel( channelName: str,sleepPeriod: float = None):
     await deleteChannel(list(client.servers)[0], channelName)
 
 @task
-async def watchCompetition(competition: Competition, serverName: str):
+async def watchCompetition(competition: Competition, serverName: str,unified_channel = None):
     """
     Adds a compeitition to be monitored. Also updates matches and competitions accordingly.
     :param competition: Competition to be monitored.
@@ -287,5 +288,8 @@ async def watchCompetition(competition: Competition, serverName: str):
 
     compWatcher = CompetitionWatcher(competition=competition,
                                      current_season=season, applicable_server=server, current_matchday=1)
+    if unified_channel is not None:
+        compWatcher.unified_channel = unified_channel
+
     compWatcher.save()
     Scheduler.addCompetition(compWatcher)

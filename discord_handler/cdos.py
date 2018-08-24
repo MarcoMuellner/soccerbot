@@ -76,8 +76,14 @@ async def cdoAddCompetition(**kwargs):
     if len(watcher) != 0:
         return CDOInteralResponseData(f"Allready watching {parameter}")
 
-    client.loop.create_task(watchCompetition(comp.first(), kwargs['msg'].server))
     responseData.response = f"Start watching competition {parameter}"
+
+    if "channel" in kwargs.keys():
+        client.loop.create_task(watchCompetition(comp.first(), kwargs['msg'].server,kwargs['channel']))
+        responseData.response += f"\n\n Using **{kwargs['channel']}** as posting channel for this competition."
+    else:
+        client.loop.create_task(watchCompetition(comp.first(), kwargs['msg'].server))
+
     return responseData
 
 
@@ -409,7 +415,7 @@ async def cdoCurrentGames(**kwargs):
         if competition == None:
             addInfo[match.title] = f"{match.match.date.strftime('%d %b %Y, %H:%M')} (UTC)"
         else:
-            if match.match.competition == competition:
+            if match.match.competition == competition.first():
                 addInfo[match.title] = f"{match.match.date.strftime('%d %b %Y, %H:%M')} (UTC)"
 
     if addInfo == OrderedDict():
@@ -439,7 +445,7 @@ async def cdoUpcomingGames(**kwargs):
         if competition == None:
             addInfo[match.title] = f"{match.match.date.strftime('%d %b %Y, %H:%M')} (UTC)"
         else:
-            if match.match.competition == competition:
+            if match.match.competition == competition.first():
                 addInfo[match.title] = f"{match.match.date.strftime('%d %b %Y, %H:%M')} (UTC)"
 
     if addInfo == OrderedDict():

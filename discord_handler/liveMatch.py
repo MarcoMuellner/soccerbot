@@ -43,7 +43,7 @@ class LiveMatch:
     lineupStyleSheet = {}
     emojiSet = {}
 
-    def __init__(self, match: Match):
+    def __init__(self, match: Match,channelName : str):
         self.match = match
         self.passed = False
         self.running = False
@@ -55,6 +55,7 @@ class LiveMatch:
             homeTeam = ""
             awayTeam = ""
         self.title = f"**{homeTeam}** - : - **{awayTeam}**"
+        self.channelName = channelName
         self.goalList = []
         self.runningStarted = False
         self.lock = asyncio.Event(loop=client.loop)
@@ -112,7 +113,6 @@ class LiveMatch:
         endCycles = 10
 
         matchid = self.match.id
-        channelName = toDiscordChannelName(f"{self.match.competition.clear_name} Matchday {self.match.matchday}")
 
         lineupsPosted = False
         while True:
@@ -139,7 +139,7 @@ class LiveMatch:
                 await asyncio.sleep(5)
                 try:
                     for channel in client.get_all_channels():
-                        if channel.name == channelName:
+                        if channel.name == self.channelName:
                             await LiveMatch.postLineups(channel, self.match, data["match"])
                             lineupsPosted = True
                             sleepTime = 20
@@ -156,7 +156,7 @@ class LiveMatch:
             for i in newEvents:
                 try:
                     for channel in client.get_all_channels():
-                        if channel.name == channelName:
+                        if channel.name == self.channelName:
                             self.started = True
                             self.title, goalString = await LiveMatch.sendMatchEvent(channel, self.match, i)
                             self.goalList.append(goalString)

@@ -145,12 +145,18 @@ def compDict(competition : CompetitionWatcher) ->Dict[str,Dict[str,Union[List[Li
 
         matchDict[md]['start'] = (matchList.first().date - timedelta(hours=1)).replace(tzinfo=UTC)
         matchDict[md]['end'] = (matchList.last().date + timedelta(hours=3)).replace(tzinfo=UTC)
-        matchDict[md]['channel_name'] = toDiscordChannelName(f"{comp_name} Matchday {md}")
+        if competition.unified_channel == None:
+            matchDict[md]['channel_name'] = toDiscordChannelName(f"{comp_name} Matchday {md}")
+            matchDict[md]['custom_channel'] = False
+        else:
+            matchDict[md]['channel_name'] = toDiscordChannelName(competition.unified_channel)
+            matchDict[md]['custom_channel'] = True
+
         matchDict[md]['channel_created'] = False
-        matchDict[md]['passedMatches'] = [LiveMatch(obj) for obj in matchList.filter(date__lt=passedTime)]
-        matchDict[md]['currentMatches'] = [LiveMatch(obj) for obj in matchList.filter(date__gt=passedTime)
+        matchDict[md]['passedMatches'] = [LiveMatch(obj,matchDict[md]['channel_name']) for obj in matchList.filter(date__lt=passedTime)]
+        matchDict[md]['currentMatches'] = [LiveMatch(obj,matchDict[md]['channel_name']) for obj in matchList.filter(date__gt=passedTime)
                                                            .filter(date__lt=upcomingTime)]
-        matchDict[md]['upcomingMatches'] = [LiveMatch(obj) for obj in matchList.filter(date__gt=upcomingTime)]
+        matchDict[md]['upcomingMatches'] = [LiveMatch(obj,matchDict[md]['channel_name']) for obj in matchList.filter(date__gt=upcomingTime)]
     return matchDict
 
 def getNextMatchDayObjects() -> Dict[str,Dict[str,Dict]]:
