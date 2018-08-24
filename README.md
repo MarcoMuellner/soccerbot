@@ -12,8 +12,15 @@ are watched for your discord server
 monitored. They are also automatically deleted.
 - Live updates for all matches. This includes goals, substitutions and
 cards.
+- Look and feel for match events are configurable via json files
+- Allows the posting of statistics for a competition. Currently includes
+the table as well as the topscorer for a given league.
+- Automated version management. You can update the bot from within
+discord
+- Userlevel management for the bot. It allows for certain users
+to have access to different commandos.
 
-These are the features available now for v0.1.0, which of course is only
+These are the features available now for v0.3.0, which of course is only
 a pre version of things to come. The final goal for this bot is to
 make all other soccerbots obsolete.
 
@@ -39,7 +46,17 @@ should look something like this:
     "secret":"key"
 }
 ```
-And your done. With
+And your done. You can also set a master user if you like
+to so. With
+```
+{
+    "masterUser":"idOfUser"
+}
+```
+You can give him absolute rights on the bot, and have access to
+the debugging commandos.
+
+With
 ```
 python __main__.py
 ```
