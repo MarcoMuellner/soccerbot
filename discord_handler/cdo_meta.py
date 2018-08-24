@@ -205,14 +205,21 @@ def getParameters(msgContent : str) -> Dict[str,str]:
             retDict[f"parameter{index}"] = data[index]
     return retDict
 
-async def sendResponse(responseData : CDOFullResponseData,onlyText = False):
+async def sendResponse(responseData : CDOFullResponseData,onlyText = False,edit_msg : Message= None):
     logger.info(responseData)
 
-    if not onlyText:
-        embObj = getEmbObj(responseData)
-        return await client.send_message(responseData.channel, embed=embObj)
+    if edit_msg == None:
+        if not onlyText:
+            embObj = getEmbObj(responseData)
+            return await client.send_message(responseData.channel, embed=embObj)
+        else:
+            return await client.send_message(responseData.channel,content=responseData.response)
     else:
-        return await client.send_message(responseData.channel,content=responseData.response)
+        if not onlyText:
+            embObj = getEmbObj(responseData)
+            return await client.edit_message(edit_msg, embed=embObj)
+        else:
+            return await client.send_message(edit_msg,content=responseData.response)
 
 
 async def cmdHandler(msg: Message) -> str:
@@ -252,10 +259,13 @@ async def cmdHandler(msg: Message) -> str:
                 except ObjectDoesNotExist:
                     prefix = "!"
 
+                tmpMsg = await sendResponse(
+                    CDOFullResponseData(msg.channel, cdos.commando, CDOInteralResponseData("Working ...")))
                 kwargs = {'cdo': cdos.commando,
                           'msg': msg,
                           'userLevel': authorUserLevel,
-                          'prefix':prefix}
+                          'prefix':prefix,
+                          'tmpMsg':tmpMsg}
                 kwargs.update(parseParameters)
 
                 return await cdos.fun(**kwargs)
@@ -308,14 +318,14 @@ def markCommando(cmd: str, group=GrpGeneral, defaultUserLevel=None):
 
             if len(responseDataInternal.additionalInfo) < 5:
                 responseData = CDOFullResponseData(kwargs['msg'].channel, kwargs['cdo'], responseDataInternal)
-                msg = await sendResponse(responseData,responseDataInternal.onlyText)
+                msg = await sendResponse(responseData,responseDataInternal.onlyText,edit_msg=kwargs['tmpMsg'])
 
                 if responseDataInternal.reactionFunc is not None:
                     await client.wait_for_reaction(message=msg, check=responseDataInternal.reactionFunc)
             else:
                 pageObj = Page(responseDataInternal,cmd,paging=responseDataInternal.paging)
                 responseData = CDOFullResponseData(kwargs['msg'].channel,cmd,pageObj.getInitialData())
-                msg = await sendResponse(responseData)
+                msg = await sendResponse(responseData,edit_msg=kwargs['tmpMsg'])
                 await resetPaging(msg)
                 await client.wait_for_reaction(message=msg,check=pageObj.reactFunc)
             return
