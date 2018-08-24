@@ -1,25 +1,25 @@
 import pytest
 from httmock import HTTMock
 
-from discord_handler.cdos import *
+from discord_handler.cdo_meta import getParameters
 from tests.testDatabase.test_handler import preUpdate
 from tests.testAPI.test_calls import unifiedHttMock
 
 def testCheckCompetitionParameter():
-    result = checkCompetitionParameter("")
-    assert isinstance(result,str)
-    result = checkCompetitionParameter("dummy")
-    assert isinstance(result, str)
-    result = checkCompetitionParameter("!addCompetition")
-    assert isinstance(result, str)
-    result = checkCompetitionParameter("!addCompetition Bundesliga")
+    result = getParameters("")
     assert isinstance(result,dict)
-    assert result["competition"] == "Bundesliga"
-    assert result["association"] == None
-    result = checkCompetitionParameter("!addCompetition Bundesliga#GER")
+    result = getParameters("dummy")
     assert isinstance(result, dict)
-    assert result["competition"] == "Bundesliga"
-    assert result["association"] == "GER"
+    result = getParameters("!addCompetition")
+    assert isinstance(result, dict)
+    result = getParameters("!addCompetition Bundesliga")
+    assert isinstance(result,dict)
+    assert result["parameter0"] == "Bundesliga"
+    assert "parameter1"not in result.keys()
+    result = getParameters("!addCompetition Bundesliga,GER")
+    assert isinstance(result, dict)
+    assert result["parameter0"] == "Bundesliga"
+    assert result["parameter1"] == "GER"
 
 """
 @pytest.mark.asyncio
