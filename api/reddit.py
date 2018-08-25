@@ -53,7 +53,7 @@ class RedditParser:
 
                 #need to remove event here if it is longer passed than 30 minutes
             RedditParser.updateRunning.clear()
-            asyncio.sleep(30)
+            await asyncio.sleep(30)
 
     @staticmethod
     def parseReddit(event : RedditEvent) -> Union[str,None]:

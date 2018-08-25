@@ -255,12 +255,6 @@ async def cmdHandler(msg: Message) -> str:
                 parseParameters = getParameters(msg.content)
                 logger.info(f"Handling {cdos.commando}")
 
-                try:
-                    prefix = Settings.objects.get(name="prefix")
-                    prefix = prefix.value
-                except ObjectDoesNotExist:
-                    prefix = "!"
-
                 tmpMsg = await sendResponse(
                     CDOFullResponseData(msg.channel, cdos.commando, CDOInteralResponseData("Working ...")))
                 kwargs = {'cdo': cdos.commando,
