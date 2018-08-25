@@ -70,7 +70,7 @@ class RedditParser:
             if event.home_team.clear_name in i.title or event.away_team.clear_name in i.title or 'goal' in i.title:
                 hTeam = event.home_team.clear_name
                 aTeam = event.away_team.clear_name
-                regexString = re.compile(rf"({hTeam})(.+-.+)({aTeam})(.+)({event.matchEvent.minute})")
+                regexString = re.compile(rf"({hTeam})(.+-.+)({aTeam})(.+)\s(\d+')")
                 findList = regexString.findall(i.title)
                 if len(findList) != 0:
                     logger.info(f"Found link for {event}")
