@@ -68,8 +68,8 @@ class RedditParser:
     def parseReddit(event : RedditEvent) -> Union[str,None]:
         for i in RedditParser.reddit.subreddit('soccer').new(limit=10):
             if event.home_team.clear_name in i.title or event.away_team.clear_name in i.title or 'goal' in i.title:
-                hTeam = event.home_team.clear_name
-                aTeam = event.away_team.clear_name
+                hTeam = event.home_team.clear_name.split(" ")[0]
+                aTeam = event.away_team.clear_name.split(" ")[0]
                 regexString = re.compile(rf"({hTeam})(.+-.+)({aTeam})(.+)\s(\d+')")
                 findList = regexString.findall(i.title)
                 if len(findList) != 0:
