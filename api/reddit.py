@@ -6,7 +6,6 @@ import logging
 from typing import List,Union
 from datetime import datetime
 
-from discord_handler.liveMatch import MatchEventData
 from discord_handler.client import client
 from support.helper import task
 
@@ -24,7 +23,7 @@ reddit = praw.Reddit(client_id='3ikffhiRzJC3cA',
                      user_agent='ubuntu:soccerbot:v0.4.0 (by /u/mamu7490)')
 
 class RedditEvent:
-    def __init__(self,matchEvent : MatchEventData, time : datetime, home_team : str , away_team, callback : callable):
+    def __init__(self,matchEvent, time : datetime, home_team : str , away_team, callback : callable):
         self.matchEvent = matchEvent
         self.time = time
         self.home_team = home_team
