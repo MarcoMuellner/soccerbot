@@ -13,8 +13,14 @@ logger = logging.getLogger(__name__)
 
 path = os.path.dirname(os.path.realpath(__file__))+"/../"
 
+reddit_available = True
+
 with open(path+"secret.json") as f:
-    reddit_secret = json.loads(f.read())['reddit_secret']
+    try:
+        reddit_secret = json.loads(f.read())['reddit_secret']
+    except:
+        logger.warning("Reddit is not available. Please add a reddit_secret to the secret file")
+        reddit_available = False
 
 
 
@@ -44,6 +50,8 @@ class RedditParser:
     @task
     async def loop():
         while True:
+            if not reddit_available:
+                return
             RedditParser.updateRunning.set()
             for i in RedditParser.teamList:
                 result = RedditParser.parseReddit(i)
