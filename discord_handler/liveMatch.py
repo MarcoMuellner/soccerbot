@@ -159,7 +159,7 @@ class LiveMatch:
                     for channel in client.get_all_channels():
                         if channel.name == self.channelName:
                             self.started = True
-                            self.title, goalString = await LiveMatch.sendMatchEvent(channel, self.match, i)
+                            self.title, goalString = await self.sendMatchEvent(channel, self.match, i)
                             self.goalList.append(goalString)
 
                             logger.info(f"Posting event: {i}")

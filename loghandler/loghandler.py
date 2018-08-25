@@ -16,6 +16,7 @@ def setup_logging(
     logging.getLogger("requests").setLevel(logging.INFO)
     logging.getLogger("urllib3.connectionpool").setLevel(logging.INFO)
     logging.getLogger("websockets.protocol").setLevel(logging.INFO)
+    logging.getLogger("prawcore").setLevel(logging.INFO)
     logger = logging.getLogger('discord')
     logger.setLevel(logging.ERROR)
     handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')

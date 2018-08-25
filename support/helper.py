@@ -49,6 +49,7 @@ def task(fun:Callable):
             res = await fun(*args)
         except asyncio.CancelledError:
             logger.error(f"Task {fun.__name__} was chancelled by asyncio")
+
         Task.removeTask(task)
         return res
     return func_wrapper

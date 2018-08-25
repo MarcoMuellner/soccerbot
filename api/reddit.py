@@ -65,16 +65,14 @@ class RedditParser:
 
     @staticmethod
     def parseReddit(event : RedditEvent) -> Union[str,None]:
-        for i in RedditParser.reddit.subreddit('soccer').new(limits=10):
-            if event.home_team in i.title or event.away_team in i.title or 'goal' in i.title:
+        for i in RedditParser.reddit.subreddit('soccer').new(limit=10):
+            if event.home_team.clear_name in i.title or event.away_team.clear_name in i.title or 'goal' in i.title:
                 logger.info(f"Possible event for {i}")
                 logger.info(i.title)
         return None
 
     @staticmethod
     def addEvent(event : RedditEvent):
-        RedditParser.updateRunning.set()
+        RedditParser.updateRunning.wait()
 
         RedditParser.teamList.append(event)
-
-        RedditParser.updateRunning.clear()
