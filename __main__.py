@@ -12,6 +12,7 @@ from discord_handler.handler import removeOldChannels,Scheduler
 from discord_handler.cdos import cmdHandler
 from loghandler.loghandler import setup_logging
 from discord_handler.client import client
+from api.reddit import RedditParser
 
 
 setup_logging()
@@ -30,6 +31,8 @@ async def on_ready():
     client.loop.create_task(Scheduler.maintananceScheduler())
     logger.debug("Starting matchScheduler")
     client.loop.create_task(Scheduler.matchScheduler())
+    logger.debug("Starting reddit scraper")
+    client.loop.create_task(RedditParser.loop())
     logger.info("Update complete")
 
 
@@ -63,7 +66,7 @@ path = os.path.dirname(os.path.realpath(__file__))
 #secret file contains secret of bot as well as other stuff (masterUser)
 try:
     with open(path+"/secret.json") as f:
-        key = json.loads(f.read())['secret']
+        key = json.loads(f.read())['discord_secret']
 except:
     logger.error(f"You need to create the secret.json file and check if secret:key is available, path {path+'/secret.json'}")
     sys.exit()

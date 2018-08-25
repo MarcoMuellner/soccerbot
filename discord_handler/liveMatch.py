@@ -4,7 +4,6 @@ import json
 from discord import Channel, Embed
 from typing import Dict, Union, Tuple, List
 from collections import OrderedDict
-from django.core.exceptions import ObjectDoesNotExist
 import logging
 from json.decoder import JSONDecodeError
 from datetime import datetime, timedelta
@@ -16,6 +15,7 @@ from database.models import Match, MatchEvents, MatchEventIcon
 from api.calls import makeMiddlewareCall, DataCalls
 from discord_handler.client import client, toDiscordChannelName
 from support.helper import task
+from api.reddit import RedditParser,RedditEvent
 
 logger = logging.getLogger(__name__)
 path = os.path.dirname(os.path.realpath(__file__))
@@ -57,6 +57,7 @@ class LiveMatch:
         self.title = f"**{homeTeam}** - : - **{awayTeam}**"
         self.channelName = channelName
         self.goalList = []
+        self.msgList = {}
         self.runningStarted = False
         self.lock = asyncio.Event(loop=client.loop)
         self.lock.set()
@@ -321,8 +322,7 @@ class LiveMatch:
 
         return title, content, goalListing
 
-    @staticmethod
-    async def sendMatchEvent(channel: Channel, match: Match, event: MatchEventData):
+    async def sendMatchEvent(self, channel: Channel, match: Match, event: MatchEventData):
         """
         This function encapsulates the look and feel of the message that is sent when a matchEvent happens.
         It will build the matchString, the embed object, etc. and than send it to the appropiate channel.
@@ -337,15 +337,23 @@ class LiveMatch:
         embObj.set_author(name=match.competition.clear_name)
 
         try:
-            await client.send_message(channel, embed=embObj)
+            msg = await client.send_message(channel, embed=embObj)
         except:
             await asyncio.sleep(10)
             for i in client.get_all_channels():
                 if i.name == channel.name:
                     logger.debug(f"Sending {embObj} to {i.name}")
-                    await client.send_message(i, embed=embObj)
+                    msg = await client.send_message(i, embed=embObj)
+
+        msgEvent = RedditEvent(event,datetime.utcnow(), self.match.home_team,self.match.away_team,self.updateMsg)
+        self.msgList[msgEvent] = msg
+        RedditParser.addEvent(msgEvent)
 
         return title, goalString
+
+    def updateMsg(self,msgEvent : RedditEvent, update : str):
+        msg = self.msgList[msgEvent]
+        logger.info(f"Updating {msg} with {update} ")
 
     @staticmethod
     def parseEvents(data: Dict[str, Union[str, List]], pastEvents : List[MatchEventData] = None) -> Tuple[List[MatchEventData], List]:
