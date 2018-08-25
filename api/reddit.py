@@ -5,6 +5,7 @@ import asyncio
 import logging
 from typing import List,Union
 from datetime import datetime
+import re
 
 from discord_handler.client import client
 from support.helper import task
@@ -58,7 +59,7 @@ class RedditParser:
                 if result is not None:
                     i.callback(i,result)
                     RedditParser.teamList.remove(i)
-
+                #only check events for which we can react to ...
                 #need to remove event here if it is longer passed than 30 minutes
             RedditParser.updateRunning.clear()
             await asyncio.sleep(30)
@@ -67,7 +68,16 @@ class RedditParser:
     def parseReddit(event : RedditEvent) -> Union[str,None]:
         for i in RedditParser.reddit.subreddit('soccer').new(limit=10):
             if event.home_team.clear_name in i.title or event.away_team.clear_name in i.title or 'goal' in i.title:
-                logger.info(f"Possible event for {i}")
+                hTeam = event.home_team.clear_name
+                aTeam = event.away_team.clear_name
+                regexString = re.compile(rf"({hTeam})(.+-.+)({aTeam})(.+)({event.matchEvent.minute})")
+                findList = regexString.findall(i.title)
+                if len(findList) != 0:
+                    logger.info(f"Found link for {event}")
+                    logger.info(f"URL is {i.url}")
+                    return i.url
+                logger.info(f"Possible non catched event for {event}")
+                logger.info(f"")
                 logger.info(i.title)
         return None
 
