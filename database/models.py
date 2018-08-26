@@ -112,6 +112,7 @@ class CompetitionWatcher(models.Model):
     unified_channel = models.CharField(max_length=255,verbose_name="Name of channel where "
                                                                    "its posted if not in a matchday channel",
                                        default=None,null=True)
+    role = models.IntegerField(verbose_name="Id for the role on the discord server",default=None,null=True)
     def __str__(self):
         return f"Competition: {self.competition.clear_name}, Season {self.current_season.clear_name}" \
                f", Matchday {self.current_matchday}, Applicable server: {self.applicable_server.name}"

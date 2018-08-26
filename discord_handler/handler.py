@@ -5,6 +5,7 @@ from discord import Server
 from pytz import UTC
 from typing import Tuple,Dict,List
 from collections import OrderedDict
+import discord
 
 from database.models import CompetitionWatcher,  DiscordServer, Season, Competition
 from database.handler import updateOverlayData, updateMatches, getNextMatchDayObjects, getCurrentMatches
@@ -16,7 +17,7 @@ from discord_handler.client import client,toDiscordChannelName
 logger = logging.getLogger(__name__)
 
 
-async def createChannel(server: Server, channelName: str):
+async def createChannel(server: Server, channelName: str,role :str = None ):
     """
     Creates a channel on the discord server.
     :param server: Server object --> relevant server for the channel
@@ -27,7 +28,19 @@ async def createChannel(server: Server, channelName: str):
             logger.debug(f"Channel {channelName} already available ")
             return
     logger.info(f"Creating channel {channelName} on {server.name}")
-    await client.create_channel(server, channelName)
+
+    targetRole = None
+    for i in server.roles:
+        if int(i.id) == role:
+            targetRole = i
+            break
+
+    if targetRole is None:
+        await client.create_channel(server, channelName)
+    else:
+        everyone = discord.PermissionOverwrite(read_messages=False,send_message=False)
+        mine = discord.PermissionOverwrite(read_messages=True,send_messages=False)
+        await client.create_channel(server, channelName, (server.default_role, everyone), (targetRole, mine))
 
 
 async def deleteChannel(server: Server, channelName: str):
@@ -46,11 +59,12 @@ async def deleteChannel(server: Server, channelName: str):
 async def removeOldChannels():
     """
     Removes all channels with the name *-matchday-* in them.
+    TODO FIX ME
     """
     deleteChannelList = []
     #these two loops are split up, as the it raises an error when the dict changes.
     for i in client.get_all_channels():
-        if "-matchday-" in i.name:
+        if "live-" in i.name:
             logger.info(f"Deleting old channel {i.name}")
             deleteChannelList.append((i.server, i.name))
 
@@ -118,7 +132,7 @@ class Scheduler:
 
                         if data['start'] < currentTime and data['end'] > currentTime:
                             logger.debug("Current time within boundaries, starting match")
-                            await asyncCreateChannel(data['channel_name'])
+                            await asyncCreateChannel(data['channel_name'],role = data['role'])
                             logger.debug("Looking into upcoming matches: ")
                             for i in data['upcomingMatches']:
                                 logger.debug(f"Match {i}, flag runningStarted {i.runningStarted}")
@@ -159,10 +173,6 @@ class Scheduler:
                                     time = datetime.utcnow()
 
                             await asyncio.sleep(5)
-
-                        elif data['end'] < currentTime:
-                            if not data['custom_channel']:
-                                await asyncDeleteChannel(data['channel_name'])
                 await asyncio.sleep(10)
 
             except RuntimeError:
@@ -183,7 +193,10 @@ class Scheduler:
     async def removeCompetition(competition : CompetitionWatcher):
         logger.debug(f"Removing {competition} from Scheduler")
         Scheduler.matchSchedulerRunning.wait()
-        #todo clear up channels
+        for comp,matchObject in Scheduler.matchDayObject.items():
+            for md,data in matchObject.items():
+                if not data['custom_channel']:
+                    await asyncDeleteChannel(data['channel_name'])
         try:
             del Scheduler.matchDayObject[competition.competition.clear_name]
         except KeyError:
@@ -255,7 +268,7 @@ def calculateSleepTime(targetTime: datetime, nowTime: datetime = datetime.utcnow
     return (targetTime.replace(tzinfo=UTC) - nowTime).total_seconds()
 
 
-async def asyncCreateChannel(channelName: str,sleepPeriod: float = None):
+async def asyncCreateChannel(channelName: str,sleepPeriod: float = None,role : str = None):
     """
     Async wrapper to create channel
     :param sleepPeriod: Period to wait before channel can be created
@@ -264,7 +277,7 @@ async def asyncCreateChannel(channelName: str,sleepPeriod: float = None):
     logger.debug(f"Initializing create Channel task for {channelName} in {sleepPeriod}")
     if sleepPeriod != None:
         await asyncio.sleep(sleepPeriod)
-    await createChannel(list(client.servers)[0], channelName)
+    await createChannel(list(client.servers)[0], channelName,role = role)
 
 
 async def asyncDeleteChannel( channelName: str,sleepPeriod: float = None):
@@ -278,7 +291,7 @@ async def asyncDeleteChannel( channelName: str,sleepPeriod: float = None):
     await deleteChannel(list(client.servers)[0], channelName)
 
 @task
-async def watchCompetition(competition: Competition, serverName: str,unified_channel = None):
+async def watchCompetition(competition: Competition, serverName: str,unified_channel = None,role = None):
     """
     Adds a compeitition to be monitored. Also updates matches and competitions accordingly.
     :param competition: Competition to be monitored.
@@ -296,7 +309,7 @@ async def watchCompetition(competition: Competition, serverName: str,unified_cha
     updateMatchesSingleCompetition(competition=competition, season=season)
 
     compWatcher = CompetitionWatcher(competition=competition,
-                                     current_season=season, applicable_server=server, current_matchday=1)
+                                     current_season=season, applicable_server=server, current_matchday=1,role=role)
     if unified_channel is not None:
         compWatcher.unified_channel = unified_channel
 

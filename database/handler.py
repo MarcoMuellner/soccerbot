@@ -156,12 +156,13 @@ def compDict(competition : CompetitionWatcher) ->Dict[str,Dict[str,Union[List[Li
         matchDict[md]['start'] = (matchList.first().date - timedelta(hours=1)).replace(tzinfo=UTC)
         matchDict[md]['end'] = (matchList.last().date + timedelta(hours=3)).replace(tzinfo=UTC)
         if competition.unified_channel == None:
-            matchDict[md]['channel_name'] = toDiscordChannelName(f"{comp_name} Matchday {md}")
+            matchDict[md]['channel_name'] = toDiscordChannelName(f"live-{comp_name}")
             matchDict[md]['custom_channel'] = False
         else:
             matchDict[md]['channel_name'] = toDiscordChannelName(competition.unified_channel)
             matchDict[md]['custom_channel'] = True
 
+        matchDict[md]['role'] = competition.role
         matchDict[md]['channel_created'] = False
         matchDict[md]['passedMatches'] = [LiveMatch(obj,matchDict[md]['channel_name']) for obj in matchList.filter(date__lt=passedTime)]
         matchDict[md]['currentMatches'] = [LiveMatch(obj,matchDict[md]['channel_name']) for obj in matchList.filter(date__gt=passedTime)

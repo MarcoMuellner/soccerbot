@@ -39,7 +39,11 @@ the userlevel of the group is used.
 @markCommando("add", defaultUserLevel=3)
 async def cdoAddCompetition(**kwargs):
     """
-    Adds a competition to be watched by soccerbot. It will be regularly checked for new games
+    Adds a competition to be watched by soccerbot. It will be regularly checked for new games.
+    Optional arguments:
+    **channel**: Defines a default channel for all live output for a given competition
+    **role**: Assigns a role for a competition. This applies to the channel. So only people with this
+    role can see this channel.
     :return: Answer message
     """
     responseData = CDOInteralResponseData()
@@ -78,11 +82,21 @@ async def cdoAddCompetition(**kwargs):
 
     responseData.response = f"Start watching competition {parameter}"
 
-    if "channel" in kwargs.keys():
-        client.loop.create_task(watchCompetition(comp.first(), kwargs['msg'].server,kwargs['channel']))
-        responseData.response += f"\n\n Using **{kwargs['channel']}** as posting channel for this competition."
-    else:
-        client.loop.create_task(watchCompetition(comp.first(), kwargs['msg'].server))
+    channel = None if 'channel' not in kwargs.keys() else kwargs['channel']
+
+    roleNames = [i.name for i in kwargs['msg'].server.roles]
+
+    role = None
+
+    if 'role' in kwargs.keys():
+        if kwargs['role'] not in roleNames:
+            return CDOInteralResponseData(f"Thre role _{kwargs['role']} is not available on this server!")
+        else:
+            for i in kwargs['msg'].server.roles:
+                if i.name == kwargs['role']:
+                    role = i.id
+
+    client.loop.create_task(watchCompetition(comp.first(), kwargs['msg'].server, channel,role))
 
     return responseData
 
@@ -260,7 +274,7 @@ async def cdoScores(**kwargs):
     channel = kwargs['msg'].channel
 
     if "parameter0" not in kwargs.keys():
-        if not "-matchday-" in channel.name:
+        if not "live-" in channel.name:
             return CDOInteralResponseData(f"{kwargs['prefix']}{kwargs['cdo']} with no argument "
                                           f"can only be called within matchday channels")
 
