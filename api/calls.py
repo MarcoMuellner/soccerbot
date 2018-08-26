@@ -23,7 +23,7 @@ class ApiCalls:
     live = "live/football"
     teamSearch = "teams/search"
     topScorer = "topseasonplayerstatistics/season"
-
+    playerSearch = 'players/search'
 
 class DataCalls:
     data_home = 'https://data.fifa.com/'

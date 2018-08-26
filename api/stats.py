@@ -2,6 +2,10 @@ from collections import OrderedDict
 from texttable import Texttable
 from json.decoder import JSONDecodeError
 import logging
+from typing import Tuple
+from datetime import datetime
+from dateutil import parser
+from pytz import UTC
 
 from database.models import Competition,Season
 from database.handler import getAndSaveData
@@ -61,3 +65,72 @@ async def getLeagueTable(competition : Competition) -> str:
     logger.info(table.draw())
 
     return "```" + table.draw() + "```"
+
+class PositionMatcher:
+    pos = {
+        0:"Goalkeeper",
+        1:"Defender",
+        2:"Midfielder",
+        3:"Forward",
+        4:"Unknown"
+    }
+
+def getPlayerInfo(playerName : str) -> Tuple[str,OrderedDict]:
+    apiPlayer = playerName.replace(" ","+")
+    try:
+        params = {"name":apiPlayer}
+        data = makeAPICall(ApiCalls.playerSearch,payload=params)
+    except JSONDecodeError:
+        return None
+
+    if not isinstance(data,list):
+        return None
+
+    data = data[0]
+    if len(data) == 0:
+        return (playerName,OrderedDict())
+
+    id = data['IdPlayer']
+    name = data['Name'][0]['Description']
+
+    try:
+        data = makeAPICall(ApiCalls.playerInfo + f"/{id}/teams")
+    except JSONDecodeError:
+        return None
+
+    addData = OrderedDict()
+
+    for i in reversed(data):
+        retString = f"Position: {PositionMatcher.pos[i['Position']]}\n"
+
+        if "JerseyNum" in i.keys():
+            retString += f"Jersey Number: {i['JerseyNum']}\n"
+
+        if len(i['PositionLocalized']) != 0:
+            retString += f"Position: {i['PositionLocalized'][0]['Description']}\n"
+
+        statList ={
+            "Goals":"Goals",
+            "RedCards": "Red cards",
+            "YellowCards": "Yellow cards",
+            "MatchesPlayed": "Matches played",
+        }
+
+        for key,val in statList.items():
+            if i[key] != None:
+                retString +=f"{val}: {i[key]}\n"
+            else:
+                retString += f"{val}: 0\n"
+        retString += f"Joined at {parser.parse(i['JoinDate']).strftime('%d %b %Y')}\n"
+        if parser.parse(i['LeaveDate']) > datetime.utcnow().replace(tzinfo=UTC):
+            retString += f"Contract running until {parser.parse(i['LeaveDate']).strftime('%d %b %Y')}\n"
+        else:
+            retString += f"Contract ran out at {parser.parse(i['LeaveDate']).strftime('%d %b %Y')}\n"
+
+        try:
+            teamData = makeAPICall(ApiCalls.specificTeam + f"/{i['IdTeam']}")
+        except JSONDecodeError:
+            return None
+
+        addData[teamData['Name'][0]['Description']] = retString
+    return name,addData

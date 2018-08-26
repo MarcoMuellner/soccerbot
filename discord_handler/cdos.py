@@ -15,7 +15,7 @@ from discord_handler.cdo_meta import markCommando, CDOInteralResponseData, cmdHa
     , DiscordCommando,resetPaging,pageNav
 from discord_handler.liveMatch import LiveMatch
 from api.calls import getLiveMatches,makeMiddlewareCall,DataCalls,getTeamsSearchedByName
-from api.stats import getTopScorers, getLeagueTable
+from api.stats import getTopScorers, getLeagueTable,getPlayerInfo
 from support.helper import shutdown,checkoutVersion,getVersions,currentVersion
 
 from support.helper import Task
@@ -397,6 +397,25 @@ async def cdoStanding(**kwargs):
     :return:
     """
     return await basicStatsFun(getLeagueTable,True,**kwargs)
+
+@markCommando("playerInfo")
+async def cdoPlayerInfo(**kwargs):
+    """
+    Shows information on a given player
+    :param kwargs:
+    :return:
+    """
+    if 'parameter0' not in kwargs.keys():
+        return CDOInteralResponseData("You need to tell me the name of the player!")
+
+    searchString = kwargs['parameter0']
+    res = getPlayerInfo(searchString)
+    if res != None
+        playerName = res[0]
+        addInfo = res[1]
+    else:
+        return CDOInteralResponseData(f"Sorry, nothing was found for {kwargs['parameter0']}")
+    return CDOInteralResponseData(playerName,addInfo,paging=1)
 
 @markCommando("current")
 async def cdoCurrentGames(**kwargs):

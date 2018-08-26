@@ -142,7 +142,7 @@ class Page:
         if reaction.count == 2:
             if reaction.emoji == '⏩' and self.index + 1 < self.length:
                 self.index +=1
-            elif reaction.emoji == '⏪' and self.index - 1 > 0:
+            elif reaction.emoji == '⏪' and self.index - 1 >= 0:
                 self.index -=1
             else:
                 pass
@@ -312,7 +312,9 @@ def markCommando(cmd: str, group=GrpGeneral, defaultUserLevel=None):
             if not isinstance(responseDataInternal, CDOInteralResponseData):
                 raise TypeError("Commandos need to return a CDOInteralResponseData type!")
 
-            if len(responseDataInternal.additionalInfo) < 5:
+            maxLen = responseDataInternal.paging if responseDataInternal.paging is not None else 5
+
+            if len(responseDataInternal.additionalInfo) < maxLen:
                 responseData = CDOFullResponseData(kwargs['msg'].channel, kwargs['cdo'], responseDataInternal)
                 msg = await sendResponse(responseData,responseDataInternal.onlyText,edit_msg=kwargs['tmpMsg'])
 
