@@ -415,10 +415,10 @@ async def cdoCurrentGames(**kwargs):
     addInfo = OrderedDict()
     for match in matchList:
         if competition == None:
-            addInfo[match.title] = f"{match.match.date.strftime('%d %b %Y, %H:%M')} (UTC)"
+            addInfo[match.title] = f"{match.minute}"
         else:
             if match.match.competition == competition.first():
-                addInfo[match.title] = f"{match.match.date.strftime('%d %b %Y, %H:%M')} (UTC)"
+                addInfo[match.title] = f"{match.minute}"
 
     if addInfo == OrderedDict():
         respStr = "No running matches"
