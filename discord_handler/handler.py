@@ -201,11 +201,11 @@ class Scheduler:
         retDict = OrderedDict()
         for match in matches['currentMatches']:
             if match.started:
-                retDict[match.title] = match.goalList
+                retDict[match.title] = (match.goalList,match.minute)
 
         for match in matches['upcomingMatches']:
             if match.started:
-                retDict[match.title] = match.goalList
+                retDict[match.title] = (match.goalList,match.minute)
 
         return retDict
 

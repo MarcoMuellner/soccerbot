@@ -56,6 +56,7 @@ class LiveMatch:
             awayTeam = ""
         self.title = f"**{homeTeam}** - : - **{awayTeam}**"
         self.channelName = channelName
+        self.minute = ""
         self.goalList = []
         self.msgList = {}
         self.runningStarted = False
@@ -175,6 +176,8 @@ class LiveMatch:
                     logger.info(f"Match {self.match} finished!")
                     break
                 endCycles -= 1
+
+            self.minute = f"{data['match']['minute']}'"
 
             await asyncio.sleep(sleepTime)
 

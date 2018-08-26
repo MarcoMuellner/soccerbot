@@ -272,13 +272,15 @@ async def cdoScores(**kwargs):
         addInfo = OrderedDict()
         for matchString,goalList in matchList.items():
             addInfo[matchString] = ""
-            for goals in goalList:
+            for goals in goalList[0]:
                 if goals != '':
                     addInfo[matchString] += goals+"\n"
+
             if addInfo[matchString] == "":
                 del addInfo[matchString]
+
             if addInfo == OrderedDict():
-                addInfo[matchString] = "No goals currently."
+                addInfo[matchString] = f"{goalList[1]}: 0-0"
 
         if addInfo == OrderedDict():
             resp.response = "Currently no running matches"
