@@ -79,7 +79,7 @@ class Scheduler:
             logger.info("Data maintanance running ...")
 
             # update competitions, seasons etc. Essentially the data that is always there
-            updateOverlayData()
+            await updateOverlayData()
             # update all matches for the monitored competitions
             updateMatches()
 
@@ -109,6 +109,7 @@ class Scheduler:
         while True:
             Scheduler.matchSchedulerRunning.set()
             Scheduler.maintananceSynchronizer.wait()
+            time = datetime.utcnow()
 
             try:
                 for competition,matchObject in Scheduler.matchDayObject.items():
@@ -130,6 +131,11 @@ class Scheduler:
                                 data['currentMatches'].append(i)
                                 data['upcomingMatches'].remove(i)
 
+                                if datetime.utcnow() - time > timedelta(seconds=30):
+                                    logger.warning("Didnt sleep for 30 seconds, sleeping now")
+                                    await asyncio.sleep(10)
+                                    time = datetime.utcnow()
+
                             await asyncio.sleep(5)
 
                             logger.debug("Looking into currentMatches")
@@ -146,6 +152,11 @@ class Scheduler:
                                     logger.debug(f"{i} has passed, moving it to passedMatches")
                                     data['passedMatches'].append(i)
                                     data['currentMatches'].remove(i)
+
+                                if datetime.utcnow() - time > timedelta(seconds=30):
+                                    logger.warning("Didnt sleep for 30 seconds, sleeping now")
+                                    await asyncio.sleep(10)
+                                    time = datetime.utcnow()
 
                             await asyncio.sleep(5)
 

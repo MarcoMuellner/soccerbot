@@ -1,3 +1,5 @@
+
+"""
 import os
 from django.core.wsgi import get_wsgi_application
 # Django specific settings
@@ -66,3 +68,5 @@ def testCreateMatchDayObject(preUpdate):
         assert isinstance(result,MatchDayObject)
 
 utc=pytz.UTC
+
+"""

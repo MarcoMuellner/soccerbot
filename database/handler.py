@@ -4,6 +4,7 @@ import logging
 import enum
 from typing import List,Dict,Union
 from pytz import utc,UTC
+import asyncio
 
 from api.calls import getSpecificTeam,getAllFederations,getAllCountries,getAllCompetitions,getAllMatches,getAllSeasons
 from database.models import Federation,Competition,CompetitionWatcher,Season,Match
@@ -64,18 +65,27 @@ def getAndSaveData(func : callable, **kwargs):
             else:
                 raise IntegrityError(f"Foreign Key constraint failed for {i._meta.label}")
 
-def updateOverlayData():
+async def updateOverlayData():
     """
     The relevant overlay data (Federations, Countries, Competitions and watched seasons) is refreshed from the API.
     """
     logger.info("Updating competitions")
     getAndSaveData(getAllFederations)
     getAndSaveData(getAllCountries)
+    time = datetime.utcnow()
     for federation in Federation.objects.all():
         getAndSaveData(getAllCompetitions, idFederation=federation.id)
+        if datetime.utcnow() - time > timedelta(seconds=30):
+            logger.warning("Didn't sleep for 30 seconds, sleeping 10 now")
+            await asyncio.sleep(10)
+            time = datetime.utcnow()
 
     for watcher in CompetitionWatcher.objects.all():
         getAndSaveData(getAllSeasons, idCompetitions=watcher.competition.id)
+        if datetime.utcnow() - time > timedelta(seconds=30):
+            logger.warning("Didn't sleep for 30 seconds, sleeping 10 now")
+            await asyncio.sleep(10)
+            time = datetime.utcnow()
 
 def updateMatches():
     """
