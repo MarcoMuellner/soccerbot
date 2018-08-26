@@ -64,7 +64,7 @@ async def removeOldChannels():
     deleteChannelList = []
     #these two loops are split up, as the it raises an error when the dict changes.
     for i in client.get_all_channels():
-        if "live-" in i.name:
+        if "live-" in i.name and "live-match-discussion" != i.name:
             logger.info(f"Deleting old channel {i.name}")
             deleteChannelList.append((i.server, i.name))
 
