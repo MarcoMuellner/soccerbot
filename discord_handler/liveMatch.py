@@ -358,9 +358,12 @@ class LiveMatch:
         msg = self.msgList[msgEvent]
         logger.info(f"Updating {msg} with {update} ")
 
-        embobj = msg.embed
-        embobj.content += f"**Link:** {update}"
+        embobj = msg.embeds[0]
+        embobj['description'] += f"\n**Link:** {update}"
         logger.info(f"Updating {msg} with {update} --> {embobj}")
+
+        embobj = Embed(title=embobj['title'],description=embobj['description'])
+
         client.loop.create_task(client.edit_message(msg,embed=embobj))
 
     @staticmethod
