@@ -355,6 +355,11 @@ class LiveMatch:
         msg = self.msgList[msgEvent]
         logger.info(f"Updating {msg} with {update} ")
 
+        embobj = msg.embed
+        embobj.content += f"**Link:** {update}"
+        logger.info(f"Updating {msg} with {update} --> {embobj}")
+        client.loop.create_task(client.edit_message(msg,embed=embobj))
+
     @staticmethod
     def parseEvents(data: Dict[str, Union[str, List]], pastEvents : List[MatchEventData] = None) -> Tuple[List[MatchEventData], List]:
         """
