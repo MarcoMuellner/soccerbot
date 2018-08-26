@@ -410,7 +410,7 @@ async def cdoPlayerInfo(**kwargs):
 
     searchString = kwargs['parameter0']
     res = getPlayerInfo(searchString)
-    if res != None
+    if res != None:
         playerName = res[0]
         addInfo = res[1]
     else:
