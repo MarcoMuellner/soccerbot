@@ -90,7 +90,7 @@ class RedditParser:
                         return i.url
                     else:
                         logger.info(f"Minute doesnt match: Expected: {event.matchEvent.minute}, got {findList[0][3]}")
-                logger.info(f"Possible non catched event for {event} : {i}")
+                logger.info(f"Possible non catched event for {event} : {i.title}")
         return None
 
     @staticmethod

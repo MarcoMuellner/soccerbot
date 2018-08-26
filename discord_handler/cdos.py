@@ -662,4 +662,4 @@ async def cdoTest(**kwargs):
         return False
 
     res = await client.wait_for_reaction(message=msg, check=check)
-    await client.send_message(kwargs['msg'].channel, '{0.user} reacted with {0.reaction.emoji}!'.format(res))
+    #await client.send_message(kwargs['msg'].channel, '{0.user} reacted with {0.reaction.emoji}!'.format(res))

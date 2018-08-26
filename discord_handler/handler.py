@@ -113,9 +113,7 @@ class Scheduler:
             try:
                 for competition,matchObject in Scheduler.matchDayObject.items():
                     for md,data in matchObject.items():
-                        logger.debug(f"Checking {competition} for {md}")
                         currentTime = datetime.utcnow().replace(tzinfo=UTC)
-                        logger.debug(f"CurrentTime {currentTime}, startTime {data['start']} endTime {data['end']}")
 
                         if data['start'] < currentTime and data['end'] > currentTime:
                             logger.debug("Current time within boundaries, starting match")
