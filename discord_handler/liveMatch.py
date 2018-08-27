@@ -255,12 +255,12 @@ class LiveMatch:
         embObj.add_field(name=awayTeamTitle, value=awayString)
 
         try:
-            await client.send_message(channel, embed=embObj)
+            await channel.send(embed=embObj)
         except:
             await asyncio.sleep(10)
             for i in client.get_all_channels():
                 if channel.name == i.name:
-                    await client.send_message(channel, embed=embObj)
+                    await channel.send(embed=embObj)
 
     #todo should this really be async?
     @staticmethod
@@ -339,13 +339,13 @@ class LiveMatch:
         embObj.set_author(name=match.competition.clear_name)
 
         try:
-            msg = await client.send_message(channel, embed=embObj)
+            msg = await channel.send(embed=embObj)
         except:
             await asyncio.sleep(10)
             for i in client.get_all_channels():
                 if i.name == channel.name:
                     logger.debug(f"Sending {embObj} to {i.name}")
-                    msg = await client.send_message(i, embed=embObj)
+                    msg = await channel.send(embed=embObj)
 
         msgEvent = RedditEvent(event,datetime.utcnow(), self.match.home_team,self.match.away_team,self.updateMsg)
         self.msgList[msgEvent] = msg
