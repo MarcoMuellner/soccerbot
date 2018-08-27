@@ -158,6 +158,7 @@ class Scheduler:
                                 data['upcomingMatches'].remove(i)
 
                                 if datetime.utcnow() - time > timedelta(seconds=30):
+                                    await client.get_all_channels()
                                     logger.warning("Didnt sleep for 30 seconds, sleeping now")
                                     await asyncio.sleep(10)
                                     time = datetime.utcnow()
@@ -180,6 +181,7 @@ class Scheduler:
                                     data['currentMatches'].remove(i)
 
                                 if datetime.utcnow() - time > timedelta(seconds=30):
+                                    await client.get_all_channels()
                                     logger.warning("Didnt sleep for 30 seconds, sleeping now")
                                     await asyncio.sleep(10)
                                     time = datetime.utcnow()

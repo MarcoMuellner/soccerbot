@@ -94,6 +94,7 @@ class DiscordCommando:
         self.userLevel = userLevel if userLevel is not None else self.cmd_group.userLevel
         self.fun = fun
         self.docstring = docstring
+        self.msg = None
 
     @staticmethod
     def allCommandos() -> List:
@@ -137,22 +138,26 @@ class Page:
         return self.addInfoList[0]
 
     def reactFunc(self,reaction : Reaction, user : User):
-        if self.cdoResp.reactionFunc is not None:
-            self.cdoResp.reactionFunc(reaction,user)
-        if reaction.count == 2:
-            if reaction.emoji == '⏩' and self.index + 1 < self.length:
-                self.index +=1
-            elif reaction.emoji == '⏪' and self.index - 1 >= 0:
-                self.index -=1
-            else:
-                pass
 
-            responseData = CDOFullResponseData(reaction.message.channel,self.cdo,self.addInfoList[self.index])
-            embObj = getEmbObj(responseData)
-            embObj.set_footer(text=f"Page {self.index+1}/{self.length}")
+        if self.msg.id == reaction.message.id:
+            if self.cdoResp.reactionFunc is not None:
+                self.cdoResp.reactionFunc(reaction,user)
+            if reaction.count == 2:
+                if reaction.emoji == '⏩' and self.index + 1 < self.length:
+                    self.index +=1
+                elif reaction.emoji == '⏪' and self.index - 1 >= 0:
+                    self.index -=1
+                else:
+                    pass
 
-            client.loop.create_task(editPagingMessage(reaction.message, embObj))
-        pass
+                responseData = CDOFullResponseData(reaction.message.channel,self.cdo,self.addInfoList[self.index])
+                embObj = getEmbObj(responseData)
+                embObj.set_footer(text=f"Page {self.index+1}/{self.length}")
+
+                client.loop.create_task(editPagingMessage(reaction.message, embObj))
+
+    def setMsg(self,msg : Message):
+        self.msg = msg
 
 
 
@@ -190,7 +195,7 @@ def getParameters(msgContent : str) -> Dict[str,str]:
     """
     retDict = {}
     #optional parameters
-    optPar = re.findall(r"\w+=\w+",msgContent)
+    optPar = re.findall(r"\w+=[\w\+]+",msgContent)
     for i in optPar:
         key,val = i.split("=")
         retDict[key] = val
@@ -328,6 +333,7 @@ def markCommando(cmd: str, group=GrpGeneral, defaultUserLevel=None):
                 responseData = CDOFullResponseData(kwargs['msg'].channel,cmd,pageObj.getInitialData())
                 msg = await sendResponse(responseData,edit_msg=kwargs['tmpMsg'])
                 await resetPaging(msg)
+                pageObj.setMsg(msg)
                 await client.wait_for('reaction_add',check=pageObj.reactFunc)
             return
 

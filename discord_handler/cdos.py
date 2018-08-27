@@ -90,11 +90,12 @@ async def cdoAddCompetition(**kwargs):
     role = None
 
     if 'role' in kwargs.keys():
-        if kwargs['role'] not in roleNames:
-            return CDOInteralResponseData(f"Thre role _{kwargs['role']} is not available on this server!")
+        fullRole = kwargs['role'].replace("+"," ")
+        if fullRole not in roleNames:
+            return CDOInteralResponseData(f"Thre role _{fullRole} is not available on this server!")
         else:
             for i in kwargs['msg'].guild.roles:
-                if i.name == kwargs['role']:
+                if i.name == fullRole:
                     role = i.id
 
     client.loop.create_task(watchCompetition(comp.first(), kwargs['msg'].guild, channel,role,category))
@@ -184,13 +185,14 @@ async def cdoShowMonitoredCompetitions(**kwargs):
         except KeyError:
             addInfo[watchers.competition.association.clear_name] = watchers.competition.clear_name
 
-    def check(reaction, user):
-        if reaction.emoji in emojiList():
-            index = emojiList().index(reaction.emoji)
-            if index < len(compList):
-                kwargs['msg'].content = f"{kwargs['prefix']}removeCompetition {compList[index].clear_name},{compList[index].association_id}"
-                client.loop.create_task(cmdHandler(kwargs['msg']))
-                return True
+    def check(reaction : Reaction, user):
+        if reaction.message.embeds[0].description == retString.strip():
+            if reaction.emoji in emojiList():
+                index = emojiList().index(reaction.emoji)
+                if index < len(compList):
+                    kwargs['msg'].content = f"{kwargs['prefix']}removeCompetition {compList[index].clear_name},{compList[index].association_id}"
+                    client.loop.create_task(cmdHandler(kwargs['msg']))
+                    return True
         return False
 
     return CDOInteralResponseData(retString, addInfo, check)
@@ -230,17 +232,18 @@ async def cdoListCompetitionByCountry(**kwargs):
                  f"be added this way"
     responseData.response = retString
 
-    def check(reaction, user):
-        if reaction.emoji in emojiList():
-            try:
-                index = emojiList().index(reaction.emoji)
-            except ValueError:
-                logger.error(f"{reaction.emoji} not in list!")
-                return False
-            if index < len(compList):
-                kwargs['msg'].content = f"!addCompetition {compList[index]}"
-                client.loop.create_task(cmdHandler(kwargs['msg']))
-                return True
+    def check(reaction : Reaction, user):
+        if reaction.message.embeds[0].description == responseData.response.strip():
+            if reaction.emoji in emojiList():
+                try:
+                    index = emojiList().index(reaction.emoji)
+                except ValueError:
+                    logger.error(f"{reaction.emoji} not in list!")
+                    return False
+                if index < len(compList):
+                    kwargs['msg'].content = f"!addCompetition {compList[index]}"
+                    client.loop.create_task(cmdHandler(kwargs['msg']))
+                    return True
         return False
 
     responseData.reactionFunc = check
@@ -396,20 +399,25 @@ async def basicStatsFun(fun,onlyText,**kwargs):
 
     if len(competition) > 1:
         if 'parameter1' not in kwargs.keys():
-            def check(reaction, user):
-                if reaction.emoji in emojiList():
-                    index = emojiList().index(reaction.emoji)
-                    if index < len(competition):
-                        kwargs['msg'].content = f"{kwargs['prefix']}{kwargs['cdo']} " \
-                                                f"{competition[index].clear_name},{competition[index].association_id}"
-                        client.loop.create_task(cmdHandler(kwargs['msg']))
-                        return True
-                return False
             compStr = ""
             for i in competition:
                 compStr +=f"**{i.clear_name} , {i.association.clear_name}**\n"
-            return CDOInteralResponseData(f"Multiple competitions found with name {searchString}.\n\n{compStr}\n"
-                                          f"React with emojis to choose",reactionFunc=check)
+
+            retString = f"Multiple competitions found with name {searchString}.\n\n{compStr}\n" \
+                        f"React with emojis to choose"
+
+            def check(reaction : Reaction, user):
+                if reaction.message.embeds[0].description == retString.strip():
+                    if reaction.emoji in emojiList():
+                        index = emojiList().index(reaction.emoji)
+                        if index < len(competition):
+                            kwargs['msg'].content = f"{kwargs['prefix']}{kwargs['cdo']} " \
+                                                    f"{competition[index].clear_name},{competition[index].association_id}"
+                            client.loop.create_task(cmdHandler(kwargs['msg']))
+                            return True
+                return False
+
+            return CDOInteralResponseData(retString,reactionFunc=check)
         else:
             competition = competition.filter(association_id=kwargs['parameter1'])
 
@@ -569,11 +577,12 @@ async def cdoStopBot(**kwargs):
     retString = f"To confirm the shutdown, please react with {emojiList()[0]} to this message."
     responseData.response = retString
 
-    def check(reaction, user):
-        if reaction.emoji == emojiList()[0]:
-            client.loop.create_task(client.send_message(kwargs['msg'].channel, "Bot is shutting down in 10 seconds"))
-            client.loop.create_task(shutdown())
-            return True
+    def check(reaction : Reaction, user):
+        if reaction.message.embeds[0].description == retString.strip():
+            if reaction.emoji == emojiList()[0]:
+                client.loop.create_task(client.send_message(kwargs['msg'].channel, "Bot is shutting down in 10 seconds"))
+                client.loop.create_task(shutdown())
+                return True
         return False
 
     responseData.reactionFunc = check

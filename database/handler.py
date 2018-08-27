@@ -10,7 +10,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from api.calls import getSpecificTeam,getAllFederations,getAllCountries,getAllCompetitions,getAllMatches,getAllSeasons
 from database.models import Federation,Competition,CompetitionWatcher,Season,Match,Settings
 from discord_handler.liveMatch import LiveMatch
-from discord_handler.client import toDiscordChannelName
+from discord_handler.client import toDiscordChannelName,client
 
 logger = logging.getLogger(__name__)
 
@@ -77,6 +77,7 @@ async def updateOverlayData():
     for federation in Federation.objects.all():
         getAndSaveData(getAllCompetitions, idFederation=federation.id)
         if datetime.utcnow() - time > timedelta(seconds=30):
+            await client.get_all_channels()
             logger.warning("Didn't sleep for 30 seconds, sleeping 10 now")
             await asyncio.sleep(10)
             time = datetime.utcnow()
@@ -84,6 +85,7 @@ async def updateOverlayData():
     for watcher in CompetitionWatcher.objects.all():
         getAndSaveData(getAllSeasons, idCompetitions=watcher.competition.id)
         if datetime.utcnow() - time > timedelta(seconds=30):
+            await client.get_all_channels()
             logger.warning("Didn't sleep for 30 seconds, sleeping 10 now")
             await asyncio.sleep(10)
             time = datetime.utcnow()
