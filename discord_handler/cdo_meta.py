@@ -2,7 +2,7 @@ from inspect import getmembers, isroutine
 import logging
 from typing import Dict, Callable, List
 from collections import OrderedDict
-from discord import Channel, Embed, Message, Reaction,User
+from discord import TextChannel, Embed, Message, Reaction,User
 from django.core.exceptions import ObjectDoesNotExist
 import os
 import json
@@ -30,7 +30,7 @@ def emojiList():
 path = os.path.dirname(os.path.realpath(__file__))
 try:
     with open(path+"/../secret.json") as f:
-        masterUserID = json.loads(f.read())['masterUser']
+        masterUserID = int(json.loads(f.read())['masterUser'])
 except (KeyError,FileNotFoundError):
     logger.error(f"NO MASTER USER AVAILABLE")
     masterUserID = None
@@ -48,7 +48,7 @@ class CDOInteralResponseData:
 
 
 class CDOFullResponseData:
-    def __init__(self, channel: Channel, cdo: str, internalResponse: CDOInteralResponseData):
+    def __init__(self, channel: TextChannel, cdo: str, internalResponse: CDOInteralResponseData):
         self.channel = channel
         self.cdo = cdo
         self.response = internalResponse.response
@@ -161,13 +161,14 @@ class Page:
 ############################### Meta functions ##########################
 
 async def editPagingMessage(message : Message,embObj):
-    await client.edit_message(message,embed=embObj)
+    await message.edit(embed=embObj)
     await resetPaging(message)
 
 async def resetPaging(message : Message):
-    await client.clear_reactions(message)
-    await client.add_reaction(message=message, emoji='⏪')
-    await client.add_reaction(message=message, emoji='⏩')
+    await message.clear_reactions()
+    await message.add_reaction(emoji='⏪')
+    await message.add_reaction(emoji='⏩')
+
 
 def getEmbObj(responseData):
     title = f"Commando {responseData.cdo}"
@@ -209,19 +210,21 @@ def getParameters(msgContent : str) -> Dict[str,str]:
 
 async def sendResponse(responseData : CDOFullResponseData,onlyText = False,edit_msg : Message= None):
     logger.info(responseData)
-
     if edit_msg == None:
         if not onlyText:
             embObj = getEmbObj(responseData)
-            return await client.send_message(responseData.channel, embed=embObj)
+            msg =  await responseData.channel.send(embed=embObj)
         else:
-            return await client.send_message(responseData.channel,content=responseData.response)
+            msg =  await responseData.channel.send(content=responseData.response)
     else:
         if not onlyText:
             embObj = getEmbObj(responseData)
-            return await client.edit_message(edit_msg, embed=embObj)
+            await edit_msg.edit(embed=embObj)
         else:
-            return await client.send_message(edit_msg,content=responseData.response)
+            await edit_msg.edit(content=responseData.response,embed=Embed())
+        msg = edit_msg
+
+    return msg
 
 
 async def cmdHandler(msg: Message) -> str:
@@ -316,16 +319,16 @@ def markCommando(cmd: str, group=GrpGeneral, defaultUserLevel=None):
 
             if len(responseDataInternal.additionalInfo) < maxLen:
                 responseData = CDOFullResponseData(kwargs['msg'].channel, kwargs['cdo'], responseDataInternal)
-                msg = await sendResponse(responseData,responseDataInternal.onlyText,edit_msg=kwargs['tmpMsg'])
+                await sendResponse(responseData,responseDataInternal.onlyText,edit_msg=kwargs['tmpMsg'])
 
                 if responseDataInternal.reactionFunc is not None:
-                    await client.wait_for_reaction(message=msg, check=responseDataInternal.reactionFunc)
+                    await client.wait_for('reaction_add', check=responseDataInternal.reactionFunc)
             else:
                 pageObj = Page(responseDataInternal,cmd,paging=responseDataInternal.paging)
                 responseData = CDOFullResponseData(kwargs['msg'].channel,cmd,pageObj.getInitialData())
                 msg = await sendResponse(responseData,edit_msg=kwargs['tmpMsg'])
                 await resetPaging(msg)
-                await client.wait_for_reaction(message=msg,check=pageObj.reactFunc)
+                await client.wait_for('reaction_add',check=pageObj.reactFunc)
             return
 
         DiscordCommando.addCommando(DiscordCommando(cmd, func_wrapper, func.__doc__, group, defaultUserLevel))

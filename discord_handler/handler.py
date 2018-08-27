@@ -1,7 +1,7 @@
 import logging
 from datetime import timedelta, datetime
 import asyncio
-from discord import Server
+from discord import Guild
 from pytz import UTC
 from typing import Tuple,Dict,List
 from collections import OrderedDict
@@ -17,42 +17,44 @@ from discord_handler.client import client,toDiscordChannelName
 logger = logging.getLogger(__name__)
 
 
-async def createChannel(server: Server, channelName: str,role :str = None ):
+async def createChannel(guild: Guild, channelName: str, role :str = None):
     """
     Creates a channel on the discord server.
-    :param server: Server object --> relevant server for the channel
+    :param guild: Server object --> relevant server for the channel
     :param channelName: Name of the channel that is to be created
     """
     for i in client.get_all_channels():
-        if i.name == toDiscordChannelName(channelName) and i.server == server:
+        if i.name == toDiscordChannelName(channelName) and i.guild == guild:
             logger.debug(f"Channel {channelName} already available ")
             return
-    logger.info(f"Creating channel {channelName} on {server.name}")
+    logger.info(f"Creating channel {channelName} on {guild.name}")
 
     targetRole = None
-    for i in server.roles:
+    for i in guild.roles:
         if int(i.id) == role:
             targetRole = i
             break
 
     if targetRole is None:
-        await client.create_channel(server, channelName)
+        await guild.create_text_channel(channelName)
     else:
-        everyone = discord.PermissionOverwrite(read_messages=False,send_message=False)
-        mine = discord.PermissionOverwrite(read_messages=True,send_messages=False)
-        await client.create_channel(server, channelName, (server.default_role, everyone), (targetRole, mine))
+        overwrites = {
+            guild.default_role: discord.PermissionOverwrite(read_messages=False),
+            targetRole: discord.PermissionOverwrite(read_messages=True)
+        }
+        await guild.create_text_channel(channelName, overwrites=overwrites)
 
 
-async def deleteChannel(server: Server, channelName: str):
+async def deleteChannel(guild: Guild, channelName: str):
     """
     Deletes a channel on the discord server
-    :param server: Server object --> relevant server for the channel
+    :param guild: Server object --> relevant server for the channel
     :param channelName: Name of the channel that is to be deleted
     """
     for i in client.get_all_channels():
-        if i.name == toDiscordChannelName(channelName) and i.server == server:
-            logger.debug(f"Deleting channel {toDiscordChannelName(channelName)} on {server.name}")
-            await client.delete_channel(i)
+        if i.name == toDiscordChannelName(channelName) and i.guild == guild:
+            logger.debug(f"Deleting channel {toDiscordChannelName(channelName)} on {guild.name}")
+            await i.delete()
             break
 
 
@@ -66,7 +68,7 @@ async def removeOldChannels():
     for i in client.get_all_channels():
         if "live-" in i.name and "live-match-discussion" != i.name:
             logger.info(f"Deleting old channel {i.name}")
-            deleteChannelList.append((i.server, i.name))
+            deleteChannelList.append((i.guild, i.name))
 
     for i in deleteChannelList:
         await deleteChannel(i[0], i[1])
@@ -274,7 +276,7 @@ async def asyncCreateChannel(channelName: str,sleepPeriod: float = None,role : s
     logger.debug(f"Initializing create Channel task for {channelName} in {sleepPeriod}")
     if sleepPeriod != None:
         await asyncio.sleep(sleepPeriod)
-    await createChannel(list(client.servers)[0], channelName,role = role)
+    await createChannel(list(client.guilds)[0], channelName,role = role)
 
 
 async def asyncDeleteChannel( channelName: str,sleepPeriod: float = None):
@@ -285,7 +287,7 @@ async def asyncDeleteChannel( channelName: str,sleepPeriod: float = None):
     """
     if sleepPeriod != None:
         await asyncio.sleep(sleepPeriod)
-    await deleteChannel(list(client.servers)[0], channelName)
+    await deleteChannel(list(client.guilds)[0], channelName)
 
 async def watchCompetition(competition: Competition, serverName: str,unified_channel = None,role = None):
     """

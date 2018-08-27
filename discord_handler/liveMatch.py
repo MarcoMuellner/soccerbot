@@ -1,7 +1,7 @@
 import asyncio
 import json
 
-from discord import Channel, Embed
+from discord import TextChannel, Embed
 from typing import Dict, Union, Tuple, List
 from collections import OrderedDict
 import logging
@@ -63,7 +63,7 @@ class LiveMatch:
         self.lock = asyncio.Event(loop=client.loop)
         self.lock.set()
         if LiveMatch.emojiSet == {}:
-            LiveMatch.emojiSet = dict([(i.name,str(i)) for i in client.get_all_emojis()])
+            LiveMatch.emojiSet = dict([(i.name,str(i)) for i in client.emojis])
 
     @staticmethod
     def styleSheetEvents(key: str = None) -> Union[Dict, str]:
@@ -190,7 +190,7 @@ class LiveMatch:
         logger.info(f"Ending match {self.title}")
 
     @staticmethod
-    async def postLineups(channel: Channel, match: Match, data: Dict):
+    async def postLineups(channel: TextChannel, match: Match, data: Dict):
         lineup = OrderedDict()
         for i in ['home', 'away']:
             lineup[i] = OrderedDict()
@@ -324,7 +324,7 @@ class LiveMatch:
 
         return title, content, goalListing
 
-    async def sendMatchEvent(self, channel: Channel, match: Match, event: MatchEventData):
+    async def sendMatchEvent(self, channel: TextChannel, match: Match, event: MatchEventData):
         """
         This function encapsulates the look and feel of the message that is sent when a matchEvent happens.
         It will build the matchString, the embed object, etc. and than send it to the appropiate channel.

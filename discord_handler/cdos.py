@@ -84,7 +84,7 @@ async def cdoAddCompetition(**kwargs):
 
     channel = None if 'channel' not in kwargs.keys() else kwargs['channel']
 
-    roleNames = [i.name for i in kwargs['msg'].server.roles]
+    roleNames = [i.name for i in kwargs['msg'].guild.roles]
 
     role = None
 
@@ -92,11 +92,11 @@ async def cdoAddCompetition(**kwargs):
         if kwargs['role'] not in roleNames:
             return CDOInteralResponseData(f"Thre role _{kwargs['role']} is not available on this server!")
         else:
-            for i in kwargs['msg'].server.roles:
+            for i in kwargs['msg'].guild.roles:
                 if i.name == kwargs['role']:
                     role = i.id
 
-    client.loop.create_task(watchCompetition(comp.first(), kwargs['msg'].server, channel,role))
+    client.loop.create_task(watchCompetition(comp.first(), kwargs['msg'].guild, channel,role))
 
     return responseData
 
