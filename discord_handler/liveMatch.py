@@ -363,7 +363,7 @@ class LiveMatch:
 
         embobj = Embed(title=embobj['title'],description=embobj['description'])
 
-        client.loop.create_task(client.edit_message(msg,embed=embobj))
+        client.loop.create_task(msg.edit(embed=embobj))
 
     @staticmethod
     def parseEvents(data: Dict[str, Union[str, List]], pastEvents : List[MatchEventData] = None) -> Tuple[List[MatchEventData], List]:
