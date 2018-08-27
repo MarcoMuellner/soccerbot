@@ -77,7 +77,6 @@ class Scheduler:
     maintananceSynchronizer = asyncio.Event(loop=client.loop)
 
     @staticmethod
-    @task
     async def maintananceScheduler():
         """
         Starts the scheduler task, which will automatically create channels adnd update databases. Currently this is
@@ -110,7 +109,6 @@ class Scheduler:
                     await asyncio.sleep(300);
 
     @staticmethod
-    @task
     async def matchScheduler():
         """
         Parses all available matches for a given matchday and starts them if necessary.
@@ -189,7 +187,6 @@ class Scheduler:
         Scheduler.matchDayObject[competition.competition.clear_name] = compDict(competition)
 
     @staticmethod
-    @task
     async def removeCompetition(competition : CompetitionWatcher):
         logger.debug(f"Removing {competition} from Scheduler")
         Scheduler.matchSchedulerRunning.wait()
@@ -290,7 +287,6 @@ async def asyncDeleteChannel( channelName: str,sleepPeriod: float = None):
         await asyncio.sleep(sleepPeriod)
     await deleteChannel(list(client.servers)[0], channelName)
 
-@task
 async def watchCompetition(competition: Competition, serverName: str,unified_channel = None,role = None):
     """
     Adds a compeitition to be monitored. Also updates matches and competitions accordingly.

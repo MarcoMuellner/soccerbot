@@ -49,7 +49,6 @@ class RedditParser:
                      user_agent='ubuntu:soccerbot:v0.4.0 (by /u/mamu7490)')
 
     @staticmethod
-    @task
     async def loop():
         while True:
             if not reddit_available:

@@ -95,7 +95,6 @@ class LiveMatch:
                 logger.error(f"Key {key} not available in stylesheet")
                 return ""
 
-    @task
     async def runMatchThread(self):
         """
         Start a match threader for a given match. Will read the live data from the middleWare API (data.fifa.com) every
