@@ -113,10 +113,11 @@ class CompetitionWatcher(models.Model):
                                                                    "its posted if not in a matchday channel",
                                        default=None,null=True)
     role = models.IntegerField(verbose_name="Id for the role on the discord server",default=None,null=True)
+    category = models.CharField(max_length=255,verbose_name="Category for the channel created by competitions",default=None,null=True)
     def __str__(self):
         return f"Competition: {self.competition.clear_name}, Season {self.current_season.clear_name}" \
                f", Matchday {self.current_matchday}, Applicable server: {self.applicable_server.name}"
 
 class Settings(models.Model):
-    name = models.CharField(max_length=255,verbose_name="Maximum length of command")
+    name = models.CharField(max_length=255,verbose_name="Maximum length of command",unique=True)
     value = models.CharField(max_length=2048,verbose_name="Actual Command to be executed")

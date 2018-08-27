@@ -7,7 +7,7 @@ from typing import Tuple,Dict,List
 from collections import OrderedDict
 import discord
 
-from database.models import CompetitionWatcher,  DiscordServer, Season, Competition
+from database.models import CompetitionWatcher,  DiscordServer, Season, Competition,Settings
 from database.handler import updateOverlayData, updateMatches, getNextMatchDayObjects, getCurrentMatches
 from database.handler import updateMatchesSingleCompetition, getAllSeasons, getAndSaveData,compDict
 from discord_handler.liveMatch import LiveMatch
@@ -17,7 +17,7 @@ from discord_handler.client import client,toDiscordChannelName
 logger = logging.getLogger(__name__)
 
 
-async def createChannel(guild: Guild, channelName: str, role :str = None):
+async def createChannel(guild: Guild, channelName: str, role :str = None,category : str = None):
     """
     Creates a channel on the discord server.
     :param guild: Server object --> relevant server for the channel
@@ -35,14 +35,26 @@ async def createChannel(guild: Guild, channelName: str, role :str = None):
             targetRole = i
             break
 
+    if category is not None:
+        channelCat = None
+        for i in guild.categories:
+            if i.name == category:
+                channelCat = i
+                break
+
+        if channelCat is None:
+            channelCat = await guild.create_category(category)
+    else:
+        channelCat = None
+
     if targetRole is None:
-        await guild.create_text_channel(channelName)
+        overwrites = None
     else:
         overwrites = {
             guild.default_role: discord.PermissionOverwrite(read_messages=False),
             targetRole: discord.PermissionOverwrite(read_messages=True)
         }
-        await guild.create_text_channel(channelName, overwrites=overwrites)
+    await guild.create_text_channel(channelName, overwrites=overwrites,category=channelCat)
 
 
 async def deleteChannel(guild: Guild, channelName: str):
@@ -132,7 +144,7 @@ class Scheduler:
 
                         if data['start'] < currentTime and data['end'] > currentTime:
                             logger.debug("Current time within boundaries, starting match")
-                            await asyncCreateChannel(data['channel_name'],role = data['role'])
+                            await asyncCreateChannel(data['channel_name'],role = data['role'],category = data['category'])
                             logger.debug("Looking into upcoming matches: ")
                             for i in data['upcomingMatches']:
                                 logger.debug(f"Match {i}, flag runningStarted {i.runningStarted}")
@@ -267,7 +279,7 @@ def calculateSleepTime(targetTime: datetime, nowTime: datetime = datetime.utcnow
     return (targetTime.replace(tzinfo=UTC) - nowTime).total_seconds()
 
 
-async def asyncCreateChannel(channelName: str,sleepPeriod: float = None,role : str = None):
+async def asyncCreateChannel(channelName: str,sleepPeriod: float = None,role : str = None,category :str = None):
     """
     Async wrapper to create channel
     :param sleepPeriod: Period to wait before channel can be created
@@ -276,7 +288,7 @@ async def asyncCreateChannel(channelName: str,sleepPeriod: float = None,role : s
     logger.debug(f"Initializing create Channel task for {channelName} in {sleepPeriod}")
     if sleepPeriod != None:
         await asyncio.sleep(sleepPeriod)
-    await createChannel(list(client.guilds)[0], channelName,role = role)
+    await createChannel(list(client.guilds)[0], channelName,role = role,category = category)
 
 
 async def asyncDeleteChannel( channelName: str,sleepPeriod: float = None):
@@ -289,7 +301,7 @@ async def asyncDeleteChannel( channelName: str,sleepPeriod: float = None):
         await asyncio.sleep(sleepPeriod)
     await deleteChannel(list(client.guilds)[0], channelName)
 
-async def watchCompetition(competition: Competition, serverName: str,unified_channel = None,role = None):
+async def watchCompetition(competition: Competition, serverName: str,unified_channel = None,role = None ,category = None):
     """
     Adds a compeitition to be monitored. Also updates matches and competitions accordingly.
     :param competition: Competition to be monitored.
@@ -307,7 +319,7 @@ async def watchCompetition(competition: Competition, serverName: str,unified_cha
     updateMatchesSingleCompetition(competition=competition, season=season)
 
     compWatcher = CompetitionWatcher(competition=competition,
-                                     current_season=season, applicable_server=server, current_matchday=1,role=role)
+                                     current_season=season, applicable_server=server, current_matchday=1,role=role,category=category)
     if unified_channel is not None:
         compWatcher.unified_channel = unified_channel
 

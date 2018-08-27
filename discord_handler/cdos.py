@@ -83,6 +83,7 @@ async def cdoAddCompetition(**kwargs):
     responseData.response = f"Start watching competition {parameter}"
 
     channel = None if 'channel' not in kwargs.keys() else kwargs['channel']
+    category = None if 'category' not in kwargs.keys() else kwargs['category']
 
     roleNames = [i.name for i in kwargs['msg'].guild.roles]
 
@@ -96,9 +97,37 @@ async def cdoAddCompetition(**kwargs):
                 if i.name == kwargs['role']:
                     role = i.id
 
-    client.loop.create_task(watchCompetition(comp.first(), kwargs['msg'].guild, channel,role))
+    client.loop.create_task(watchCompetition(comp.first(), kwargs['msg'].guild, channel,role,category))
 
     return responseData
+
+@markCommando("defaultCategory",defaultUserLevel=5)
+async def cdoDefaultCategory(**kwargs):
+    """
+    Sets a default category for the channels created
+    :param kwargs: 
+    :return: 
+    """
+    try:
+        defaultCategory = Settings.objects.get(name="defaultCategory")
+    except ObjectDoesNotExist:
+        defaultCategory = None
+
+    if "parameter0" not in kwargs.keys():
+        if defaultCategory is not None:
+            return CDOInteralResponseData(f"Default category is **{defaultCategory.value}**")
+        else:
+            return CDOInteralResponseData(f"No default category set yet")
+
+    if defaultCategory is not None:
+        defaultCategory.value = kwargs['parameter0']
+    else:
+        defaultCategory = Settings(name="defaultCategory",value=kwargs['parameter0'])
+
+    defaultCategory.save()
+
+    return CDOInteralResponseData(f"Default category set to **{defaultCategory.value}**")
+
 
 
 @markCommando("remove", defaultUserLevel=3)

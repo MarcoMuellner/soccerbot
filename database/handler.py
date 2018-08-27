@@ -5,9 +5,10 @@ import enum
 from typing import List,Dict,Union
 from pytz import utc,UTC
 import asyncio
+from django.core.exceptions import ObjectDoesNotExist
 
 from api.calls import getSpecificTeam,getAllFederations,getAllCountries,getAllCompetitions,getAllMatches,getAllSeasons
-from database.models import Federation,Competition,CompetitionWatcher,Season,Match
+from database.models import Federation,Competition,CompetitionWatcher,Season,Match,Settings
 from discord_handler.liveMatch import LiveMatch
 from discord_handler.client import toDiscordChannelName
 
@@ -162,6 +163,16 @@ def compDict(competition : CompetitionWatcher) ->Dict[str,Dict[str,Union[List[Li
             matchDict[md]['channel_name'] = toDiscordChannelName(competition.unified_channel)
             matchDict[md]['custom_channel'] = True
 
+        if competition.category is None:
+            try:
+                settings = Settings.objects.get(name='defaultCategory')
+                category =settings.value
+            except ObjectDoesNotExist:
+                category = None
+        else:
+            category = competition.category
+
+        matchDict[md]['category'] = category
         matchDict[md]['role'] = competition.role
         matchDict[md]['channel_created'] = False
         matchDict[md]['passedMatches'] = [LiveMatch(obj,matchDict[md]['channel_name']) for obj in matchList.filter(date__lt=passedTime)]
