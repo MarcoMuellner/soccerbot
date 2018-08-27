@@ -353,17 +353,15 @@ class LiveMatch:
 
         return title, goalString
 
-    def updateMsg(self,msgEvent : RedditEvent, update : str):
+    async def updateMsg(self,msgEvent : RedditEvent, update : str):
         msg = self.msgList[msgEvent]
         logger.info(f"Updating {msg} with {update} ")
 
         embobj = msg.embeds[0]
-        embobj['description'] += f"\n**Link:** {update}"
-        logger.info(f"Updating {msg} with {update} --> {embobj}")
+        embobj.description += f"\n**Link:** {update}"
+        logger.info(f"Updating {msg} with {update} --> {embobj.description}")
 
-        embobj = Embed(title=embobj['title'],description=embobj['description'])
-
-        client.loop.create_task(msg.edit(embed=embobj))
+        await msg.edit(embed=embobj)
 
     @staticmethod
     def parseEvents(data: Dict[str, Union[str, List]], pastEvents : List[MatchEventData] = None) -> Tuple[List[MatchEventData], List]:

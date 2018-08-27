@@ -64,7 +64,7 @@ class RedditParser:
                 newList = RedditParser.reddit.subreddit('soccer').new(limit=50)
                 result = RedditParser.parseReddit(i,newList)
                 if result is not None:
-                    i.callback(i,result)
+                    await i.callback(i,result)
                     RedditParser.liveEventList.remove(i)
 
                 if datetime.utcnow() - i.time > timedelta(minutes=15):
