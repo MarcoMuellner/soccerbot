@@ -195,7 +195,7 @@ def getParameters(msgContent : str) -> Dict[str,str]:
     """
     retDict = {}
     #optional parameters
-    optPar = re.findall(r"\w+=[\w\+]+",msgContent)
+    optPar = re.findall(r"\w+=[/\w\+]+",msgContent)
     for i in optPar:
         key,val = i.split("=")
         retDict[key] = val
