@@ -2,7 +2,6 @@ import pytest
 from httmock import HTTMock
 
 from discord_handler.cdo_meta import getParameters
-from tests.testDatabase.test_handler import preUpdate
 from tests.testAPI.test_calls import unifiedHttMock
 
 def testCheckCompetitionParameter():

@@ -16,19 +16,13 @@ logger = logging.getLogger(__name__)
 path = os.path.dirname(os.path.realpath(__file__))+"/../"
 
 reddit_available = True
-
-with open(path+"secret.json") as f:
-    try:
-        reddit_secret = json.loads(f.read())['reddit_secret']
-    except:
-        logger.warning("Reddit is not available. Please add a reddit_secret to the secret file")
-        reddit_available = False
-
-
-
-reddit = praw.Reddit(client_id='3ikffhiRzJC3cA',
-                     client_secret=reddit_secret,
-                     user_agent='ubuntu:soccerbot:v0.4.0 (by /u/mamu7490)')
+try:
+    with open(path+"secret.json") as f:
+            reddit_secret = json.loads(f.read())['reddit_secret']
+except:
+    logger.warning("Reddit is not available. Please add a reddit_secret to the secret file")
+    reddit_available = False
+    reddit_secret = None
 
 class RedditEvent:
     def __init__(self,matchEvent, time : datetime, home_team : str , away_team, callback : callable):
