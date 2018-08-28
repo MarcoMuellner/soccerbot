@@ -699,8 +699,9 @@ async def cdoAbout(**kwargs):
     """
     retstring = "**Soccerbot - a live threading experience**\n\n"
     retstring += f"Current version: {currentVersion()}\n"
-    retstring += f"State: good \n"
-    retstring += f"More info: https://github.com/muma7490/soccerbot"
+    retstring += f"Website: https://soccerbot.eu\n"
+    retstring += f"More info: https://github.com/muma7490/soccerbot\n"
+    retstring += f"Click https://paypal.me/soccerbot if you want to buy my creator a beer"
 
     return CDOInteralResponseData(retstring)
 

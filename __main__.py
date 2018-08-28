@@ -24,6 +24,8 @@ async def on_ready():
     On ready will perform the last updates and checkups needed by soccerbot.
     :return:
     """
+    game = discord.Game("soccerbot.eu")
+    await client.change_presence(status=discord.Status.online, activity=game)
     logger.info(f"Logged in as {client.user.name} with id {client.user.id}")
     logger.debug("Removing all channels")
     await removeOldChannels()
