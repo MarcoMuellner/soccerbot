@@ -141,7 +141,7 @@ class Page:
 
         if self.msg.id == reaction.message.id:
             if self.cdoResp.reactionFunc is not None:
-                self.cdoResp.reactionFunc(reaction,user)
+               client.loop.create_task(self.cdoResp.reactionFunc(reaction,user))
             if reaction.count == 2:
                 if reaction.emoji == '⏩' and self.index + 1 < self.length:
                     self.index +=1
@@ -324,17 +324,31 @@ def markCommando(cmd: str, group=GrpGeneral, defaultUserLevel=None):
 
             if len(responseDataInternal.additionalInfo) < maxLen:
                 responseData = CDOFullResponseData(kwargs['msg'].channel, kwargs['cdo'], responseDataInternal)
-                await sendResponse(responseData,responseDataInternal.onlyText,edit_msg=kwargs['tmpMsg'])
+                msg = await sendResponse(responseData,responseDataInternal.onlyText,edit_msg=kwargs['tmpMsg'])
 
                 if responseDataInternal.reactionFunc is not None:
-                    await client.wait_for('reaction_add', check=responseDataInternal.reactionFunc)
+
+                    def internalCheck(reaction: Reaction, user: User):
+                        if reaction.message.id == msg.id:
+                            return responseDataInternal.reactionFunc(reaction, user)
+                        else:
+                            return False
+
+                    await client.wait_for('reaction_add', check=internalCheck)
             else:
                 pageObj = Page(responseDataInternal,cmd,paging=responseDataInternal.paging)
                 responseData = CDOFullResponseData(kwargs['msg'].channel,cmd,pageObj.getInitialData())
                 msg = await sendResponse(responseData,edit_msg=kwargs['tmpMsg'])
                 await resetPaging(msg)
                 pageObj.setMsg(msg)
-                await client.wait_for('reaction_add',check=pageObj.reactFunc)
+
+                def internalCheck(reaction : Reaction, user: User):
+                    if reaction.message.id == msg.id:
+                        return pageObj.reactFunc(reaction,user)
+                    else:
+                        return False
+
+                await client.wait_for('reaction_add',check =internalCheck)
             return
 
         DiscordCommando.addCommando(DiscordCommando(cmd, func_wrapper, func.__doc__, group, defaultUserLevel))
