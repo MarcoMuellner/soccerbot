@@ -51,8 +51,8 @@ async def createChannel(guild: Guild, channelName: str, role :str = None,categor
         overwrites = None
     else:
         overwrites = {
-            guild.default_role: discord.PermissionOverwrite(read_messages=False,write_messages=False),
-            targetRole: discord.PermissionOverwrite(read_messages=True,write_messages=True)
+            guild.default_role: discord.PermissionOverwrite(read_messages=False,send_messages=False),
+            targetRole: discord.PermissionOverwrite(read_messages=True,send_messages=True)
         }
     await guild.create_text_channel(channelName, overwrites=overwrites,category=channelCat)
 
