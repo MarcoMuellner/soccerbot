@@ -92,7 +92,7 @@ async def cdoAddCompetition(**kwargs):
     if 'role' in kwargs.keys():
         fullRole = kwargs['role'].replace("+"," ")
         if fullRole not in roleNames:
-            return CDOInteralResponseData(f"Thre role _{fullRole} is not available on this server!")
+            return CDOInteralResponseData(f"The role __{fullRole}__ is not available on this server!")
         else:
             for i in kwargs['msg'].guild.roles:
                 if i.name == fullRole:
