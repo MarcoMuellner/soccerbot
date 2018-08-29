@@ -19,9 +19,10 @@ path = os.path.dirname(os.path.realpath(__file__))+"/../"
 reddit_available = True
 try:
     with open(path+"secret.json") as f:
-            reddit_secret = json.loads(f.read())['reddit_secret']
-            reddit_id = json.loads(f.read())['reddit_client_id']
-except:
+        fileDict = json.loads(f.read())
+        reddit_id = fileDict['reddit_client_id']
+        reddit_secret = fileDict['reddit_secret']
+except KeyError:
     logger.warning("Reddit is not available. Please add a reddit_secret to the secret file")
     reddit_available = False
     reddit_secret = None

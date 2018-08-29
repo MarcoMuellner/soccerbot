@@ -248,7 +248,7 @@ async def cmdHandler(msg: Message) -> str:
         if msg.content.startswith(prefix+cdos.commando):
             if msg.author.bot:
                 logger.info("Ignoring {msg.content}, because bot")
-                return
+                return ""
 
             if msg.author.id == masterUserID and len(DiscordUsers.objects.filter(id=masterUserID)) == 0:
                 DiscordUsers(id=masterUserID,name=msg.author.name,userLevel=6).save()
@@ -266,13 +266,12 @@ async def cmdHandler(msg: Message) -> str:
                 tmpMsg = await sendResponse(
                     CDOFullResponseData(msg.channel, cdos.commando, CDOInteralResponseData("Working ...")))
                 kwargs = {'cdo': cdos.commando,
-                          'msg': msg,
                           'userLevel': authorUserLevel,
                           'prefix':prefix,
                           'tmpMsg':tmpMsg}
                 kwargs.update(parseParameters)
 
-                return await cdos.fun(**kwargs)
+                return await cdos.fun(msg,**kwargs)
             else:
                 responseStr = "I am sorry, you are not allowed to do that"
                 responseData = CDOFullResponseData(msg.channel, cdos.commando, CDOInteralResponseData(responseStr))
@@ -315,15 +314,15 @@ class GrpGeneral:
 
 def markCommando(cmd: str, group=GrpGeneral, defaultUserLevel=None):
     def internal_func_wrapper(func: callable):
-        async def func_wrapper(**kwargs):
-            responseDataInternal = await func(**kwargs)
+        async def func_wrapper(msg : Message,**kwargs):
+            responseDataInternal = await func(msg,**kwargs)
             if not isinstance(responseDataInternal, CDOInteralResponseData):
                 raise TypeError("Commandos need to return a CDOInteralResponseData type!")
 
             maxLen = responseDataInternal.paging if responseDataInternal.paging is not None else 5
 
             if len(responseDataInternal.additionalInfo) < maxLen:
-                responseData = CDOFullResponseData(kwargs['msg'].channel, kwargs['cdo'], responseDataInternal)
+                responseData = CDOFullResponseData(msg.channel, kwargs['cdo'], responseDataInternal)
                 msg = await sendResponse(responseData,responseDataInternal.onlyText,edit_msg=kwargs['tmpMsg'])
 
                 if responseDataInternal.reactionFunc is not None:
@@ -337,7 +336,7 @@ def markCommando(cmd: str, group=GrpGeneral, defaultUserLevel=None):
                     await client.wait_for('reaction_add', check=internalCheck)
             else:
                 pageObj = Page(responseDataInternal,cmd,paging=responseDataInternal.paging)
-                responseData = CDOFullResponseData(kwargs['msg'].channel,cmd,pageObj.getInitialData())
+                responseData = CDOFullResponseData(msg.channel,cmd,pageObj.getInitialData())
                 msg = await sendResponse(responseData,edit_msg=kwargs['tmpMsg'])
                 await resetPaging(msg)
                 pageObj.setMsg(msg)

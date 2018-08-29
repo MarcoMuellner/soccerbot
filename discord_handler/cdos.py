@@ -7,7 +7,7 @@ import subprocess
 import sys
 import os
 import re
-from discord import Reaction,User
+from discord import Reaction,User,Message
 
 from database.models import CompetitionWatcher, Competition, MatchEvents, MatchEventIcon,Settings,DiscordUsers
 from discord_handler.handler import client, watchCompetition,Scheduler
@@ -37,7 +37,7 @@ the userlevel of the group is used.
 ################################### Commandos ########################################
 
 @markCommando("add", defaultUserLevel=3)
-async def cdoAddCompetition(**kwargs):
+async def cdoAddCompetition(msg : Message,**kwargs):
     """
     Adds a competition to be watched by soccerbot. It will be regularly checked for new games.
     Optional arguments:
@@ -63,7 +63,7 @@ async def cdoAddCompetition(**kwargs):
             name_code = [f"{existing_com.clear_name},{existing_com.association_id}" for existing_com in comp]
             responseData.response = f"Found competitions {name_code} with that name. Please add a second parameter " \
                                     f"with the country code. For example: " \
-                                    f"**{kwargs['prefix']}{kwargs['cdo']} Premier League,ENG**"
+                                    f"**Premier League,ENG**"
             return responseData
         else:
             comp = comp.filter(association=kwargs['parameter1'])
@@ -85,7 +85,7 @@ async def cdoAddCompetition(**kwargs):
     channel = None if 'channel' not in kwargs.keys() else kwargs['channel']
     category = None if 'category' not in kwargs.keys() else kwargs['category']
 
-    roleNames = [i.name for i in kwargs['msg'].guild.roles]
+    roleNames = [i.name for i in msg.guild.roles]
 
     role = None
 
@@ -94,16 +94,16 @@ async def cdoAddCompetition(**kwargs):
         if fullRole not in roleNames:
             return CDOInteralResponseData(f"The role __{fullRole}__ is not available on this server!")
         else:
-            for i in kwargs['msg'].guild.roles:
+            for i in msg.guild.roles:
                 if i.name == fullRole:
                     role = i.id
 
-    client.loop.create_task(watchCompetition(comp.first(), kwargs['msg'].guild, channel,role,category))
+    client.loop.create_task(watchCompetition(comp.first(), msg.guild, channel,role,category))
 
     return responseData
 
 @markCommando("defaultCategory",defaultUserLevel=5)
-async def cdoDefaultCategory(**kwargs):
+async def cdoDefaultCategory(msg : Message,**kwargs):
     """
     Sets a default category for the channels created
     :param kwargs: 
@@ -132,7 +132,7 @@ async def cdoDefaultCategory(**kwargs):
 
 
 @markCommando("remove", defaultUserLevel=3)
-async def cdoRemoveCompetition(**kwargs):
+async def cdoRemoveCompetition(msg : Message,**kwargs):
     """
     Removes a competition from the watchlist.
     :return: Answer message
@@ -168,13 +168,12 @@ async def cdoRemoveCompetition(**kwargs):
 
 
 @markCommando("monitored")
-async def cdoShowMonitoredCompetitions(**kwargs):
+async def cdoShowMonitoredCompetitions(msg : Message,**kwargs):
     """
     Lists all watched competitions by soccerbot.
     :return: Answer message
     """
-    retString = f"{kwargs['prefix']}{kwargs['cdo']} " \
-                f"(react with number emojis to remove.Only the first {len(emojiList())} can " \
+    retString = f"React with number emojis to remove.Only the first {len(emojiList())} can " \
                 f"be added this way):\n\n"
     addInfo = OrderedDict()
     compList = []
@@ -189,15 +188,15 @@ async def cdoShowMonitoredCompetitions(**kwargs):
         if reaction.emoji in emojiList():
             index = emojiList().index(reaction.emoji)
             if index < len(compList):
-                kwargs['msg'].content = f"{kwargs['prefix']}removeCompetition {compList[index].clear_name},{compList[index].association_id}"
-                client.loop.create_task(cmdHandler(kwargs['msg']))
+                msg.content = f"{kwargs['prefix']}removeCompetition {compList[index].clear_name},{compList[index].association_id}"
+                client.loop.create_task(cmdHandler(msg))
                 return True
 
     return CDOInteralResponseData(retString, addInfo, check)
 
 
 @markCommando("list")
-async def cdoListCompetitionByCountry(**kwargs):
+async def cdoListCompetitionByCountry(msg : Message,**kwargs):
     """
     Lists all competitions for a given country. Needs the name of the country of country code as
     a parameter.
@@ -205,8 +204,7 @@ async def cdoListCompetitionByCountry(**kwargs):
     """
     responseData = CDOInteralResponseData()
     if "parameter0" not in kwargs.keys():
-        return CDOInteralResponseData(f"{kwargs['prefix']}{kwargs['cdo']} needs the country "
-                                      f"or countrycode as parameter")
+        return CDOInteralResponseData(f"Needs the country or countrycode as parameter")
 
     association = kwargs['parameter0']
 
@@ -238,8 +236,8 @@ async def cdoListCompetitionByCountry(**kwargs):
                 logger.error(f"{reaction.emoji} not in list!")
                 return False
             if index < len(compList):
-                kwargs['msg'].content = f"{kwargs['prefix']}addCompetition {compList[index]}"
-                client.loop.create_task(cmdHandler(kwargs['msg']))
+                msg.content = f"{kwargs['prefix']}addCompetition {compList[index]}"
+                client.loop.create_task(cmdHandler(msg))
                 return True
 
     responseData.reactionFunc = check
@@ -247,7 +245,7 @@ async def cdoListCompetitionByCountry(**kwargs):
 
 
 @markCommando("help")
-async def cdoGetHelp(**kwargs):
+async def cdoGetHelp(msg : Message,**kwargs):
     """
     Returns all available Commandos and their documentation.
     :return:
@@ -256,7 +254,7 @@ async def cdoGetHelp(**kwargs):
     addInfo = OrderedDict()
 
     try:
-        userQuery = DiscordUsers.objects.get(id=kwargs['msg'].author.id)
+        userQuery = DiscordUsers.objects.get(id=msg.author.id)
         authorUserLevel = userQuery.userLevel
     except ObjectDoesNotExist:
         authorUserLevel = 0
@@ -277,7 +275,7 @@ async def cdoGetHelp(**kwargs):
     return responseData
 
 @markCommando("showRunningTasks", defaultUserLevel=6)
-async def cdoShowRunningTasks(**kwargs):
+async def cdoShowRunningTasks(msg : Message,**kwargs):
     """
     Shows all currently running tasks on the server
     :return:
@@ -293,18 +291,17 @@ async def cdoShowRunningTasks(**kwargs):
     return CDOInteralResponseData(responseString, addInfo)
 
 @markCommando("scores")
-async def cdoScores(**kwargs):
+async def cdoScores(msg : Message,**kwargs):
     """
     Returns the scores for a given competition/matchday/team
     :param kwargs:
     :return:
     """
-    channel = kwargs['msg'].channel
+    channel = msg.channel
 
     if "parameter0" not in kwargs.keys():
         if not "live-" in channel.name:
-            return CDOInteralResponseData(f"{kwargs['prefix']}{kwargs['cdo']} with no argument "
-                                          f"can only be called within matchday channels")
+            return CDOInteralResponseData(f"This command with no argument can only be called within matchday channels")
 
         comp,md = Scheduler.findCompetitionMatchdayByChannel(channel.name)
 
@@ -378,7 +375,7 @@ async def cdoScores(**kwargs):
         resp.additionalInfo = addInfo
         return resp
 
-async def basicStatsFun(fun,onlyText,**kwargs):
+async def basicStatsFun(msg,fun,onlyText,**kwargs):
     """
     Shows the topscorer for a given competition
     :param kwargs:
@@ -406,17 +403,17 @@ async def basicStatsFun(fun,onlyText,**kwargs):
                 if reaction.emoji in emojiList():
                     index = emojiList().index(reaction.emoji)
                     if index < len(competition):
-                        kwargs['msg'].content = f"{kwargs['prefix']}{kwargs['cdo']} " \
+                        msg.content = f"{kwargs['prefix']}{kwargs['cdo']} " \
                                                 f"{competition[index].clear_name},{competition[index].association_id}"
-                        client.loop.create_task(cmdHandler(kwargs['msg']))
+                        client.loop.create_task(cmdHandler(msg))
                         return True
+                return False
 
             return CDOInteralResponseData(retString,reactionFunc=check)
         else:
             competition = competition.filter(association_id=kwargs['parameter1'])
 
     addInfo = await fun(competition.first())
-
     if addInfo == OrderedDict():
         return CDOInteralResponseData(f"Sorry no data available for {searchString}")
     else:
@@ -426,25 +423,25 @@ async def basicStatsFun(fun,onlyText,**kwargs):
             return CDOInteralResponseData(f"Result for {searchString}",addInfo,paging=1)
 
 @markCommando("topScorer")
-async def cdoTopScorer(**kwargs):
+async def cdoTopScorer(msg : Message,**kwargs):
     """
     Shows the topscorer for a given competition
     :param kwargs:
     :return:
     """
-    return await basicStatsFun(getTopScorers,False,**kwargs)
+    return await basicStatsFun(msg,getTopScorers,False,**kwargs)
 
 @markCommando("standing")
-async def cdoStanding(**kwargs):
+async def cdoStanding(msg : Message,**kwargs):
     """
     Shows the standing for a given competition
     :param kwargs:
     :return:
     """
-    return await basicStatsFun(getLeagueTable,True,**kwargs)
+    return await basicStatsFun(msg,getLeagueTable,True,**kwargs)
 
 @markCommando("playerInfo")
-async def cdoPlayerInfo(**kwargs):
+async def cdoPlayerInfo(msg : Message,**kwargs):
     """
     Shows information on a given player
     :param kwargs:
@@ -463,7 +460,7 @@ async def cdoPlayerInfo(**kwargs):
     return CDOInteralResponseData(playerName,addInfo,paging=1)
 
 @markCommando("current")
-async def cdoCurrentGames(**kwargs):
+async def cdoCurrentGames(msg : Message,**kwargs):
     """
     Lists all current games within a matchday channel
     :param kwargs:
@@ -494,7 +491,7 @@ async def cdoCurrentGames(**kwargs):
     return resp
 
 @markCommando("upcoming")
-async def cdoUpcomingGames(**kwargs):
+async def cdoUpcomingGames(msg : Message,**kwargs):
     """
     Lists all upcoming games
     :param kwargs:
@@ -523,7 +520,7 @@ async def cdoUpcomingGames(**kwargs):
     return resp
 
 @markCommando("setStartCdo", defaultUserLevel=5)
-async def cdoSetStartCDO(**kwargs):
+async def cdoSetStartCDO(msg : Message,**kwargs):
     """
     Sets a commandline argument to start the bot.
     :param kwargs:
@@ -538,7 +535,7 @@ async def cdoSetStartCDO(**kwargs):
     return CDOInteralResponseData(f"Setting startup command to {commandString}")
 
 @markCommando("update", defaultUserLevel=5)
-async def cdoUpdateBot(**kwargs):
+async def cdoUpdateBot(msg : Message,**kwargs):
     """
     Updates bot
     :param kwargs:
@@ -561,7 +558,7 @@ async def cdoUpdateBot(**kwargs):
     return CDOInteralResponseData(f"Updated Bot to {data[1]}. Please restart to apply changes")
 
 @markCommando("stop", defaultUserLevel=5)
-async def cdoStopBot(**kwargs):
+async def cdoStopBot(msg : Message,**kwargs):
     """
     Stops the execution of the bot
     :param kwargs:
@@ -573,7 +570,7 @@ async def cdoStopBot(**kwargs):
 
     def check(reaction : Reaction, user):
         if reaction.emoji == emojiList()[0]:
-            client.loop.create_task(client.send_message(kwargs['msg'].channel, "Bot is shutting down in 10 seconds"))
+            client.loop.create_task(client.send_message(msg.channel, "Bot is shutting down in 10 seconds"))
             client.loop.create_task(shutdown())
             return True
 
@@ -581,7 +578,7 @@ async def cdoStopBot(**kwargs):
     return responseData
 
 @markCommando("restart", defaultUserLevel=5)
-async def cdoRestartBot(**kwargs):
+async def cdoRestartBot(msg : Message,**kwargs):
     """
     Restart Kommando
     :param kwargs:
@@ -600,7 +597,7 @@ async def cdoRestartBot(**kwargs):
                                       "commando is available")
 
 @markCommando("prefix", defaultUserLevel=5)
-async def cdoSetPrefix(**kwargs):
+async def cdoSetPrefix(msg : Message,**kwargs):
     """
     Sets the prefix for the commands
     :param kwargs:
@@ -620,13 +617,13 @@ async def cdoSetPrefix(**kwargs):
     return CDOInteralResponseData(f"New prefix is {prefix.value}")
 
 @markCommando("setPermissions", defaultUserLevel=5)
-async def cdoSetUserPermissions(**kwargs):
+async def cdoSetUserPermissions(msg : Message,**kwargs):
     """
     Sets the userlevel for the mentioned users.
     :param kwargs:
     :return:
     """
-    if len(kwargs['msg'].mentions) == 0:
+    if len(msg.mentions) == 0:
         return CDOInteralResponseData("You need to mention a user to set its permission levels")
 
     level = None
@@ -642,28 +639,28 @@ async def cdoSetUserPermissions(**kwargs):
                     continue
 
     if level == None:
-        return CDOInteralResponseData(f"Wrong parameters! Needs {kwargs['prefix']}{kwargs['cdo']}"
-                                      f"*mentions* userLevel. userLevel needs to be a number between 0 and 5")
+        return CDOInteralResponseData(f"Wrong parameters! Needs a mention and user level."
+                                      f"User Level needs to be a number between 0 and 5")
 
     if level > 5 or level < 0:
         return CDOInteralResponseData("Only user levels from 0 to 5 are available")
 
     retString = ""
-    for user in kwargs['msg'].mentions:
+    for user in msg.mentions:
         DiscordUsers(id=user.id,name=user.name,userLevel=level).save()
         retString += f"Setting {user.name} with id {user.id} to user level {level}\n"
 
     return CDOInteralResponseData(retString)
 
 @markCommando("getPermissions",defaultUserLevel=5)
-async def cdoGetUserPermissions(**kwargs):
+async def cdoGetUserPermissions(msg : Message,**kwargs):
     """
     Gets the userlevel of a mentioned user
     :param kwargs:
     :return:
     """
     addInfo = OrderedDict()
-    for user in kwargs['msg'].mentions:
+    for user in msg.mentions:
         try:
             user = DiscordUsers.objects.get(id=user.id)
             addInfo[user.name] = f"User level: {user.userLevel}"
@@ -678,7 +675,7 @@ async def cdoGetUserPermissions(**kwargs):
     return retObj
 
 @markCommando("versions",defaultUserLevel=5)
-async def cdoVersions(**kwargs):
+async def cdoVersions(msg : Message,**kwargs):
     """
     Shows all available versions for the bot
     :param kwargs:
@@ -691,7 +688,7 @@ async def cdoVersions(**kwargs):
     return CDOInteralResponseData(retString)
 
 @markCommando("about",defaultUserLevel=0)
-async def cdoAbout(**kwargs):
+async def cdoAbout(msg : Message,**kwargs):
     """
     About the bot
     :param kwargs:
@@ -706,13 +703,13 @@ async def cdoAbout(**kwargs):
     return CDOInteralResponseData(retstring)
 
 @markCommando("test", defaultUserLevel=6)
-async def cdoTest(**kwargs):
+async def cdoTest(msg : Message,**kwargs):
     """
     Test Kommando
     :param kwargs:
     :return:
     """
-    msg = await client.send_message(kwargs['msg'].channel, 'React <:yellow_card:478130458090012672> with thumbs up or thumbs down.')
+    msg = await client.send_message(msg.channel, 'React <:yellow_card:478130458090012672> with thumbs up or thumbs down.')
     await client.add_reaction(message=msg, emoji='⏪')
     await client.add_reaction(message=msg,emoji='⏩')
 
@@ -726,4 +723,4 @@ async def cdoTest(**kwargs):
         return False
 
     res = await client.wait_for_reaction(message=msg, check=check)
-    #await client.send_message(kwargs['msg'].channel, '{0.user} reacted with {0.reaction.emoji}!'.format(res))
+    #await client.send_message(msg.channel, '{0.user} reacted with {0.reaction.emoji}!'.format(res))
