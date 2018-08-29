@@ -77,7 +77,7 @@ async def updateOverlayData():
     for federation in Federation.objects.all():
         getAndSaveData(getAllCompetitions, idFederation=federation.id)
         if datetime.utcnow() - time > timedelta(seconds=30):
-            await client.get_all_channels()
+            client.get_all_channels()
             logger.warning("Didn't sleep for 30 seconds, sleeping 10 now")
             await asyncio.sleep(10)
             time = datetime.utcnow()
@@ -85,7 +85,7 @@ async def updateOverlayData():
     for watcher in CompetitionWatcher.objects.all():
         getAndSaveData(getAllSeasons, idCompetitions=watcher.competition.id)
         if datetime.utcnow() - time > timedelta(seconds=30):
-            await client.get_all_channels()
+            client.get_all_channels()
             logger.warning("Didn't sleep for 30 seconds, sleeping 10 now")
             await asyncio.sleep(10)
             time = datetime.utcnow()
