@@ -544,18 +544,22 @@ async def cdoUpdateBot(msg : Message,**kwargs):
     def spawnAndWait(listObj):
         p = subprocess.Popen(listObj)
         p.wait()
-    data = kwargs['msg'.split(" ")]
-    if len(data) != 2:
-        return CDOInteralResponseData("Exactly one parameter is allowed. Pass the version or master")
 
-    if data[1] != "master" and data[1] not in getVersions():
+    if "parameter0" not in kwargs.keys():
+        return CDOInteralResponseData("Please provide the version you want to update to (master (_**experimental**_)"
+                                      ", or version)")
+
+    version = kwargs['parameter0']
+
+    if version != "master" and version not in getVersions():
         return CDOInteralResponseData(f"Version {data[1]} not available")
 
-    checkoutVersion(data[1])
+    if not checkoutVersion(version):
+        return CDOInteralResponseData(f"Sorry, {version} is not available")
     spawnAndWait([sys.executable, path + "/../manage.py", "migrate"])
     spawnAndWait([sys.executable, "-m", "pip", "install", "-r", f"{path}/../requirements.txt"])
 
-    return CDOInteralResponseData(f"Updated Bot to {data[1]}. Please restart to apply changes")
+    return CDOInteralResponseData(f"Updated Bot to **{version}**. Please restart to apply changes")
 
 @markCommando("stop", defaultUserLevel=5)
 async def cdoStopBot(msg : Message,**kwargs):
