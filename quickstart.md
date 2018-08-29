@@ -79,12 +79,13 @@ to setup the secret.json file. Here is an example of how that looks like:
 {
 	"discord_secret":"secret_key",
 	"reddit_secret":"secret_key",
+	"reddit_client_id":"client_id",
 	"masterUser":"user_id"
 }
 ```
 Replace the key in "discord_secret" with your discord secret you set up
-when setting up the bot with discord and the reddit secret with the
-reddit secret you got when setting up the reddit application. The
+when setting up the bot with discord and the reddit stuff with the
+id and secret you got when setting up the reddit application. The
 masterUser value should be the id of the master user, which is easily
 obtainable with clicking _copy id_ on discord. This user will be able to assign userlevels for all other users.
 
