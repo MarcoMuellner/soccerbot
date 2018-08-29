@@ -1,70 +1,43 @@
-# The soccerbot [![Build Status](https://travis-ci.org/muma7490/soccerbot.svg?branch=master)]
+# The soccerbot [![Build Status](https://travis-ci.com/muma7490/soccerbot.svg?branch=master)]
 
 _Introducing soccerbot: A discord bot that automatically creates Match
 channels, posts live updates and many more things to come._
 
-## Functionality
-- All official FIFA football leagues in the world are available,
-including live updates to them.
-- Customization: You can choose the competitions that
-are watched for your discord server
-- Automated creation of matchday channels for each league you want
-monitored. They are also automatically deleted.
-- Live updates for all matches. This includes goals, substitutions and
-cards.
-- Look and feel for match events are configurable via json files
-- Allows the posting of statistics for a competition. Currently includes
-the table as well as the topscorer for a given league.
-- Automated version management. You can update the bot from within
-discord
-- Userlevel management for the bot. It allows for certain users
-to have access to different commandos.
+## Information
 
-These are the features available now for v0.3.0, which of course is only
-a pre version of things to come. The final goal for this bot is to
-make all other soccerbots obsolete.
+All information on this project is available under
+[soccerbot.eu](https://soccerbot.eu). It includes all currently active
+[features](http://soccerbot.eu/features/),
+[commando documentation](http://soccerbot.eu/documentation/) as well as
+an [installation guide](http://soccerbot.eu/quickstart/). This is the
+central point for all information on the bot and will be kept up to
+date with the currently active release.
 
-## Requirements
-To use this bot, you currently have to install it on your own server.
+## Help
 
-**Important**: Python 3.6 is mandatory. Also it is recommended
-to use a virtual environment for the code.
+Before asking for any help, please refer to the website above. If this
+doesn't help you, there are two points where you can receive help:
 
-The installation process is very simple. First off install the
-requirements
-```
-pip install -r requirements.txt
-```
-Next, initialize the database
-```
-python manage.py migrate
-```
-Create your secret.json file containing your secret. Its content
-should look something like this:
-```
-{
-    "secret":"key"
-}
-```
-And your done. You can also set a master user if you like
-to so. With
-```
-{
-    "masterUser":"idOfUser"
-}
-```
-You can give him absolute rights on the bot, and have access to
-the debugging commandos.
+* _Discord_: There is a discord server for this bot, available
+[here](https://discord.gg/wGDvGR9). There you can also see the latest
+experimental features of the bot. Please use the #help channel for any
+help.
+* _Issues Page_: If you encounter a bug, please use the issues page on
+this github (**always provide the debug.log file!**). If you have a
+feature request, please be as specific as possible and state a data
+source for it if one is needed.
 
-With
-```
-python __main__.py
-```
-you can start your server. You obviously have to add it to your discord
-server.
+## Donations
 
-If you want to run it in production mode, it is strongly recommended
-to add it as a systemctl job.
+If you like the bot and want to buy me a beer,
+[here](paypal.me/soccerbot) is a link for that if you like.
+
+## Want to contribute?
+
+If you want to help improve the bot, don't hesitate to fork the
+repo, implement/fix an issue if you like and create a pull request. I
+am happy about all the help i get, and will respond to it as soon
+as possible.
 
 ## Acknowledgments
 

@@ -19,10 +19,12 @@ reddit_available = True
 try:
     with open(path+"secret.json") as f:
             reddit_secret = json.loads(f.read())['reddit_secret']
+            reddit_id = json.loads(f.read())['reddit_client_id']
 except:
     logger.warning("Reddit is not available. Please add a reddit_secret to the secret file")
     reddit_available = False
     reddit_secret = None
+    reddit_id = None
 
 class RedditEvent:
     def __init__(self,matchEvent, time : datetime, home_team : str , away_team, callback : callable):
@@ -38,9 +40,9 @@ class RedditEvent:
 class RedditParser:
     liveEventList : List[RedditEvent] = []
     updateRunning = asyncio.Event(loop=client.loop)
-    reddit = praw.Reddit(client_id='3ikffhiRzJC3cA',
+    reddit = praw.Reddit(client_id=reddit_id,
                      client_secret=reddit_secret,
-                     user_agent='ubuntu:soccerbot:v0.4.0 (by /u/mamu7490)')
+                     user_agent='ubuntu:soccerbot:v1.0.0 (by /u/mamu7490)')
 
     @staticmethod
     async def loop():
