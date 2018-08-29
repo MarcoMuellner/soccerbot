@@ -226,7 +226,8 @@ async def sendResponse(responseData : CDOFullResponseData,onlyText = False,edit_
             embObj = getEmbObj(responseData)
             await edit_msg.edit(embed=embObj)
         else:
-            await edit_msg.edit(content=responseData.response,embed=Embed())
+            await edit_msg.delete()
+            edit_msg = await responseData.channel.send(content=responseData.response)
         msg = edit_msg
 
     return msg
