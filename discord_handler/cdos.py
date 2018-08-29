@@ -542,17 +542,25 @@ async def cdoUpcomingGames(msg : Message,**kwargs):
 
     matchList = Scheduler.upcomingMatches()
     addInfo = OrderedDict()
+
     for match in matchList:
         if competition == None:
-            addInfo[match.title] = f"{match.match.date.strftime('%d %b %Y, %H:%M')} (UTC)"
+            addInfo[match.title] = match.match.date
         else:
             if match.match.competition == competition.first():
-                addInfo[match.title] = f"{match.match.date.strftime('%d %b %Y, %H:%M')} (UTC)"
+                addInfo[match.title] = match.match.date
+
+    addInfo =  dict(reversed([(k, addInfo[k]) for k in sorted(addInfo, key=addInfo.get, reverse=True)]))
+
+    for key,value in addInfo.items():
+        addInfo[key] = f"{addInfo[key].strftime('%d %b %Y, %H:%M')} (UTC)"
 
     if addInfo == OrderedDict():
         respStr = "No upcoming matches"
     else:
         respStr = "Upcoming matches:"
+
+
 
     resp = CDOInteralResponseData(respStr,addInfo)
     return resp
