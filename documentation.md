@@ -15,9 +15,7 @@ The prefix for soccerbot is configurable using the `prefix` command. You can, in
 
 ## What happens when i call a command?
 
-Due to the fact, that soccerbot regularly needs to call other websites and crawls data from them, a command can potentially take a while to complete. Therefore, after setting off a command, it will show a `Working ...` message like this:
-
-![Working command][working]
+Due to the fact, that soccerbot regularly needs to call other websites and crawls data from them, a command can potentially take a while to complete. Therefore, after setting off a command, it will show a `Working ...` message.
 
 This message indicates that the bot is busy and will be edited after the bot is finished and show the result.
 You can of course send the next command after it, though it won't show up, after the bot is actually finished with what it was doing. Some commands also support paging and reactions with emojis
