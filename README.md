@@ -30,7 +30,7 @@ source for it if one is needed.
 ## Donations
 
 If you like the bot and want to buy me a beer,
-[here](paypal.me/soccerbot) is a link for that if you like.
+[here](https://paypal.me/soccerbot) is a link for that if you like.
 
 ## Want to contribute?
 

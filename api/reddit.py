@@ -1,4 +1,5 @@
 import praw
+from praw.exceptions import ClientException
 import os
 import json
 import asyncio
@@ -40,9 +41,12 @@ class RedditEvent:
 class RedditParser:
     liveEventList : List[RedditEvent] = []
     updateRunning = asyncio.Event(loop=client.loop)
-    reddit = praw.Reddit(client_id=reddit_id,
-                     client_secret=reddit_secret,
-                     user_agent='ubuntu:soccerbot:v1.0.0 (by /u/mamu7490)')
+    try:
+        reddit = praw.Reddit(client_id=reddit_id,
+                         client_secret=reddit_secret,
+                         user_agent='ubuntu:soccerbot:v1.0.0 (by /u/mamu7490)')
+    except ClientException:
+        reddit = None
 
     @staticmethod
     async def loop():
