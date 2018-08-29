@@ -347,7 +347,7 @@ class LiveMatch:
                     logger.debug(f"Sending {embObj} to {i.name}")
                     msg = await channel.send(embed=embObj)
 
-        msgEvent = RedditEvent(event,datetime.utcnow(), self.match.home_team,self.match.away_team,self.updateMsg)
+        msgEvent = RedditEvent(event,datetime.utcnow(),self.match,self.updateMsg)
         self.msgList[msgEvent] = msg
         RedditParser.addEvent(msgEvent)
 

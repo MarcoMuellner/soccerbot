@@ -8,6 +8,7 @@ import os
 import json
 from enum import Enum
 import re
+import traceback
 
 from discord_handler.client import client
 from database.models import DiscordUsers,Settings
@@ -316,7 +317,19 @@ class GrpGeneral:
 def markCommando(cmd: str, group=GrpGeneral, defaultUserLevel=None):
     def internal_func_wrapper(func: callable):
         async def func_wrapper(msg : Message,**kwargs):
-            responseDataInternal = await func(msg,**kwargs)
+            try:
+                responseDataInternal = await func(msg,**kwargs)
+            except Exception as e:
+                trace = traceback.format_exc()
+                addInfo = OrderedDict()
+                addInfo["Error"] = f"{e.__class__.__name__} : {str(e)}"
+                addInfo["Traceback"] = trace[:1023]
+                responseDataInternal = CDOInteralResponseData("Sorry, an error occured. Please tell my master with "
+                                                              "the info below",addInfo)
+                responseData = CDOFullResponseData(msg.channel, kwargs['cdo'], responseDataInternal)
+                msg = await sendResponse(responseData, responseDataInternal.onlyText,edit_msg=kwargs['tmpMsg'])
+                return
+
             if not isinstance(responseDataInternal, CDOInteralResponseData):
                 raise TypeError("Commandos need to return a CDOInteralResponseData type!")
 

@@ -9,7 +9,7 @@ import os
 import re
 from discord import Reaction,User,Message
 
-from database.models import CompetitionWatcher, Competition, MatchEvents, MatchEventIcon,Settings,DiscordUsers
+from database.models import CompetitionWatcher, Competition,Settings,DiscordUsers,Goal,Team
 from discord_handler.handler import client, watchCompetition,Scheduler
 from discord_handler.cdo_meta import markCommando, CDOInteralResponseData, cmdHandler, emojiList\
     , DiscordCommando,resetPaging,pageNav
@@ -431,6 +431,44 @@ async def cdoTopScorer(msg : Message,**kwargs):
     """
     return await basicStatsFun(msg,getTopScorers,False,**kwargs)
 
+@markCommando("goals")
+async def cdoGoals(msg : Message,**kwargs):
+    """
+    Lists the goals stored in the database
+    :param msg:
+    :param kwargs:
+    :return:
+    """
+    if "parameter0" in kwargs.keys():
+        teams = Team.objects.filter(clear_name=kwargs['parameter0'])
+        if len(teams) != 0:
+            goalListHome = Goal.objects.filter(match_home_Team__clear_name=kwargs['parameter0']).order_by(
+                'match__date')
+            goalListAway = Goal.objects.filter(match_away_Team__clear_name=kwargs['parameter0']).order_by(
+                'match__date')
+            goalist = goalListHome | goalListAway
+        else:
+            goalList = Goal.objects.filter(player=kwargs['parameter0']).order_by('match__date')
+            if len(goalList) == 0:
+                return CDOInteralResponseData(f"Sorry, nothing found for {kwargs['parameter0']}")
+    else:
+        goalList = Goal.objects.all().order_by('match__date')
+
+    retDict = OrderedDict()
+
+    for i in reversed(goalList):
+        keyStr = f"{match.home_team.clear_name} : {match.home_team.clear_name}"
+        try:
+            retDict[keyStr] += f"{i.minute}: {i.player} {i.link}\n"
+        except KeyError:
+            retDict[keyStr] = f"{i.minute}: {i.player} {i.link}\n"
+
+
+    if retDict == OrderedDict():
+        return CDOInteralResponseData("No goals found")
+    else:
+        return CDOInteralResponseData("Goallinks:",additionalInfo=retDict)
+
 @markCommando("standing")
 async def cdoStanding(msg : Message,**kwargs):
     """
@@ -705,26 +743,3 @@ async def cdoAbout(msg : Message,**kwargs):
     retstring += f"Click https://paypal.me/soccerbot if you want to buy my creator a beer"
 
     return CDOInteralResponseData(retstring)
-
-@markCommando("test", defaultUserLevel=6)
-async def cdoTest(msg : Message,**kwargs):
-    """
-    Test Kommando
-    :param kwargs:
-    :return:
-    """
-    msg = await client.send_message(msg.channel, 'React <:yellow_card:478130458090012672> with thumbs up or thumbs down.')
-    await client.add_reaction(message=msg, emoji='⏪')
-    await client.add_reaction(message=msg,emoji='⏩')
-
-    def check(reaction : Reaction, user : User):
-        print(reaction.count)
-        if reaction.count == 2:
-            client.loop.create_task(resetPaging(reaction.message))
-        e = str(reaction.emoji)
-        print(e)
-        print(e == emojiList()[0])
-        return False
-
-    res = await client.wait_for_reaction(message=msg, check=check)
-    #await client.send_message(msg.channel, '{0.user} reacted with {0.reaction.emoji}!'.format(res))

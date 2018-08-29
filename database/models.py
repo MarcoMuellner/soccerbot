@@ -121,3 +121,9 @@ class CompetitionWatcher(models.Model):
 class Settings(models.Model):
     name = models.CharField(max_length=255,verbose_name="Maximum length of command",unique=True)
     value = models.CharField(max_length=2048,verbose_name="Actual Command to be executed")
+
+class Goal(models.Model):
+    match = models.ForeignKey(Match,verbose_name="Match that this goal belongs to",on_delete=models.CASCADE)
+    player = models.CharField(max_length=255,verbose_name="Name of the player that scored the goal")
+    minute = models.CharField(max_length=10,verbose_name="Minute this happened")
+    link = models.URLField(verbose_name="Link to the goal")

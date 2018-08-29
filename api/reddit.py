@@ -10,7 +10,7 @@ import re
 
 from discord_handler.client import client
 from support.helper import task
-from database.models import MatchEvents
+from database.models import MatchEvents,Goal,Match
 
 logger = logging.getLogger(__name__)
 
@@ -29,11 +29,10 @@ except KeyError:
     reddit_id = None
 
 class RedditEvent:
-    def __init__(self,matchEvent, time : datetime, home_team : str , away_team, callback : callable):
+    def __init__(self,matchEvent, time : datetime, match : Match, callback : callable):
         self.matchEvent = matchEvent
         self.time = time
-        self.home_team = home_team
-        self.away_team = away_team
+        self.match = match
         self.callback = callback
 
     def __str__(self):
@@ -55,6 +54,7 @@ class RedditParser:
             if not reddit_available:
                 return
             RedditParser.updateRunning.set()
+            i : RedditEvent
             for i in RedditParser.liveEventList:
                 if i.matchEvent.event != MatchEvents.goal:
                     logger.info(f"Can't react to {i}, as we can only react to goals currently")
@@ -65,6 +65,7 @@ class RedditParser:
                 newList = RedditParser.reddit.subreddit('soccer').new(limit=50)
                 result = RedditParser.parseReddit(i,newList)
                 if result is not None:
+                    Goal(match=i.match, player=i.matchEvent.player, minute=i.matchEvent.minute, link=result).save()
                     await i.callback(i,result)
                     RedditParser.liveEventList.remove(i)
 
@@ -77,9 +78,9 @@ class RedditParser:
     @staticmethod
     def parseReddit(event : RedditEvent,newList) -> Union[str,None]:
         for i in newList:
-            if event.home_team.clear_name in i.title or event.away_team.clear_name in i.title or 'goal' in i.title:
-                hTeam = event.home_team.clear_name.replace(" ","|")
-                aTeam = event.away_team.clear_name.replace(" ","|")
+            if event.match.home_team.clear_name in i.title or event.away_team.clear_name in i.title or 'goal' in i.title:
+                hTeam = event.match.home_team.clear_name.replace(" ","|")
+                aTeam = event.match.away_team.clear_name.replace(" ","|")
                 regexString = re.compile(rf"({hTeam})(.+-.+)({aTeam}).+(\s\d+.+)")
                 findList = regexString.findall(i.title)
                 if len(findList) != 0:
