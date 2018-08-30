@@ -537,8 +537,14 @@ async def cdoUpcomingGames(msg : Message,**kwargs):
     """
     if "parameter0" in kwargs.keys():
         competition = Competition.objects.filter(clear_name=kwargs['parameter0'])
+        watchers = CompetitionWatcher.objects.filter(competition=competition)
     else:
         competition = None
+        watchers = []
+
+    if len(watchers) == 0:
+        return CDOInteralResponseData("Sorry {competition.clear_name} is not watched by Soccerbot.")
+
 
     matchList = Scheduler.upcomingMatches()
 
