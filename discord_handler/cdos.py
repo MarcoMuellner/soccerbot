@@ -7,6 +7,7 @@ import sys
 import os
 import re
 from discord import Reaction,User,Message
+from dateutil import parser
 
 from database.models import CompetitionWatcher, Competition,Settings,DiscordUsers,Goal,Team
 from discord_handler.handler import client, watchCompetition,Scheduler
@@ -540,6 +541,10 @@ async def cdoUpcomingGames(msg : Message,**kwargs):
         competition = None
 
     matchList = Scheduler.upcomingMatches()
+
+    if len(matchList) == 0:
+        return CDOInteralResponseData("No upcoming matches.")
+
     addInfo = InfoObj()
     for match in matchList:
         if competition == None:
@@ -548,15 +553,15 @@ async def cdoUpcomingGames(msg : Message,**kwargs):
             if match.match.competition == competition.first():
                 addInfo[match.title] = match.match.date
                 
-    addInfo =  dict(reversed([(k, addInfo[k]) for k in sorted(addInfo, key=addInfo.get, reverse=True)]))
+    tmpAddInfo =  dict([(k, addInfo[k]) for k in sorted(addInfo, key=addInfo.get, reverse=False)])
 
-    for key,value in addInfo.items():
-        addInfo[key] = f"{addInfo[key].strftime('%d %b %Y, %H:%M')} (UTC)"
-        
-    if addInfo == InfoObj():
-        respStr = "No upcoming matches"
-    else:
-        respStr = "Upcoming matches:"
+
+    addInfo = InfoObj()
+
+    for key,value in tmpAddInfo.items():
+        addInfo[key] = f"{tmpAddInfo[key].description.strftime('%d %b %Y, %H:%M')} (UTC)"
+
+    respStr = "Upcoming matches:"
 
 
 

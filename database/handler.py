@@ -48,14 +48,18 @@ def getAndSaveData(func : callable, **kwargs):
 
     cnt = 1
     length = len(data)
-    if data[0]._meta.label == 'database.Match' or data[0]._meta.label == 'database.Player':
+    if data[0]._meta.label == 'database.Player':
         logger.info(f"Saving {data[0]._meta.label}. This may take a while")
         type(data[0]).objects.bulk_create(data)
         return
 
     for i in data:
         try:
-            logger.debug(f"{cnt}/{length}: Saving {func.__name__}: {i}")
+            if data[0]._meta.label == 'database.Match':
+                if cnt %100 == 0:
+                    logger.debug(f"{cnt}/{length}: Saving {func.__name__}: {i}")
+            else:
+                logger.debug(f"{cnt}/{length}: Saving {func.__name__}: {i}")
             i.save()
 
         except IntegrityError:

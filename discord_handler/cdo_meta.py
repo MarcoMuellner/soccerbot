@@ -40,18 +40,21 @@ except (KeyError,FileNotFoundError):
 class InfoObj:
     def __init__(self):
         self.dataDict = OrderedDict()
+        self._internalDataDict = OrderedDict()
 
     def __iter__(self):
         return self.dataDict.__iter__()
 
     def __setitem__(self, key : str, value :str):
         self.dataDict[key] = Embed(title=key, description=value)
+        self._internalDataDict[key] = value
 
     def __getitem__(self, item :str) ->Embed:
         return self.dataDict[item]
 
     def __delitem__(self, key :str):
         del self.dataDict[key]
+        del self._internalDataDict[key]
 
     def __len__(self):
         return len(self.dataDict)
@@ -64,6 +67,9 @@ class InfoObj:
             return self.dataDict == other.dataDict
         else:
             return False
+
+    def get(self,key):
+        return self._internalDataDict.get(key)
 
     def items(self):
         return self.dataDict.items()
