@@ -13,6 +13,7 @@ from discord_handler.cdos import cmdHandler
 from loghandler.loghandler import setup_logging
 from discord_handler.client import client
 from api.reddit import RedditParser
+from database.handler import updateMatches,updateOverlayData
 
 
 setup_logging()
@@ -61,8 +62,6 @@ async def on_message_edit(before : discord.Message, after : discord.Message):
         await cmdHandler(after)
     except discord.errors.HTTPException:
         pass
-
-logger.info("------------------Soccerbot is starting-----------------------")
 path = os.path.dirname(os.path.realpath(__file__))
 
 #secret file contains secret of bot as well as other stuff (masterUser)
@@ -72,4 +71,11 @@ try:
 except:
     logger.error(f"You need to create the secret.json file and check if secret:key is available, path {path+'/secret.json'}")
     sys.exit()
+
+logger.info("updating initial data")
+updateOverlayData()
+updateMatches()
+
+logger.info("------------------Soccerbot is starting-----------------------")
+
 client.run(key)

@@ -100,18 +100,7 @@ class Scheduler:
         await client.wait_until_ready()
         logger.debug("Client ready, starting loop")
         while True:
-            # take synchronization object, during update no live thread should run!
-            Scheduler.maintananceSynchronizer.set()
             targetTime = datetime.utcnow().replace(hour=0, minute=0, second=0) + timedelta(days=1)
-            logger.info("Data maintanance running ...")
-
-            # update competitions, seasons etc. Essentially the data that is always there
-            await updateOverlayData()
-            # update all matches for the monitored competitions
-            updateMatches()
-
-            Scheduler.maintananceSynchronizer.clear()
-            logger.info(f"Sleeping for {targetTime}")
             while True:
                 if datetime.utcnow() > targetTime:
                     logger.info("Running maintanance scheduler again")
@@ -121,6 +110,17 @@ class Scheduler:
                                  f"is earlier than {targetTime.strftime('%d %b %Y, %H:%M')},"
                                  f"sleeping for another 5 minutes")
                     await asyncio.sleep(300);
+            # take synchronization object, during update no live thread should run!
+            Scheduler.maintananceSynchronizer.set()
+            logger.info("Data maintanance running ...")
+
+            # update competitions, seasons etc. Essentially the data that is always there
+            await updateOverlayData()
+            # update all matches for the monitored competitions
+            updateMatches()
+
+            Scheduler.maintananceSynchronizer.clear()
+            logger.info(f"Sleeping for {targetTime}")
 
     @staticmethod
     async def matchScheduler():

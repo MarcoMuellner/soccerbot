@@ -7,8 +7,9 @@ from pytz import utc,UTC
 import asyncio
 from django.core.exceptions import ObjectDoesNotExist
 
-from api.calls import getSpecificTeam,getAllFederations,getAllCountries,getAllCompetitions,getAllMatches,getAllSeasons
-from database.models import Federation,Competition,CompetitionWatcher,Season,Match,Settings
+from api.calls import getSpecificTeam,getAllFederations,getAllCountries\
+    ,getAllCompetitions,getAllMatches,getAllSeasons,getAllPlayerInfo
+from database.models import Federation,Competition,CompetitionWatcher,Season,Match,Settings,Player
 from discord_handler.liveMatch import LiveMatch
 from discord_handler.client import toDiscordChannelName,client
 
@@ -45,11 +46,18 @@ def getAndSaveData(func : callable, **kwargs):
     """
     data = func(**kwargs)
 
+    cnt = 1
+    length = len(data)
+    if data[0]._meta.label == 'database.Match' or data[0]._meta.label == 'database.Player':
+        logger.info(f"Saving {data[0]._meta.label}. This may take a while")
+        type(data[0]).objects.bulk_create(data)
+        return
+
     for i in data:
         try:
+            logger.debug(f"{cnt}/{length}: Saving {func.__name__}: {i}")
             i.save()
-            if i._meta.label != 'database.Match':
-                logger.debug(f"Saving {func.__name__}: {i}")
+
         except IntegrityError:
             if i._meta.label == 'database.Match':
                 try:
@@ -66,29 +74,22 @@ def getAndSaveData(func : callable, **kwargs):
             else:
                 raise IntegrityError(f"Foreign Key constraint failed for {i._meta.label}")
 
-async def updateOverlayData():
+        cnt += 1
+
+def updateOverlayData():
     """
     The relevant overlay data (Federations, Countries, Competitions and watched seasons) is refreshed from the API.
     """
     logger.info("Updating competitions")
+    if len(Player.objects.all()) == 0:
+        getAndSaveData(getAllPlayerInfo)
     getAndSaveData(getAllFederations)
     getAndSaveData(getAllCountries)
-    time = datetime.utcnow()
     for federation in Federation.objects.all():
         getAndSaveData(getAllCompetitions, idFederation=federation.id)
-        if datetime.utcnow() - time > timedelta(seconds=30):
-            client.get_all_channels()
-            logger.warning("Didn't sleep for 30 seconds, sleeping 10 now")
-            await asyncio.sleep(10)
-            time = datetime.utcnow()
 
     for watcher in CompetitionWatcher.objects.all():
         getAndSaveData(getAllSeasons, idCompetitions=watcher.competition.id)
-        if datetime.utcnow() - time > timedelta(seconds=30):
-            client.get_all_channels()
-            logger.warning("Didn't sleep for 30 seconds, sleeping 10 now")
-            await asyncio.sleep(10)
-            time = datetime.utcnow()
 
 def updateMatches():
     """

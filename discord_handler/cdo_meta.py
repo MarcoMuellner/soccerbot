@@ -37,9 +37,45 @@ except (KeyError,FileNotFoundError):
     masterUserID = None
 
 ############################### Response objects ##########################
+class InfoObj:
+    def __init__(self):
+        self.dataDict = OrderedDict()
+
+    def __iter__(self):
+        return self.dataDict.__iter__()
+
+    def __setitem__(self, key : str, value :str):
+        self.dataDict[key] = Embed(title=key, description=value)
+
+    def __getitem__(self, item :str) ->Embed:
+        return self.dataDict[item]
+
+    def __delitem__(self, key :str):
+        del self.dataDict[key]
+
+    def __len__(self):
+        return len(self.dataDict)
+
+    def __contains__(self, item :str):
+        return item in self.dataDict
+
+    def __eq__(self, other):
+        if isinstance(other,InfoObj):
+            return self.dataDict == other.dataDict
+        else:
+            return False
+
+    def items(self):
+        return self.dataDict.items()
+
+    def keys(self):
+        return self.dataDict.keys()
+
+    def values(self):
+        return self.dataDict.values()
 
 class CDOInteralResponseData:
-    def __init__(self, response: str = "", additionalInfo: OrderedDict = OrderedDict()
+    def __init__(self, response: str = "", additionalInfo: InfoObj = InfoObj()
                  , reactionFunc=None, paging = None,onlyText = False):
         self.response = response
         self.additionalInfo = additionalInfo
@@ -119,16 +155,18 @@ class Page:
             maxCount = 5
 
         count = 0
-        tmpDict = OrderedDict()
+        tmpDict = InfoObj()
         for key,val in cdoResp.additionalInfo.items():
-            tmpDict[key] = val
+            tmpDict[key] = val.description
+            if val.thumbnail.url != Embed.Empty:
+                tmpDict[key].set_thumbnail(url=val.thumbnail.url)
             count += 1
             if count >=maxCount:
                 self.addInfoList.append(CDOInteralResponseData(response=cdoResp.response,additionalInfo=tmpDict))
-                tmpDict = OrderedDict()
+                tmpDict = InfoObj()
                 count = 0
 
-        if tmpDict != OrderedDict():
+        if tmpDict != InfoObj():
             self.addInfoList.append(CDOInteralResponseData(response=cdoResp.response,additionalInfo=tmpDict))
         self.index = 0
         self.length = len(self.addInfoList)
@@ -139,29 +177,24 @@ class Page:
         return self.addInfoList[0]
 
     def reactFunc(self,reaction : Reaction, user : User):
+        if self.cdoResp.reactionFunc is not None:
+           client.loop.create_task(self.cdoResp.reactionFunc(reaction,user))
+        if reaction.count == 2:
+            if reaction.emoji == '⏩' and self.index + 1 < self.length:
+                self.index +=1
+            elif reaction.emoji == '⏪' and self.index - 1 >= 0:
+                self.index -=1
+            else:
+                pass
 
-        if self.msg.id == reaction.message.id:
-            if self.cdoResp.reactionFunc is not None:
-               client.loop.create_task(self.cdoResp.reactionFunc(reaction,user))
-            if reaction.count == 2:
-                if reaction.emoji == '⏩' and self.index + 1 < self.length:
-                    self.index +=1
-                elif reaction.emoji == '⏪' and self.index - 1 >= 0:
-                    self.index -=1
-                else:
-                    pass
+            responseData = CDOFullResponseData(reaction.message.channel,self.cdo,self.addInfoList[self.index])
+            embObj = getEmbObj(responseData)
+            embObj.set_footer(text=f"Page {self.index+1}/{self.length}")
 
-                responseData = CDOFullResponseData(reaction.message.channel,self.cdo,self.addInfoList[self.index])
-                embObj = getEmbObj(responseData)
-                embObj.set_footer(text=f"Page {self.index+1}/{self.length}")
-
-                client.loop.create_task(editPagingMessage(reaction.message, embObj))
+            client.loop.create_task(editPagingMessage(reaction.message, embObj))
 
     def setMsg(self,msg : Message):
         self.msg = msg
-
-
-
 
 
 ############################### Meta functions ##########################
@@ -182,8 +215,11 @@ def getEmbObj(responseData):
 
     embObj = Embed(title=title, description=content)
 
+    val:Embed
     for key, val in responseData.additionalInfo.items():
-        embObj.add_field(name=key, value=val, inline=True)
+        embObj.add_field(name=val.title, value=val.description, inline=True)
+        if val.thumbnail.url != Embed.Empty:
+            embObj.set_thumbnail(url=val.thumbnail.url)
 
     return embObj
 
@@ -321,7 +357,7 @@ def markCommando(cmd: str, group=GrpGeneral, defaultUserLevel=None):
                 responseDataInternal = await func(msg,**kwargs)
             except Exception as e:
                 trace = traceback.format_exc()
-                addInfo = OrderedDict()
+                addInfo = InfoObj()
                 addInfo["Error"] = f"{e.__class__.__name__} : {str(e)}"
                 addInfo["Traceback"] = trace[:1023]
                 responseDataInternal = CDOInteralResponseData("Sorry, an error occured. Please tell my master with "

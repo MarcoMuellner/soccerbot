@@ -11,7 +11,7 @@ from pytz import UTC
 import os
 import re
 
-from database.models import Match, MatchEvents, MatchEventIcon
+from database.models import Match, MatchEvents, Player
 from api.calls import makeMiddlewareCall, DataCalls
 from discord_handler.client import client, toDiscordChannelName
 from support.helper import task
@@ -337,6 +337,26 @@ class LiveMatch:
         title, content, goalString = await LiveMatch.beautifyEvent(event, match)
         embObj = Embed(title=title, description=content)
         embObj.set_author(name=match.competition.clear_name)
+
+        lastName = event.player.split(" ")[-1].lower()
+        firstName = event.player.split(" ")[0].lower()
+
+        imageList = Player.objects.filter(lastName=lastName)
+        image = None
+
+        if len(imageList) != 0:
+            if len(imageList) == 1:
+                image = imageList.first().imageLink
+            else:
+                imageList = imageList.filter(firstName=firstName)
+                if len(imageList) != 0:
+                    image = imageList.first().imageLink
+                else:
+                    imageList = Player.objects.filter(lastName=lastName)
+                    image = imageList.first().imageLink
+
+        if image is not None:
+            embObj.set_thumbnail(url=image)
 
         try:
             msg = await channel.send(embed=embObj)
