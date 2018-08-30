@@ -542,8 +542,8 @@ async def cdoUpcomingGames(msg : Message,**kwargs):
         competition = None
         watchers = []
 
-    if len(watchers) == 0:
-        return CDOInteralResponseData("Sorry {competition.clear_name} is not watched by Soccerbot.")
+    if len(watchers) == 0 and competition is not None:
+        return CDOInteralResponseData(f"Sorry {competition.clear_name} is not watched by Soccerbot.")
 
 
     matchList = Scheduler.upcomingMatches()
