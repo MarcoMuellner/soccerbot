@@ -1,6 +1,5 @@
 from typing import Dict, Union
 import logging
-from collections import OrderedDict
 from django.core.exceptions import ObjectDoesNotExist
 from json.decoder import JSONDecodeError
 import subprocess
@@ -12,7 +11,7 @@ from discord import Reaction,User,Message
 from database.models import CompetitionWatcher, Competition,Settings,DiscordUsers,Goal,Team
 from discord_handler.handler import client, watchCompetition,Scheduler
 from discord_handler.cdo_meta import markCommando, CDOInteralResponseData, cmdHandler, emojiList\
-    , DiscordCommando,resetPaging,pageNav
+    , DiscordCommando,InfoObj
 from discord_handler.liveMatch import LiveMatch
 from api.calls import getLiveMatches,makeMiddlewareCall,DataCalls,getTeamsSearchedByName
 from api.stats import getTopScorers, getLeagueTable,getPlayerInfo
@@ -175,7 +174,7 @@ async def cdoShowMonitoredCompetitions(msg : Message,**kwargs):
     """
     retString = f"React with number emojis to remove.Only the first {len(emojiList())} can " \
                 f"be added this way):\n\n"
-    addInfo = OrderedDict()
+    addInfo = InfoObj()
     compList = []
     for watchers in CompetitionWatcher.objects.all():
         compList.append(watchers.competition)
@@ -251,7 +250,7 @@ async def cdoGetHelp(msg : Message,**kwargs):
     :return:
     """
     retString = "Available Commandos:"
-    addInfo = OrderedDict()
+    addInfo = InfoObj()
 
     try:
         userQuery = DiscordUsers.objects.get(id=msg.author.id)
@@ -282,7 +281,7 @@ async def cdoShowRunningTasks(msg : Message,**kwargs):
     """
     tasks = Task.getAllTaks()
     responseString = "Running tasks:"
-    addInfo = OrderedDict()
+    addInfo = InfoObj()
 
     for i in tasks:
         args = str(i.args).replace("<", "").replace(">", "").replace(",)", ")")
@@ -308,7 +307,7 @@ async def cdoScores(msg : Message,**kwargs):
         matchList = Scheduler.getScores(comp,md)
 
         resp = CDOInteralResponseData("Current scores:")
-        addInfo = OrderedDict()
+        addInfo = InfoObj()
         for matchString,goalList in matchList.items():
             addInfo[matchString] = ""
             for goals in goalList[0]:
@@ -318,10 +317,10 @@ async def cdoScores(msg : Message,**kwargs):
             if addInfo[matchString] == "":
                 del addInfo[matchString]
 
-            if addInfo == OrderedDict():
+            if addInfo == InfoObj():
                 addInfo[matchString] = f"{goalList[1]}: 0-0"
 
-        if addInfo == OrderedDict():
+        if addInfo == InfoObj():
             resp.response = "Currently no running matches"
         else:
             resp.response = "Current scores:"
@@ -346,7 +345,7 @@ async def cdoScores(msg : Message,**kwargs):
         if len(matchList) == 0:
             return CDOInteralResponseData(f"No current matches for {matchObj}")
 
-        addInfo = OrderedDict()
+        addInfo = InfoObj()
         for matchID in matchList:
             try:
                 data = makeMiddlewareCall(DataCalls.liveData + f"/{matchID}")
@@ -368,7 +367,7 @@ async def cdoScores(msg : Message,**kwargs):
                     except KeyError:
                         addInfo[title] = goalListing + "\n"
 
-        if addInfo == OrderedDict():
+        if addInfo == InfoObj():
             return CDOInteralResponseData(f"No goals currently for {matchObj}")
 
         resp = CDOInteralResponseData(f"Current scores for {matchObj}")
@@ -414,7 +413,7 @@ async def basicStatsFun(msg,fun,onlyText,**kwargs):
             competition = competition.filter(association_id=kwargs['parameter1'])
 
     addInfo = await fun(competition.first())
-    if addInfo == OrderedDict():
+    if addInfo == InfoObj():
         return CDOInteralResponseData(f"Sorry no data available for {searchString}")
     else:
         if onlyText:
@@ -454,7 +453,7 @@ async def cdoGoals(msg : Message,**kwargs):
     else:
         goalList = Goal.objects.all().order_by('match__date')
 
-    retDict = OrderedDict()
+    retDict = InfoObj()
 
     for i in reversed(goalList):
         keyStr = f"{match.home_team.clear_name} : {match.home_team.clear_name}"
@@ -464,7 +463,7 @@ async def cdoGoals(msg : Message,**kwargs):
             retDict[keyStr] = f"{i.minute}: {i.player} {i.link}\n"
 
 
-    if retDict == OrderedDict():
+    if retDict == InfoObj():
         return CDOInteralResponseData("No goals found")
     else:
         return CDOInteralResponseData("Goallinks:",additionalInfo=retDict)
@@ -511,7 +510,7 @@ async def cdoCurrentGames(msg : Message,**kwargs):
         competition = None
 
     matchList = Scheduler.startedMatches()
-    addInfo = OrderedDict()
+    addInfo = InfoObj()
     for match in matchList:
         if competition == None:
             addInfo[match.title] = f"{match.minute}"
@@ -519,7 +518,7 @@ async def cdoCurrentGames(msg : Message,**kwargs):
             if match.match.competition == competition.first():
                 addInfo[match.title] = f"{match.minute}"
 
-    if addInfo == OrderedDict():
+    if addInfo == InfoObj():
         respStr = "No running matches"
     else:
         respStr = "Running matches:"
@@ -541,21 +540,20 @@ async def cdoUpcomingGames(msg : Message,**kwargs):
         competition = None
 
     matchList = Scheduler.upcomingMatches()
-    addInfo = OrderedDict()
-
+    addInfo = InfoObj()
     for match in matchList:
         if competition == None:
             addInfo[match.title] = match.match.date
         else:
             if match.match.competition == competition.first():
                 addInfo[match.title] = match.match.date
-
+                
     addInfo =  dict(reversed([(k, addInfo[k]) for k in sorted(addInfo, key=addInfo.get, reverse=True)]))
 
     for key,value in addInfo.items():
         addInfo[key] = f"{addInfo[key].strftime('%d %b %Y, %H:%M')} (UTC)"
-
-    if addInfo == OrderedDict():
+        
+    if addInfo == InfoObj():
         respStr = "No upcoming matches"
     else:
         respStr = "Upcoming matches:"
@@ -709,7 +707,7 @@ async def cdoGetUserPermissions(msg : Message,**kwargs):
     :param kwargs:
     :return:
     """
-    addInfo = OrderedDict()
+    addInfo = InfoObj()
     for user in msg.mentions:
         try:
             user = DiscordUsers.objects.get(id=user.id)
@@ -717,7 +715,7 @@ async def cdoGetUserPermissions(msg : Message,**kwargs):
         except ObjectDoesNotExist:
             addInfo[user.name] = f"User level: 0"
 
-    if addInfo == OrderedDict():
+    if addInfo == InfoObj():
         return CDOInteralResponseData("You need to mention a user to get its permission status!")
 
     retObj = CDOInteralResponseData("UserLevels:")

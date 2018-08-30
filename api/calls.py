@@ -3,8 +3,10 @@ import json
 from typing import Dict, List, Callable, Union
 from dateutil import parser
 import re
+import xml.etree.ElementTree as ET
+from unidecode import unidecode
 
-from database.models import Federation,Competition,Association,Match,Season,Team
+from database.models import Federation,Competition,Association,Match,Season,Team,Player
 
 
 class ApiCalls:
@@ -77,6 +79,26 @@ def makeMiddlewareCall(keyword: str, payload: Dict = None) -> Dict:
     data = data.replace(")","")
     return json.loads(data)
 
+def getAllPlayerInfo(**kwargs) -> Union[List, Player]:
+    if len(kwargs.keys()) == 0:
+        data = requests.get('http://c3420952.r52.cf0.rackcdn.com/playerdata.xml') #todo replace this with a dynamic link generation
+        dataList = ET.ElementTree(ET.fromstring(data.text))
+        dataList = dataList.getroot()[0].getchildren()
+        return loop(getAllPlayerInfo,dataList)
+    elif 'resDict' in kwargs.keys() and len(kwargs.keys()) == 1:
+        res = dict(kwargs['resDict'].items())
+        if 'i' in res.keys():
+            image = res['i']
+        else:
+            image = 'missing_player.jpg'
+        return Player(
+            firstName = unidecode(res['f'].lower().replace("ü","ue").replace("ö","oe").replace("ä","ae")),
+            lastName=unidecode(res['s'].lower().replace("ü","ue").replace("ö","e").replace("ä","ae")),
+            birthDate=res['d'],
+            imageLink= "https://cdn.soccerwiki.org/images/player/"+image
+        )
+    else:
+        raise AttributeError('Wrong parameters for call getAllPlayerInfo')
 
 def getAllFederations(**kwargs) -> Union[List, Federation]:
     """

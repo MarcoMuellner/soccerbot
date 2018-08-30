@@ -127,3 +127,12 @@ class Goal(models.Model):
     player = models.CharField(max_length=255,verbose_name="Name of the player that scored the goal")
     minute = models.CharField(max_length=10,verbose_name="Minute this happened")
     link = models.URLField(verbose_name="Link to the goal")
+
+class Player(models.Model):
+    firstName = models.CharField(max_length=255,verbose_name=" First name of the player")
+    lastName = models.CharField(max_length=255,verbose_name="Last name of the player")
+    birthDate = models.CharField(max_length=12, verbose_name="Birth date of the player")
+    imageLink = models.URLField(max_length=255,verbose_name="Link to the image of the player")
+
+    def __str__(self):
+        return f"Player {self.firstName} {self.lastName}"
