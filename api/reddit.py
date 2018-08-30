@@ -22,7 +22,7 @@ try:
         fileDict = json.loads(f.read())
         reddit_id = fileDict['reddit_client_id']
         reddit_secret = fileDict['reddit_secret']
-except KeyError:
+except (KeyError,FileNotFoundError):
     logger.warning("Reddit is not available. Please add a reddit_secret to the secret file")
     reddit_available = False
     reddit_secret = None
