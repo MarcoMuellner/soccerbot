@@ -180,7 +180,7 @@ async def cdoShowMonitoredCompetitions(msg : Message,**kwargs):
     for watchers in CompetitionWatcher.objects.all():
         compList.append(watchers.competition)
         try:
-            addInfo[watchers.competition.association.clear_name] +=(f"\n{watchers.competition.clear_name}")
+            addInfo[watchers.competition.association.clear_name].description +=(f"\n{watchers.competition.clear_name}")
         except KeyError:
             addInfo[watchers.competition.association.clear_name] = watchers.competition.clear_name
 
@@ -629,7 +629,7 @@ async def cdoStopBot(msg : Message,**kwargs):
 
     def check(reaction : Reaction, user):
         if reaction.emoji == emojiList()[0]:
-            client.loop.create_task(client.send_message(msg.channel, "Bot is shutting down in 10 seconds"))
+            client.loop.create_task(msg.channel.send("Bot is shutting down in 10 seconds"))
             client.loop.create_task(shutdown())
             return True
 
