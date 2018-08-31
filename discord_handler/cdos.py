@@ -457,7 +457,7 @@ async def cdoGoals(msg : Message,**kwargs):
     retDict = InfoObj()
 
     for i in reversed(goalList):
-        keyStr = f"{match.home_team.clear_name} : {match.home_team.clear_name}"
+        keyStr = f"{i.match.home_team.clear_name} : {i.match.home_team.clear_name}"
         try:
             retDict[keyStr] += f"{i.minute}: {i.player} {i.link}\n"
         except KeyError:
