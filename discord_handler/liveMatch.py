@@ -1,7 +1,7 @@
 import asyncio
 import json
 
-from discord import TextChannel, Embed
+from discord import TextChannel, Embed,Colour
 from typing import Dict, Union, Tuple, List
 from collections import OrderedDict
 import logging
@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 from pytz import UTC
 import os
 import re
+import random
 
 from database.models import Match, MatchEvents, Player
 from api.calls import makeMiddlewareCall, DataCalls
@@ -62,6 +63,9 @@ class LiveMatch:
         self.runningStarted = False
         self.lock = asyncio.Event(loop=client.loop)
         self.lock.set()
+        r = lambda: random.randint(0,255)
+        self.color = Colour(int('0x%02X%02X%02X' % (r(),r(),r()),16))
+
         if LiveMatch.emojiSet == {}:
             LiveMatch.emojiSet = dict([(i.name,str(i)) for i in client.emojis])
 
@@ -141,7 +145,7 @@ class LiveMatch:
                 try:
                     for channel in client.get_all_channels():
                         if channel.name == self.channelName:
-                            await LiveMatch.postLineups(channel, self.match, data["match"])
+                            await self. postLineups(channel, self.match, data["match"])
                             lineupsPosted = True
                             sleepTime = 20
                 except RuntimeError:
@@ -189,8 +193,7 @@ class LiveMatch:
         self.lock.set()
         logger.info(f"Ending match {self.title}")
 
-    @staticmethod
-    async def postLineups(channel: TextChannel, match: Match, data: Dict):
+    async def postLineups(self,channel: TextChannel, match: Match, data: Dict):
         lineup = OrderedDict()
         for i in ['home', 'away']:
             lineup[i] = OrderedDict()
@@ -253,6 +256,7 @@ class LiveMatch:
 
         embObj.add_field(name=homeTeamTitle, value=homeString)
         embObj.add_field(name=awayTeamTitle, value=awayString)
+        embObj.colour = self.color
 
         try:
             await channel.send(embed=embObj)
@@ -337,6 +341,7 @@ class LiveMatch:
         title, content, goalString = await LiveMatch.beautifyEvent(event, match)
         embObj = Embed(title=title, description=content)
         embObj.set_author(name=match.competition.clear_name)
+        embObj.colour = self.color
 
         lastName = event.player.split(" ")[-1].lower()
         firstName = event.player.split(" ")[0].lower()
