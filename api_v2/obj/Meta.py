@@ -1,0 +1,112 @@
+from typing import Dict,List,Union
+from datetime import datetime, timedelta
+import inspect
+import requests
+import json
+import re
+from django.db import models
+import asyncio
+
+class MetaAPI(models.Model):
+    """
+    Meta API represents the basic class that every API object is derived off. It shows
+    a general interface, that should be implemented by all classes of this type, as well
+    as providing some general data, like the urls for the APIs.
+
+    All API objects have to integrate static methods, that return objects of that type.
+    This needs to be filterable as well, by all members available.
+    """
+    class Meta: #abstract class for django
+        abstract = True
+
+    class DataSrc:
+        api = "https://api.fifa.com/api/v1/"
+        middleWare = "https://data.fifa.com/"
+        soccerWiki = None
+
+    class ApiKey:
+        federations = 'confederations'
+        competitions = 'competitions/all'
+        seasons = 'seasons'
+        matches = 'calendar/matches'
+        teams = 'teams/all'
+        specificTeam = 'teams'
+        playerInfo = 'players'
+        countries = 'countries'
+        live = "live/football"
+        teamSearch = "teams/search"
+        topScorer = "topseasonplayerstatistics/season"
+        playerSearch = 'players/search'
+
+    def __init__(self,*args,**kwargs):
+        #Write model
+        models.Model.__init__(self, *args, **kwargs)
+        #All objects that are higher up in the hierarchy, and own an object of this type
+        self._upperObjects = {}
+        #All objects that are the "children" of this object
+        self._lowerObjects = {}
+
+    @classmethod
+    def create(cls, **kwargs):
+        return cls(**kwargs)
+
+    @staticmethod
+    def makeDataCall(src : str, keyword: str ,params : Dict[str,Union[str,int]] = None) -> Union[List,Dict]:
+        """
+        This method should make the actual data call to the api.
+        :param url: The full URL of the API
+        :param params: The parameter for the get call.
+        :return: The data from the API
+        """
+        params = params if params != None else {}
+        req = requests.get(src + keyword, params=params)
+        data = req.content.decode()
+        data = re.sub(r"_\w+\(", "", data)
+        data = data.replace(")", "")
+        try:
+            return json.loads(data)['Results']
+        except (KeyError, TypeError) as e:
+            return json.loads(data)
+
+    @staticmethod
+    async def updateRegularly(time : timedelta):
+        """
+        If an event loop is available, this method should be spawned, according to the
+        delta time it should be updated at.
+        :param time: The delta time this should be updated at
+        :return:
+        """
+        raise NotImplementedError("Update regularly is not implemented!")
+
+    @staticmethod
+    def updateInternally(delta : timedelta, fun : callable):
+        start_time = datetime.utcnow()
+        while True:
+            time = datetime.utcnow()
+            if time - start_time > delta:
+                fun()
+                start_time = datetime.utcnow()
+            else:
+                asyncio.sleep(300)
+
+    def mem(self) -> Dict[str,property]:
+        """
+        Creates a dictionary containing all properties of a given API Object. These
+        objects can be used to filter stuff.
+        :return:
+        """
+        obj = inspect.getmembers(type(self),inspect.isdatadescriptor)
+        del obj['__weakref__']
+        return dict(obj)
+
+    def checkDataAccess(self,**kwargs) -> bool:
+        """
+        Checks if the passed kwargs object contains only properties that are available
+        through the Accessor
+        :return: true/false, depending on if the things are correct
+        """
+        inKeys = kwargs.keys()
+        avKeys = self.mem().keys()
+        return set(inKeys).issubset(avKeys)
+
+

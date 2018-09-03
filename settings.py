@@ -11,7 +11,7 @@ DATABASES = {
 }
 
 INSTALLED_APPS = (
-    'database',
+    'api_v2.obj',
 )
 
 SECRET_KEY = 'REPLACE_ME'

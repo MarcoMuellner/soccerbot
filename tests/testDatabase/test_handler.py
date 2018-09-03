@@ -1,5 +1,3 @@
-
-"""
 import os
 from django.core.wsgi import get_wsgi_application
 # Django specific settings
@@ -17,7 +15,7 @@ from database.models import DiscordServer
 from tests.testAPI.test_calls import unifiedHttMock
 
 @pytest.fixture(autouse=True)
-def enable_db_access_for_all_tests(db):
+def enable_db_access_for_all_tests(obj):
     pass
 
 getAndSaveDataList = [
@@ -68,5 +66,3 @@ def testCreateMatchDayObject(preUpdate):
         assert isinstance(result,MatchDayObject)
 
 utc=pytz.UTC
-
-"""
