@@ -6,6 +6,7 @@ import json
 import re
 from django.db import models
 import asyncio
+import xml.etree.ElementTree as ET
 
 class MetaAPI(models.Model):
     """
@@ -22,33 +23,33 @@ class MetaAPI(models.Model):
     class DataSrc:
         api = "https://api.fifa.com/api/v1/"
         middleWare = "https://data.fifa.com/"
-        soccerWiki = None
+        soccerWiki = 'http://c3420952.r52.cf0.rackcdn.com/'
 
     class ApiKey:
         federations = 'confederations'
         competitions = 'competitions/all'
         seasons = 'seasons'
         matches = 'calendar/matches'
-        teams = 'teams/all'
+        teams = 'teams/association/{}'
         specificTeam = 'teams'
-        playerInfo = 'players'
+        playerInfo = 'players/{}'
         countries = 'countries'
         live = "live/football"
         teamSearch = "teams/search"
         topScorer = "topseasonplayerstatistics/season"
         playerSearch = 'players/search'
+        squad = 'teams/{}/squad/all'
+
+    class DataKey:
+        liveData = "matches/en/live/info"
+        standings = "livescores/de/standing/byphase/{}"
+
+    class WikiKey:
+        playerData = "playerdata.xml"
 
     def __init__(self,*args,**kwargs):
         #Write model
         models.Model.__init__(self, *args, **kwargs)
-        #All objects that are higher up in the hierarchy, and own an object of this type
-        self._upperObjects = {}
-        #All objects that are the "children" of this object
-        self._lowerObjects = {}
-
-    @classmethod
-    def create(cls, **kwargs):
-        return cls(**kwargs)
 
     @staticmethod
     def makeDataCall(src : str, keyword: str ,params : Dict[str,Union[str,int]] = None) -> Union[List,Dict]:
@@ -58,15 +59,27 @@ class MetaAPI(models.Model):
         :param params: The parameter for the get call.
         :return: The data from the API
         """
+
         params = params if params != None else {}
         req = requests.get(src + keyword, params=params)
-        data = req.content.decode()
-        data = re.sub(r"_\w+\(", "", data)
-        data = data.replace(")", "")
-        try:
-            return json.loads(data)['Results']
-        except (KeyError, TypeError) as e:
-            return json.loads(data)
+
+        if req.status_code == 404:
+            raise requests.exceptions.HTTPError(f"404 error returned by {req.url}")
+
+        if src == MetaAPI.DataSrc.soccerWiki:
+            dataList = ET.ElementTree(ET.fromstring(req.text))
+            return dataList.getroot()[0].getchildren()
+        else:
+            try:
+                data = req.content.decode()
+                data = re.sub(r"_\w+\(", "", data)
+                data = data.replace(")", "")
+                try:
+                    return json.loads(data)['Results']
+                except (KeyError, TypeError) as e:
+                    return json.loads(data)
+            except json.decoder.JSONDecodeError:
+                raise ValueError(f"Failed to parse data for url {req.url}")
 
     @staticmethod
     async def updateRegularly(time : timedelta):
@@ -108,5 +121,21 @@ class MetaAPI(models.Model):
         inKeys = kwargs.keys()
         avKeys = self.mem().keys()
         return set(inKeys).issubset(avKeys)
+
+    @staticmethod
+    def saveData(classObj:type , objectList : List) -> List:
+        bulkList = []
+        for i in objectList:
+            if i in classObj.objects.all() and i != classObj.objects.get(id=i.id):
+                i.save()
+            elif i not in classObj.objects.all():
+                bulkList.append(i)
+
+        classObj.objects.bulk_create(bulkList)
+
+        return objectList
+
+    def __str__(self):
+        raise NotImplementedError(f"{type(self)} need to implement the __str__ method")
 
 

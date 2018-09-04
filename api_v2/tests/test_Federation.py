@@ -12,7 +12,8 @@ from ..obj.models import Federation
 
 @pytest.mark.django_db
 def testStructue():
-    federations = Federation.initData()
+    federations = Federation.updateData()
+    federations = Federation.updateData()
     fedList = list(Federation.objects.values_list('id',flat=True))
 
     assert fedList == ['AFC', 'CAF', 'CONCACAF', 'CONMEBOL', 'FIFA', 'OFC', 'UEFA']

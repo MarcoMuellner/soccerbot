@@ -11,8 +11,4 @@ from ..obj.models import Competition,Federation
 
 @pytest.mark.django_db
 def testStructue():
-    if len(Federation.objects.all()) == 0:
-        Federation.initData()
-
-    for i in Federation.objects.all():
-        Competition.initData(i)
+    Competition.updateData()
