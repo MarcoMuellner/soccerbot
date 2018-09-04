@@ -412,15 +412,19 @@ class LiveMatch:
                                        )
             if event['eventCode'] == 3:  # Goal!
                 eventData.event = MatchEvents.goal
-            elif event['eventCode'] == 4:  # Substitution!
-                eventData.event = MatchEvents.substitution
+            #elif event['eventCode'] == 4:  # Substitution!
+            #    eventData.event = MatchEvents.substitution
             elif event['eventCode'] == 1:
-                ev = MatchEvents.yellowCard if event['eventDescriptionShort'] == "Y" else MatchEvents.redCard
+                if event['eventDescriptionShort'] == "Y":
+                    continue
+                else:
+                    ev = MatchEvents.redCard
+                #ev = MatchEvents.yellowCard if event['eventDescriptionShort'] == "Y" else MatchEvents.redCard
                 eventData.event = ev
             elif event['eventCode'] == 2:
                 eventData.event = MatchEvents.yellowRedCard
-            elif event['eventCode'] == 5:
-                eventData.event = MatchEvents.missedPenalty
+            #elif event['eventCode'] == 5:
+            #    eventData.event = MatchEvents.missedPenalty
             elif event['eventCode'] == 14:
                 if not data['isFinished']:
                     ev = MatchEvents.firstHalfEnd if event[
