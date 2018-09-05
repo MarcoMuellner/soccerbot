@@ -38,11 +38,12 @@ class MetaAPI(models.Model):
         teamSearch = "teams/search"
         topScorer = "topseasonplayerstatistics/season"
         playerSearch = 'players/search'
-        squad = 'teams/{}/squad/all'
+        squad = 'teams/squads/all/{}/{}'
 
     class DataKey:
         liveData = "matches/en/live/info"
         standings = "livescores/de/standing/byphase/{}"
+        teams = "livescores/en/teams"
 
     class WikiKey:
         playerData = "playerdata.xml"
@@ -123,13 +124,12 @@ class MetaAPI(models.Model):
         return set(inKeys).issubset(avKeys)
 
     @staticmethod
-    def saveData(classObj:type , objectList : List) -> List:
-        bulkList = []
-        for i in objectList:
-            if i in classObj.objects.all() and i != classObj.objects.get(id=i.id):
-                i.save()
-            elif i not in classObj.objects.all():
-                bulkList.append(i)
+    def saveData(classObj:models.Model , objectList : List) -> List:
+        itList = [i for i in objectList if i not in classObj.objects.values_list('id', flat=True)]
+        bulkList = [i for i in objectList if i not in itList]
+
+        for i in itList:
+            i.save()
 
         classObj.objects.bulk_create(bulkList)
 

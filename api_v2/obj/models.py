@@ -3,8 +3,8 @@ from datetime import datetime,timedelta
 from django.db import models
 from django.core.exceptions import ObjectDoesNotExist
 import logging
-import asyncio
 from dateutil.parser import parse
+from unidecode import unidecode
 
 from .Meta import MetaAPI
 logger = logging.getLogger(__name__)
@@ -214,9 +214,9 @@ class Season(MetaAPI):
 
 class Team(MetaAPI):
     id = models.IntegerField(primary_key=True,verbose_name="ID of the team,according to API")
-    country = models.ForeignKey(Country,verbose_name="Country that team belongs to",on_delete=models.CASCADE)
+    country = models.ForeignKey(Country,verbose_name="Country that team belongs to",on_delete=models.CASCADE,null=True)
     name = models.CharField(max_length=1024,verbose_name="Name of the team")
-    short_name = models.CharField(max_length=10,verbose_name="Short name of the team",null=True)
+    type = models.CharField(max_length=128,verbose_name="Team type",null = True)
 
 
     def __init__(self,*args,**kwargs):
@@ -224,29 +224,28 @@ class Team(MetaAPI):
 
     @staticmethod
     def updateData():
+        if len(Season.objects.all()) == 0:
+            Season.updateData()
+
+        objList = []
+        result = MetaAPI.makeDataCall(MetaAPI.DataSrc.middleWare,MetaAPI.DataKey.teams)
+
         if len(Country.objects.all()) == 0:
             Country.updateData()
 
-        objList = []
+        for i in result['teams']:
+            try:
+                country = Country.objects.get(id=i['countryCode'])
+            except ObjectDoesNotExist:
+                country = None
 
-        for country in Country.objects.all():
-            params = {
-                'count': 1000
-            }
-            result = MetaAPI.makeDataCall(MetaAPI.DataSrc.api, MetaAPI.ApiKey.teams.format(country.id), params)
-
-            #passing confederation stuff, for which no standing is available
-            if result == None and country.id in [i.id for i in Federation.objects.all()]:
-                continue
-
-            for i in result:
-                obj = Team(
-                    id = i['IdTeam'],
-                    country = country,
-                    name = i['Name'][0]['Description'],
-                    short_name= i['ShortClubName']
-                )
-                objList.append(obj)
+            obj = Team(
+                id = i['idTeam'],
+                country = country,
+                name = i['webName'],
+                type = i['type']
+            )
+            objList.append(obj)
 
         Team.saveData(Team,objList)
     def __str__(self):
@@ -315,6 +314,14 @@ class SeasonStats(MetaAPI):
         return objList
 
 class Player(MetaAPI):
+    class PosMatch:
+        pos = {
+            0: "Goalkeeper",
+            1: "Defender",
+            2: "Midfielder",
+            3: "Forward",
+            4: "Unknown"
+        }
     id = models.IntegerField(primary_key=True,verbose_name="Id of player, according to API")
     name = models.CharField(max_length=256, verbose_name="Name of player")
     short_name = models.CharField(max_length=32,verbose_name="Short name of player")
@@ -323,9 +330,9 @@ class Player(MetaAPI):
     weight = models.IntegerField(verbose_name="Weight of player in kg")
     jersey_number = models.IntegerField(verbose_name="Jersey number of player")
     position = models.CharField(max_length=20,verbose_name="Position of player")
-    birth_date = models.DateField(verbose_name="Birth date of the player")
-    join_date = models.DateField(verbose_name="Join date of player")
-    leave_date = models.DateField(verbose_name="Leave date of player")
+    birth_date = models.DateField(verbose_name="Birth date of the player",null=True)
+    join_date = models.DateField(verbose_name="Join date of player",null=True)
+    leave_date = models.DateField(verbose_name="Leave date of player",null=True)
     goals = models.IntegerField(verbose_name="Goals scored by player")
     yellow_cards = models.IntegerField(verbose_name="Yellow cards received by player")
     red_cards = models.IntegerField(verbose_name="Red cards received by player")
@@ -339,14 +346,66 @@ class Player(MetaAPI):
             Team.updateData()
 
         wikiData = MetaAPI.makeDataCall(MetaAPI.DataSrc.soccerWiki,MetaAPI.WikiKey.playerData)
+        names = [unidecode(f"{i.attrib['f']} {i.attrib['s']}") for i in wikiData]
 
         objList = []
-        for team in Team.objects.all():
-            squad = MetaAPI.makeDataCall(MetaAPI.DataSrc.api, MetaAPI.ApiKey.squad.format(team.id))
-            for player in squad:
+        for competition in Competition.objects.all():
+            season = competition.current_season()
+            param = {
+                "count":1000
+            }
+            if competition.country_id in Federation.objects.values_list('id', flat=True):
+                continue
+
+            squad = MetaAPI.makeDataCall(MetaAPI.DataSrc.api, MetaAPI.ApiKey.squad.format(competition.id,season.id),param)
+            for i in squad:
+                if int(i['IdSeason']) == season.id:
+                    squad = i
+                    break
+            
+            if len(squad) == 0:
+                continue
+            for player in squad['Players']:
                 add_res = MetaAPI.makeDataCall(MetaAPI.DataSrc.api,MetaAPI.ApiKey.playerInfo.format(player['IdPlayer']))
+                try:
+                    try:
+                        imageLink = wikiData[names.index(unidecode(add_res['Name'][0]['Description']))].attrib['i']
+                        imageLink = "https://cdn.soccerwiki.org/images/player/"+imageLink
+                    except ValueError:
+                        firstLast = add_res['Name'][0]['Description'].split(" ")
+                        firstLast = firstLast[0] +" " + firstLast[-1]
+                        try:
+                            imageLink = wikiData[names.index(unidecode(firstLast))].attrib['i']
+                            imageLink = "https://cdn.soccerwiki.org/images/player/" + imageLink
+                        except ValueError:
+                            logger.warning(f"No image link for {add_res['Name'][0]['Description']}")
+                            imageLink = ""
+                except KeyError:
+                    logger.warning(f"No image link for {add_res['Name'][0]['Description']}")
+                    imageLink = ""
 
+                obj = Player(
+                    id = add_res['IdPlayer'],
+                    name = add_res['Name'][0]['Description'],
+                    short_name = add_res['Alias'][0]['Description'],
+                    team = team,
+                    height = add_res['Height'],
+                    weight = add_res['Weight'],
+                    jersey_number = player['JerseyNum'],
+                    position = Player.PosMatch.pos[player['RealPositionSide']],
+                    birth_date = parse(player['BirthDate']) if player['BirthDate'] != None else None,
+                    join_date = parse(player['JoinDate']) if player['JoinDate'] != None else None,
+                    leave_date = parse(player['LeaveDate']) if player['LeaveDate'] != None else None,
+                    goals = player['Goals'],
+                    yellow_cards = player['YellowCards'],
+                    red_cards = player['RedCards'],
+                    imageLink = imageLink
+                )
+                objList.append(obj)
+                break
 
+        objList = Player.saveData(Player,objList)
+        return objList
 
 class Calendar(MetaAPI):
     def __init__(self,*args,**kwargs):
