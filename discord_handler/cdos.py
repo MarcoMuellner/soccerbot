@@ -1,4 +1,3 @@
-from typing import Dict, Union
 import logging
 from django.core.exceptions import ObjectDoesNotExist
 from json.decoder import JSONDecodeError
@@ -6,16 +5,15 @@ import subprocess
 import sys
 import os
 import re
-from discord import Reaction,User,Message
-from dateutil import parser
+from discord import Reaction, Message
 
 from database.models import CompetitionWatcher, Competition,Settings,DiscordUsers,Goal,Team
 from discord_handler.handler import client, watchCompetition,Scheduler
 from discord_handler.cdo_meta import markCommando, CDOInteralResponseData, cmdHandler, emojiList\
     , DiscordCommando,InfoObj
 from discord_handler.liveMatch import LiveMatch
-from api.calls import getLiveMatches,makeMiddlewareCall,DataCalls,getTeamsSearchedByName
-from api.stats import getTopScorers, getLeagueTable,getPlayerInfo
+from backend.calls import getLiveMatches,makeMiddlewareCall,DataCalls,getTeamsSearchedByName
+from backend.stats import getTopScorers, getLeagueTable,getPlayerInfo
 from support.helper import shutdown,checkoutVersion,getVersions,currentVersion
 
 from support.helper import Task

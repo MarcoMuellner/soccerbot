@@ -12,7 +12,7 @@ from discord_handler.handler import removeOldChannels,Scheduler
 from discord_handler.cdos import cmdHandler
 from loghandler.loghandler import setup_logging
 from discord_handler.client import client
-from api.reddit import RedditParser
+from backend.reddit import RedditParser
 from database.handler import updateMatches,updateOverlayData
 
 

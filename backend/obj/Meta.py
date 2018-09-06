@@ -21,7 +21,7 @@ class MetaAPI(models.Model):
         abstract = True
 
     class DataSrc:
-        api = "https://api.fifa.com/api/v1/"
+        api = "https://backend.fifa.com/backend/v1/"
         middleWare = "https://data.fifa.com/"
         soccerWiki = 'http://c3420952.r52.cf0.rackcdn.com/'
 
@@ -57,7 +57,7 @@ class MetaAPI(models.Model):
     @staticmethod
     def makeDataCall(src : str, keyword: str ,params : Dict[str,Union[str,int]] = None) -> Union[List,Dict]:
         """
-        This method should make the actual data call to the api.
+        This method should make the actual data call to the backend.
         :param url: The full URL of the API
         :param params: The parameter for the get call.
         :return: The data from the API

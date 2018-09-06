@@ -13,10 +13,9 @@ import re
 import random
 
 from database.models import Match, MatchEvents, Player
-from api.calls import makeMiddlewareCall, DataCalls
-from discord_handler.client import client, toDiscordChannelName
-from support.helper import task
-from api.reddit import RedditParser,RedditEvent
+from backend.calls import makeMiddlewareCall, DataCalls
+from discord_handler.client import client
+from backend.reddit import RedditParser,RedditEvent
 
 logger = logging.getLogger(__name__)
 path = os.path.dirname(os.path.realpath(__file__))
@@ -391,7 +390,7 @@ class LiveMatch:
     @staticmethod
     def parseEvents(data: Dict[str, Union[str, List]], pastEvents : List[MatchEventData] = None) -> Tuple[List[MatchEventData], List]:
         """
-        Parses the event list from the middleware api. The code below should be self explanatory, every eventCode
+        Parses the event list from the middleware backend. The code below should be self explanatory, every eventCode
         represents a certain event.
         :param data: data that is to be parsed
         :param pastEvents: all events that already happened

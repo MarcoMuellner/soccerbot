@@ -9,7 +9,7 @@ import unidecode
 
 from database.models import Competition, Season, Player
 from database.handler import getAndSaveData
-from api.calls import makeAPICall, getAllSeasons, ApiCalls, makeMiddlewareCall, DataCalls
+from backend.calls import makeAPICall, getAllSeasons, ApiCalls, makeMiddlewareCall, DataCalls
 from discord_handler.cdo_meta import InfoObj
 
 logger = logging.getLogger(__name__)

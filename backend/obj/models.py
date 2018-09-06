@@ -627,14 +627,6 @@ class Calendar(MetaAPI):
     def __str__(self):
         return f"{self.home_team}:{self.away_team} for {self.season}"
 
-class LiveMatch(MetaAPI):
-    def __init__(self,*args,**kwargs):
-        MetaAPI.__init__(self,*args,**kwargs)
-
-    @staticmethod
-    def updateData():
-        pass
-
 
 class TeamStats(MetaAPI):
     def __init__(self,*args,**kwargs):

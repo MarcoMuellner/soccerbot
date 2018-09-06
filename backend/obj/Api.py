@@ -1,4 +1,4 @@
-from api_v2.obj.Meta import MetaAPI
+from backend.obj.Meta import MetaAPI
 
 class FootballApi(MetaAPI):
     def __init__(self):
