@@ -39,6 +39,8 @@ class MetaAPI(models.Model):
         topScorer = "topseasonplayerstatistics/season"
         playerSearch = 'players/search'
         squad = 'teams/squads/all/{}/{}'
+        stages = 'stages'
+        groups = 'competitiongroups'
 
     class DataKey:
         liveData = "matches/en/live/info"
@@ -126,7 +128,9 @@ class MetaAPI(models.Model):
     @staticmethod
     def saveData(classObj:models.Model , objectList : List) -> List:
         itList = [i for i in objectList if i not in classObj.objects.values_list('id', flat=True)]
-        bulkList = [i for i in objectList if i not in itList]
+
+        s = set(itList)
+        bulkList = [i for i in objectList if i not in s]
 
         for i in itList:
             i.save()

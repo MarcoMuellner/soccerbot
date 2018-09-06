@@ -5,6 +5,7 @@ from django.core.exceptions import ObjectDoesNotExist
 import logging
 from dateutil.parser import parse
 from unidecode import unidecode
+import json
 
 from .Meta import MetaAPI
 logger = logging.getLogger(__name__)
@@ -313,6 +314,9 @@ class SeasonStats(MetaAPI):
         objList = SeasonStats.saveData(SeasonStats,objList)
         return objList
 
+    def __str__(self):
+        return f"Stats {self.season}"
+
 class Player(MetaAPI):
     class PosMatch:
         pos = {
@@ -325,17 +329,17 @@ class Player(MetaAPI):
     id = models.IntegerField(primary_key=True,verbose_name="Id of player, according to API")
     name = models.CharField(max_length=256, verbose_name="Name of player")
     short_name = models.CharField(max_length=32,verbose_name="Short name of player")
-    team = models.ForeignKey(Team,verbose_name="Team this player belongs to",on_delete=models.CASCADE)
+    team = models.ForeignKey(Team,verbose_name="Team this player belongs to",on_delete=models.CASCADE,null=True)
     height = models.IntegerField(verbose_name="Height of player in cm")
     weight = models.IntegerField(verbose_name="Weight of player in kg")
-    jersey_number = models.IntegerField(verbose_name="Jersey number of player")
+    jersey_number = models.IntegerField(verbose_name="Jersey number of player",null=True)
     position = models.CharField(max_length=20,verbose_name="Position of player")
     birth_date = models.DateField(verbose_name="Birth date of the player",null=True)
     join_date = models.DateField(verbose_name="Join date of player",null=True)
     leave_date = models.DateField(verbose_name="Leave date of player",null=True)
-    goals = models.IntegerField(verbose_name="Goals scored by player")
-    yellow_cards = models.IntegerField(verbose_name="Yellow cards received by player")
-    red_cards = models.IntegerField(verbose_name="Red cards received by player")
+    goals = models.IntegerField(verbose_name="Goals scored by player",null = True)
+    yellow_cards = models.IntegerField(verbose_name="Yellow cards received by player",null=True)
+    red_cards = models.IntegerField(verbose_name="Red cards received by player",null=True)
     imageLink = models.URLField(max_length=255, verbose_name="Link to the image of the player")
     def __init__(self,*args,**kwargs):
         MetaAPI.__init__(self,*args,**kwargs)
@@ -384,6 +388,12 @@ class Player(MetaAPI):
                     logger.warning(f"No image link for {add_res['Name'][0]['Description']}")
                     imageLink = ""
 
+                try:
+                    team = Team.objects.get(id=int(player['IdTeam']))
+                except ObjectDoesNotExist:
+                    team = None
+
+
                 obj = Player(
                     id = add_res['IdPlayer'],
                     name = add_res['Name'][0]['Description'],
@@ -407,14 +417,215 @@ class Player(MetaAPI):
         objList = Player.saveData(Player,objList)
         return objList
 
-class Calendar(MetaAPI):
+    def __str__(self):
+        return f"{self.name} playing for {self.team}"
+
+class Stage(MetaAPI):
+    typeDict = {
+        0:"KnockOut",
+        1:"Group",
+        2:"League",
+        3:"Unknown"
+    }
+
+    id = models.IntegerField(primary_key=True,verbose_name="ID of stage, according to API")
+    name = models.CharField(max_length=255,verbose_name="Name of stage",null=True)
+    season = models.ForeignKey(Season,verbose_name="Season belonging to this stage",on_delete=models.CASCADE)
+    start_date = models.DateField(verbose_name="Start date of stage")
+    end_date = models.DateField(verbose_name="End date of stage")
+    stage_type = models.CharField(max_length=10,verbose_name="Type of stage")
+    stage_level = models.IntegerField(verbose_name="Stage level",null=True)
+
     def __init__(self,*args,**kwargs):
         MetaAPI.__init__(self,*args,**kwargs)
 
     @staticmethod
     def updateData():
-        if len(Season.objects.all()) == 0:
+        if(len(Season.objects.all())) == 0:
             Season.updateData()
+
+        objList = []
+
+        for competition in Competition.objects.all():
+            season = competition.current_season()
+
+            param = {"idCompetition":competition.id,
+                     "idSeason":season.id,
+                     "count":1000}
+
+            data = MetaAPI.makeDataCall(MetaAPI.DataSrc.api,MetaAPI.ApiKey.stages,param)
+            for i in data:
+                try:
+                    name = i['Name'][0]['Description']
+                except IndexError:
+                    name = None
+
+                obj = Stage(
+                    id = i['IdStage'],
+                    name=name,
+                    season = season,
+                    start_date = parse(i['StartDate']),
+                    end_date = parse(i['EndDate']),
+                    stage_type = Stage.typeDict[i['Type']],
+                    stage_level = i['StageLevel']
+                )
+                objList.append(obj)
+
+        objList = Stage.saveData(Stage,objList)
+        return objList
+
+    def __str__(self):
+        return f"Stage {self.name} for {self.season}"
+
+
+class Group(MetaAPI):
+    id = models.IntegerField(primary_key=True,verbose_name="Id according to API")
+    stage = models.ForeignKey(Stage,verbose_name="Stage belonging to this group",on_delete=models.CASCADE)
+    name = models.CharField(max_length=255,verbose_name="Name of group",null=True)
+    description = models.CharField(max_length=1024,verbose_name="Description of group",null=True)
+    start_date = models.DateField(verbose_name="Start date of group")
+    end_date = models.DateField(verbose_name="End date of group")
+    def __init__(self,*args,**kwargs):
+        MetaAPI.__init__(self,*args,**kwargs)
+
+    @staticmethod
+    def updateData():
+        if(len(Stage.objects.all())) == 0:
+            Stage.updateData()
+
+        objList = []
+
+        for stage in Stage.objects.all():
+            season = stage.season
+            competition = season.competition
+
+            param ={
+                "idCompetition":competition.id,
+                "idSeason":season.id,
+                "idStage":stage.id,
+                "counter":1000
+            }
+            data = MetaAPI.makeDataCall(MetaAPI.DataSrc.api,MetaAPI.ApiKey.groups,param)
+
+            for i in data:
+
+                try:
+                    description = i['Description'][0]['Description']
+                except IndexError:
+                    description = None
+
+                try:
+                    name = i['Name'][0]['Description']
+                except IndexError:
+                    name = None
+
+
+                obj = Group(
+                    id=i['IdGroup'],
+                    stage = stage,
+                    name=name,
+                    description=description,
+                    start_date=parse(i['StartDate']),
+                    end_date=parse(i['EndDate'])
+                )
+
+                objList.append(obj)
+
+        objList = Group.saveData(Group,objList)
+        return objList
+
+    def __str__(self):
+        return f"Group {self.name} for {self.stage}"
+
+class Calendar(MetaAPI):
+    id = models.IntegerField(primary_key=True,verbose_name="Id of the match, according to API")
+    season = models.ForeignKey(Season,verbose_name="Season belonging to this match",on_delete=models.CASCADE)
+    stage = models.ForeignKey(Stage,verbose_name="Stage this match belongs to",on_delete=models.CASCADE)
+    group = models.ForeignKey(Group,verbose_name="Group this match belongs to",on_delete=models.CASCADE,null=True)
+    weather = models.CharField(max_length=255,verbose_name="Weather information for the game",null=True)
+    attendance = models.IntegerField(verbose_name="Attendance for the game",null=True)
+    matchday = models.IntegerField(verbose_name="Matchday of the game",null=True)
+    date = models.DateField(verbose_name="Date of the match")
+    home_team = models.ForeignKey(Team,verbose_name="Home team",related_name="home_team",on_delete=models.CASCADE,null=True)
+    away_team = models.ForeignKey(Team,verbose_name="Away team",related_name="away_team",on_delete=models.CASCADE,null=True)
+    home_score = models.IntegerField(verbose_name="Goals for Home team",null=True)
+    away_score = models.IntegerField(verbose_name="Goals for away team",null=True)
+    leg = models.IntegerField(verbose_name="Leg of the game",null=True)
+    stadium = models.CharField(max_length=1024,verbose_name="Stadium the match is played at",null=True)
+    officials = models.CharField(max_length=2048,verbose_name="Officials for the game",null=True)
+    home_lineup = models.CharField(max_length=8096,verbose_name="Home Lineup",null=True)
+    away_lineup = models.CharField(max_length=8096,verbose_name="Away Lineup",null=True)
+    events = models.CharField(max_length=16192,verbose_name="Match events",null=True)
+
+
+    def __init__(self,*args,**kwargs):
+        MetaAPI.__init__(self,*args,**kwargs)
+
+    @staticmethod
+    def updateData():
+        if len(Group.objects.all()) == 0:
+            Group.updateData()
+
+        if len(Team.objects.all()) == 0:
+            Team.updateData()
+
+        objList = []
+
+        for competition in Competition.objects.all():
+            season = competition.current_season()
+
+            param = {
+                "idSeason":season.id,
+                "idCompetition":competition.id,
+                "count":1000
+
+            }
+            data = MetaAPI.makeDataCall(MetaAPI.DataSrc.api,MetaAPI.ApiKey.matches,param)
+            for i in data:
+                stage = Stage.objects.get(id=i['IdStage'])
+                try:
+                    group = Group.objects.get(id=i['IdGroup'])
+                except ObjectDoesNotExist:
+                    group = None
+                try:
+                    home_team = Team.objects.get(id=i['Home']['IdTeam'])
+                except:
+                    home_team = None
+                try:
+                    away_team = Team.objects.get(id=i['Away']['IdTeam'])
+                except:
+                    away_team = None
+                try:
+                    obj =Calendar(
+                        id=i['IdMatch'],
+                        season =season,
+                        stage =stage,
+                        group =group,
+                        weather =json.dumps(i['Weather']),
+                        attendance =i['Attendance'],
+                        matchday =i['MatchDay'],
+                        date =parse(i['Date']),
+                        home_team =home_team,
+                        away_team =away_team,
+                        home_score =i['HomeTeamScore'],
+                        away_score =i['AwayTeamScore'],
+                        leg =i['Leg'],
+                        stadium =json.dumps(i['Stadium']),
+                        officials =json.dumps(i['Officials']),
+                        home_lineup =None,
+                        away_lineup =None,
+                        events =None,
+                        )
+                except Exception as e:
+                    print(i)
+
+                objList.append(obj)
+
+        objList = Calendar.saveData(Calendar,objList)
+        return objList
+
+    def __str__(self):
+        return f"{self.home_team}:{self.away_team} for {self.season}"
 
 class LiveMatch(MetaAPI):
     def __init__(self,*args,**kwargs):
