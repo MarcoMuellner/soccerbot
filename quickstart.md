@@ -89,10 +89,18 @@ id and secret you got when setting up the reddit application. The
 masterUser value should be the id of the master user, which is easily
 obtainable with clicking _copy id_ on discord. This user will be able to assign userlevels for all other users.
 
+**It is recommended to use a tagged version**. Check out the github for the
+latest version. The latest version while writing this was v.1.1.2, so check
+it out like this:
+```console
+(venv) marco@mamu-pc:~/path/to/install/soccerbot (master)$ git checkout v1.1.2
+```
+
 And there you go. Everything should be set up now, and with
 ```console
 (venv) marco@mamu-pc:~/path/to/install/soccerbot (master)$ python __main__.py
 ```
+
 you can run the bot. Obviously you should create some kind of daemon for
 the bot, so it can run without you connected to the server. See
 [this link](https://www.raspberrypi-spy.co.uk/2015/10/how-to-autorun-a-python-script-on-boot-using-systemd/)

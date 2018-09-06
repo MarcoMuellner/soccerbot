@@ -15,8 +15,7 @@ to keep it up to date and work with it, all within Discord.
 Details on features and roadmap are available [here](features.md)
 To get it running klick the [Quickstart](quickstart.md) link.
 There is also full documentation about all commands within Discord
-[here](documentation.md).For the more technically inclined, there is
-also a documentation on [how the bot works](technical_details.md).
+[here](documentation.md).
 
 A quick warning at the end of this paragraph: This website and
 the documentation containing it, will always respond to the latest
@@ -24,6 +23,26 @@ stable version, tagged on github. Don't expect experimental
 features documented here. Docstrings can be of help in case you
 want to use experimental features and the code should be pretty
 much self explainable.
+
+## Some notes on future development
+With version 1.1.0 released (and its following smaller fixes), an
+initial major (and more or less stable) release of soccerbot has arrived.
+For the foreseeable future, this version should be used, and all
+documentation here will reference this version for now.
+
+Due to the rising amount of requirements and stuff i actually want to
+do with the bot (including removing the entanglement to discord), i
+will rework most of the codebase, to better reflect the backend and
+frontend side of the code. This rework will also include a massive
+amount of optimization, multiprocessing approach (the backend and each
+frontend will run in their dedicated processes) and much much more
+data, that is accessible within the data. As soon as i make tangible
+progress, a link to the progress page can be found here.
+
+## Showcasing
+If you are interested on how the bot looks like in production, check out
+the [Football discord](https://discord.gg/NPt55Ed). It was/is
+produced for that community.
 
 ## Getting help
 
