@@ -21,7 +21,7 @@ class MetaAPI(models.Model):
         abstract = True
 
     class DataSrc:
-        api = "https://backend.fifa.com/backend/v1/"
+        api = "https://api.fifa.com/api/v1/"
         middleWare = "https://data.fifa.com/"
         soccerWiki = 'http://c3420952.r52.cf0.rackcdn.com/'
 
