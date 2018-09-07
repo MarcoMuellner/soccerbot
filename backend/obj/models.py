@@ -10,8 +10,6 @@ import json
 from .Meta import MetaAPI
 logger = logging.getLogger(__name__)
 
-#####################################FEDERATION#################################
-
 class Federation(MetaAPI):
     """
     Federation represents all information belonging to a single federation. This represents the root of all information.
@@ -60,8 +58,6 @@ class Federation(MetaAPI):
     def __str__(self):
         return f"Federation {self.id}"
 
-
-#####################################COUNTRY #################################
 class Country(MetaAPI):
     id = models.CharField(primary_key=True, max_length=3, verbose_name="FIFA country code")
     name = models.CharField(max_length=255, verbose_name="Full Country Name")
@@ -95,7 +91,6 @@ class Country(MetaAPI):
     def __str__(self):
         return f"Country: {self.name.encode('utf-8')}"
 
-#####################################COMPETITION #################################
 class Competition(MetaAPI):
     id = models.IntegerField(primary_key=True, verbose_name="Id of the competitions, according to API")
     federation = models.ForeignKey(Federation, on_delete=models.CASCADE, verbose_name="Federation ID")
@@ -211,7 +206,7 @@ class Season(MetaAPI):
         return objList
 
     def __str__(self):
-        return f"{self.name}: {self.federation}:{self.competition}"
+        return f"{self.name}: {self.competition.federation}:{self.competition}"
 
 class Team(MetaAPI):
     id = models.IntegerField(primary_key=True,verbose_name="ID of the team,according to API")
@@ -253,6 +248,7 @@ class Team(MetaAPI):
         return f"{self.name} in {self.country}"
 
 class SeasonStats(MetaAPI):
+    id = models.AutoField(primary_key=True)
     season = models.ForeignKey(Season,verbose_name="Season belonging to this stat",on_delete=models.CASCADE)
     rank = models.IntegerField(verbose_name="Rank of the team")
     team = models.ForeignKey(Team,verbose_name="Team of that rank",on_delete=models.CASCADE)
@@ -293,7 +289,7 @@ class SeasonStats(MetaAPI):
                     team = Team(id = i['idTeam']
                                 ,country=competition.country
                                 ,name=i['teamName']
-                                ,short_name=i['teamShortName'])
+                                ,type="")
                     team.save()
 
                 obj = SeasonStats(
@@ -477,71 +473,11 @@ class Stage(MetaAPI):
     def __str__(self):
         return f"Stage {self.name} for {self.season}"
 
-
-class Group(MetaAPI):
-    id = models.IntegerField(primary_key=True,verbose_name="Id according to API")
-    stage = models.ForeignKey(Stage,verbose_name="Stage belonging to this group",on_delete=models.CASCADE)
-    name = models.CharField(max_length=255,verbose_name="Name of group",null=True)
-    description = models.CharField(max_length=1024,verbose_name="Description of group",null=True)
-    start_date = models.DateField(verbose_name="Start date of group")
-    end_date = models.DateField(verbose_name="End date of group")
-    def __init__(self,*args,**kwargs):
-        MetaAPI.__init__(self,*args,**kwargs)
-
-    @staticmethod
-    def updateData():
-        if(len(Stage.objects.all())) == 0:
-            Stage.updateData()
-
-        objList = []
-
-        for stage in Stage.objects.all():
-            season = stage.season
-            competition = season.competition
-
-            param ={
-                "idCompetition":competition.id,
-                "idSeason":season.id,
-                "idStage":stage.id,
-                "counter":1000
-            }
-            data = MetaAPI.makeDataCall(MetaAPI.DataSrc.api,MetaAPI.ApiKey.groups,param)
-
-            for i in data:
-
-                try:
-                    description = i['Description'][0]['Description']
-                except IndexError:
-                    description = None
-
-                try:
-                    name = i['Name'][0]['Description']
-                except IndexError:
-                    name = None
-
-
-                obj = Group(
-                    id=i['IdGroup'],
-                    stage = stage,
-                    name=name,
-                    description=description,
-                    start_date=parse(i['StartDate']),
-                    end_date=parse(i['EndDate'])
-                )
-
-                objList.append(obj)
-
-        objList = Group.saveData(Group,objList)
-        return objList
-
-    def __str__(self):
-        return f"Group {self.name} for {self.stage}"
-
 class Calendar(MetaAPI):
     id = models.IntegerField(primary_key=True,verbose_name="Id of the match, according to API")
     season = models.ForeignKey(Season,verbose_name="Season belonging to this match",on_delete=models.CASCADE)
     stage = models.ForeignKey(Stage,verbose_name="Stage this match belongs to",on_delete=models.CASCADE)
-    group = models.ForeignKey(Group,verbose_name="Group this match belongs to",on_delete=models.CASCADE,null=True)
+    group = models.CharField(max_length=255,verbose_name="Group this match belongs to",null=True)
     weather = models.CharField(max_length=255,verbose_name="Weather information for the game",null=True)
     attendance = models.IntegerField(verbose_name="Attendance for the game",null=True)
     matchday = models.IntegerField(verbose_name="Matchday of the game",null=True)
@@ -563,8 +499,8 @@ class Calendar(MetaAPI):
 
     @staticmethod
     def updateData():
-        if len(Group.objects.all()) == 0:
-            Group.updateData()
+        if len(Stage.objects.all()) == 0:
+            Stage.updateData()
 
         if len(Team.objects.all()) == 0:
             Team.updateData()
@@ -584,8 +520,8 @@ class Calendar(MetaAPI):
             for i in data:
                 stage = Stage.objects.get(id=i['IdStage'])
                 try:
-                    group = Group.objects.get(id=i['IdGroup'])
-                except ObjectDoesNotExist:
+                    group = i['GroupName'][0]["Description"]
+                except IndexError:
                     group = None
                 try:
                     home_team = Team.objects.get(id=i['Home']['IdTeam'])
