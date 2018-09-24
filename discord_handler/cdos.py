@@ -582,8 +582,12 @@ async def cdoSetStartCDO(msg : Message,**kwargs):
     :param kwargs:
     :return:
     """
-    if kwargs['parameter0'] in kwargs.keys():
-        return CDOInteralResponseData("You need to set a command to be executed to start the bot")
+    if kwargs['parameter0'] not in kwargs.keys():
+        if len(Settings.objects.filter(name="startCommando")) == 0:
+            return CDOInteralResponseData("You need to set a command to be executed to start the bot")
+        else:
+            obj = Settings.objects.get(name='startCommando')
+            return CDOInteralResponseData(f"Current restart command: _{obj.value}_")
     commandString = kwargs['parameter0']
 
     try:
