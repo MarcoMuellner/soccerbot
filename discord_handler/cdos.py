@@ -1,6 +1,7 @@
 from typing import Dict, Union
 import logging
 from django.core.exceptions import ObjectDoesNotExist
+from django.db import IntegrityError
 from json.decoder import JSONDecodeError
 import subprocess
 import sys
@@ -584,6 +585,13 @@ async def cdoSetStartCDO(msg : Message,**kwargs):
     if kwargs['parameter0'] in kwargs.keys():
         return CDOInteralResponseData("You need to set a command to be executed to start the bot")
     commandString = kwargs['parameter0']
+
+    try:
+        Settings(name="startCommando",value=commandString)
+    except IntegrityError:
+        obj = Settings.objects.get(name='startCommando')
+        obj.value=commandString
+        obj.save()
 
     obj = Settings(name="startCommando",value=commandString)
     obj.save()
