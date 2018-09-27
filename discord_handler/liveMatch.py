@@ -45,6 +45,7 @@ class LiveMatch:
     emojiSet = {}
 
     def __init__(self, match: Match,channelName : str):
+        self.stopFlag = False
         self.match = match
         self.passed = False
         self.running = False
@@ -99,6 +100,15 @@ class LiveMatch:
                 logger.error(f"Key {key} not available in stylesheet")
                 return ""
 
+    async def stop(self):
+        self.stopFlag = True
+        while self.runningStarted:
+            logger.info(f"Match {self.match} has not ended yet")
+            await asyncio.sleep(1)
+        logger.info(f"Match {self.match} ended")
+        self.stopFlag = False
+
+
     async def runMatchThread(self):
         """
         Start a match threader for a given match. Will read the live data from the middleWare API (data.fifa.com) every
@@ -112,86 +122,90 @@ class LiveMatch:
         else:
             logger.info(f"Starting match {self.title}")
         self.runningStarted = True
-        pastEvents = []
-        eventList = []
-        sleepTime = 600
-        endCycles = 10
+        try:
+            pastEvents = []
+            eventList = []
+            sleepTime = 600
+            endCycles = 10
 
-        matchid = self.match.id
+            matchid = self.match.id
 
-        lineupsPosted = False
-        while True:
-            try:
-                data = makeMiddlewareCall(DataCalls.liveData + f"/{matchid}")
-            except JSONDecodeError:
-                break
-
-            if data["match"]["isFinished"] and not self.running:
-                logger.info(f"Match {self.match} allready passed")
-                break
-
-            self.running = True
-            if data["match"]["isLive"]:
-                self.started = True
-            else:
-                self.started = False
-
-            if not self.lock.is_set():
-                self.lock.set()
-
-            if not lineupsPosted and data["match"]["hasLineup"]:
-                logger.info(f"Posting lineups for {self.title}")
-                await asyncio.sleep(5)
+            lineupsPosted = False
+            while True:
+                if self.stopFlag:
+                    return
                 try:
-                    for channel in client.get_all_channels():
-                        if channel.name == self.channelName:
-                            await self. postLineups(channel, self.match, data["match"])
-                            lineupsPosted = True
-                            sleepTime = 20
-                except RuntimeError:
-                    lineupsPosted = False
-                    logger.warning("Size of channels has changed")
-            else:
-                if not lineupsPosted:
-                    logger.info(f"Lineups not yet available for {self.title}")
-
-            newEvents, pastEvents = LiveMatch.parseEvents(data["match"], pastEvents)
-
-
-            for i in newEvents:
-                try:
-                    for channel in client.get_all_channels():
-                        if channel.name == self.channelName:
-                            self.started = True
-                            self.title, goalString = await self.sendMatchEvent(channel, self.match, i)
-                            self.goalList.append(goalString)
-
-                            logger.info(f"Posting event: {i}")
-                except RuntimeError:
-                    logger.warning("Size of channels has changed!")
+                    data = makeMiddlewareCall(DataCalls.liveData + f"/{matchid}")
+                except JSONDecodeError:
                     break
 
-            if self.lock.is_set():
-                self.lock.clear()
-
-            if data["match"]["isFinished"]:
-                if endCycles <= 0:
-                    logger.info(f"Match {self.match} finished!")
+                if data["match"]["isFinished"] and not self.running:
+                    logger.info(f"Match {self.match} allready passed")
                     break
-                endCycles -= 1
 
-            self.minute = f"{data['match']['minute']}'"
+                self.running = True
+                if data["match"]["isLive"]:
+                    self.started = True
+                else:
+                    self.started = False
 
-            await asyncio.sleep(sleepTime)
+                if not self.lock.is_set():
+                    self.lock.set()
 
-        now = datetime.utcnow().replace(tzinfo=UTC)
-        if now < (self.match.date + timedelta(hours=3)).replace(tzinfo=UTC):
-            self.passed = True
-        self.running = False
-        self.started = False
-        self.runningStarted = False
-        self.lock.set()
-        logger.info(f"Ending match {self.title}")
+                if not lineupsPosted and data["match"]["hasLineup"]:
+                    logger.info(f"Posting lineups for {self.title}")
+                    await asyncio.sleep(5)
+                    try:
+                        for channel in client.get_all_channels():
+                            if channel.name == self.channelName:
+                                await self. postLineups(channel, self.match, data["match"])
+                                lineupsPosted = True
+                                sleepTime = 20
+                    except RuntimeError:
+                        lineupsPosted = False
+                        logger.warning("Size of channels has changed")
+                else:
+                    if not lineupsPosted:
+                        logger.info(f"Lineups not yet available for {self.title}")
+
+                newEvents, pastEvents = LiveMatch.parseEvents(data["match"], pastEvents)
+
+
+                for i in newEvents:
+                    try:
+                        for channel in client.get_all_channels():
+                            if channel.name == self.channelName:
+                                self.started = True
+                                self.title, goalString = await self.sendMatchEvent(channel, self.match, i)
+                                self.goalList.append(goalString)
+
+                                logger.info(f"Posting event: {i}")
+                    except RuntimeError:
+                        logger.warning("Size of channels has changed!")
+                        break
+
+                if self.lock.is_set():
+                    self.lock.clear()
+
+                if data["match"]["isFinished"]:
+                    if endCycles <= 0:
+                        logger.info(f"Match {self.match} finished!")
+                        break
+                    endCycles -= 1
+
+                self.minute = f"{data['match']['minute']}'"
+
+                await asyncio.sleep(sleepTime)
+
+            now = datetime.utcnow().replace(tzinfo=UTC)
+            if now < (self.match.date + timedelta(hours=3)).replace(tzinfo=UTC):
+                self.passed = True
+            self.running = False
+            self.started = False
+            self.lock.set()
+            logger.info(f"Ending match {self.title}")
+        finally:
+            self.runningStarted = False
 
     async def postLineups(self,channel: TextChannel, match: Match, data: Dict):
         lineup = OrderedDict()

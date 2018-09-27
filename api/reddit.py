@@ -41,6 +41,8 @@ class RedditEvent:
 
 
 class RedditParser:
+    stopFlag = False
+    running = False
     liveEventList: List[RedditEvent] = []
     updateRunning = asyncio.Event(loop=client.loop)
     try:
@@ -51,31 +53,46 @@ class RedditParser:
         reddit = None
 
     @staticmethod
+    async def stop():
+        RedditParser.stopFlag = True
+        while RedditParser.running:
+            logger.info("Reddit parser still running")
+            await asyncio.sleep(1)
+        RedditParser.stopFlag = False
+
+
+    @staticmethod
     async def loop():
-        while True:
-            if not reddit_available:
-                return
-            RedditParser.updateRunning.set()
-            i: RedditEvent
-            for i in RedditParser.liveEventList:
-                if i.matchEvent.event != MatchEvents.goal:
-                    logger.info(f"Can't react to {i}, as we can only react to goals currently")
-                    RedditParser.liveEventList.remove(i)
-                    continue
+        RedditParser.running = True
+        try:
+            while True:
+                if RedditParser.stopFlag:
+                    return
+                if not reddit_available:
+                    return
+                RedditParser.updateRunning.set()
+                i: RedditEvent
+                for i in RedditParser.liveEventList:
+                    if i.matchEvent.event != MatchEvents.goal:
+                        logger.info(f"Can't react to {i}, as we can only react to goals currently")
+                        RedditParser.liveEventList.remove(i)
+                        continue
 
-                logger.debug(f"Checking {i}")
-                newList = RedditParser.reddit.subreddit('soccer').new(limit=50)
-                result = RedditParser.parseReddit(i, newList)
-                if result is not None:
-                    Goal(match=i.match, player=i.matchEvent.player, minute=i.matchEvent.minute, link=result).save()
-                    await i.callback(i, result)
-                    RedditParser.liveEventList.remove(i)
+                    logger.debug(f"Checking {i}")
+                    newList = RedditParser.reddit.subreddit('soccer').new(limit=50)
+                    result = RedditParser.parseReddit(i, newList)
+                    if result is not None:
+                        Goal(match=i.match, player=i.matchEvent.player, minute=i.matchEvent.minute, link=result).save()
+                        await i.callback(i, result)
+                        RedditParser.liveEventList.remove(i)
 
-                if datetime.utcnow() - i.time > timedelta(minutes=15):
-                    logger.info(f"Removing {i}, as 15 minutes are passed")
-                    RedditParser.liveEventList.remove(i)
-            RedditParser.updateRunning.clear()
-            await asyncio.sleep(30)
+                    if datetime.utcnow() - i.time > timedelta(minutes=15):
+                        logger.info(f"Removing {i}, as 15 minutes are passed")
+                        RedditParser.liveEventList.remove(i)
+                RedditParser.updateRunning.clear()
+                await asyncio.sleep(30)
+        finally:
+            RedditParser.running = False
 
     @staticmethod
     def parseReddit(event: RedditEvent, newList) -> Union[str, None]:

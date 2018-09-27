@@ -66,7 +66,10 @@ async def deleteChannel(guild: Guild, channelName: str):
     for i in client.get_all_channels():
         if i.name == toDiscordChannelName(channelName) and i.guild == guild:
             logger.debug(f"Deleting channel {toDiscordChannelName(channelName)} on {guild.name}")
-            await i.delete()
+            try:
+                await i.delete()
+            except discord.errors.NotFound:
+                pass
             break
 
 
@@ -89,6 +92,29 @@ class Scheduler:
     matchDayObject = {}
     matchSchedulerRunning = asyncio.Event(loop=client.loop)
     maintananceSynchronizer = asyncio.Event(loop=client.loop)
+    stopFlag = False
+    runMatchSchedulerFlag = False
+    runMaintananceFlag = False
+
+    @staticmethod
+    async def stop():
+        Scheduler.stopFlag = True
+        try:
+            while Scheduler.runMatchSchedulerFlag:
+                logger.info("Waiting for matchScheduler to end")
+                await asyncio.sleep(1)
+
+            while Scheduler.runMaintananceFlag:
+                logger.info("Waiting for maintanance to end")
+                await asyncio.sleep(1)
+
+            for competition,matchObject in Scheduler.matchDayObject.items():
+                for md, data in matchObject.items():
+                    for i in data['currentMatches'] + data['upcomingMatches']:
+                        await i.stop()
+        finally:
+            Scheduler.stopFlag = False
+
 
     @staticmethod
     async def maintananceScheduler():
@@ -96,31 +122,38 @@ class Scheduler:
         Starts the scheduler task, which will automatically create channels adnd update databases. Currently this is
         always done at 24:00 UTC. Should be called via create_task!
         """
-        logger.debug("Waiting for client ready.")
-        await client.wait_until_ready()
-        logger.debug("Client ready, starting loop")
-        while True:
-            targetTime = datetime.utcnow().replace(hour=0, minute=0, second=0) + timedelta(days=1)
+        Scheduler.runMaintananceFlag = True
+        try:
+            logger.debug("Waiting for client ready.")
+            await client.wait_until_ready()
+            logger.debug("Client ready, starting loop")
             while True:
-                if datetime.utcnow() > targetTime:
-                    logger.info("Running maintanance scheduler again")
-                    break
-                else:
-                    logger.debug(f"{datetime.utcnow().strftime('%d %b %Y, %H:%M')} "
-                                 f"is earlier than {targetTime.strftime('%d %b %Y, %H:%M')},"
-                                 f"sleeping for another 5 minutes")
-                    await asyncio.sleep(300);
-            # take synchronization object, during update no live thread should run!
-            Scheduler.maintananceSynchronizer.set()
-            logger.info("Data maintanance running ...")
+                targetTime = datetime.utcnow().replace(hour=0, minute=0, second=0) + timedelta(days=1)
+                while True:
+                    if Scheduler.stopFlag:
+                        logger.info("Stop Flag raised! Mainanance ends")
+                        return
+                    if datetime.utcnow() > targetTime:
+                        logger.info("Running maintanance scheduler again")
+                        break
+                    else:
+                        logger.debug(f"{datetime.utcnow().strftime('%d %b %Y, %H:%M')} "
+                                     f"is earlier than {targetTime.strftime('%d %b %Y, %H:%M')},"
+                                     f"sleeping for another 1 minute")
+                        await asyncio.sleep(60);
+                # take synchronization object, during update no live thread should run!
+                Scheduler.maintananceSynchronizer.set()
+                logger.info("Data maintanance running ...")
 
-            # update competitions, seasons etc. Essentially the data that is always there
-            await updateOverlayData()
-            # update all matches for the monitored competitions
-            updateMatches()
+                # update competitions, seasons etc. Essentially the data that is always there
+                await updateOverlayData()
+                # update all matches for the monitored competitions
+                updateMatches()
 
-            Scheduler.maintananceSynchronizer.clear()
-            logger.info(f"Sleeping for {targetTime}")
+                Scheduler.maintananceSynchronizer.clear()
+                logger.info(f"Sleeping for {targetTime}")
+        finally:
+            Scheduler.runMaintananceFlag = False
 
     @staticmethod
     async def matchScheduler():
@@ -131,70 +164,77 @@ class Scheduler:
         await client.wait_until_ready()
         logger.debug("Client ready, starting loop")
         Scheduler.matchDayObject = getNextMatchDayObjects() #add competition adds new competitions to this.
+        Scheduler.runMatchSchedulerFlag = True
+        try:
+            while True:
+                if Scheduler.stopFlag:
+                    logger.info("Stop Flag raised! Match ends")
+                    break
 
-        while True:
-            Scheduler.matchSchedulerRunning.set()
-            Scheduler.maintananceSynchronizer.wait()
-            time = datetime.utcnow()
+                Scheduler.matchSchedulerRunning.set()
+                Scheduler.maintananceSynchronizer.wait()
+                time = datetime.utcnow()
 
-            try:
-                for competition,matchObject in Scheduler.matchDayObject.items():
-                    for md,data in matchObject.items():
-                        currentTime = datetime.utcnow().replace(tzinfo=UTC)
+                try:
+                    for competition,matchObject in Scheduler.matchDayObject.items():
+                        for md,data in matchObject.items():
+                            currentTime = datetime.utcnow().replace(tzinfo=UTC)
 
-                        if data['start'] < currentTime and data['end'] > currentTime:
-                            logger.debug("Current time within boundaries, starting match")
-                            await asyncCreateChannel(data['channel_name'],role = data['role'],category = data['category'])
-                            logger.debug("Looking into upcoming matches: ")
-                            for i in data['upcomingMatches']:
-                                logger.debug(f"Match {i}, flag runningStarted {i.runningStarted}")
-                                if not i.runningStarted:
-                                    logger.debug(f"Starting task {i}")
-                                    client.loop.create_task(i.runMatchThread())
-                                    logger.debug(f"Waiting for {i} to have started")
-                                    i.lock.wait()
-                                    logger.debug(f"{i} started")
-                                data['currentMatches'].append(i)
-                                data['upcomingMatches'].remove(i)
+                            if data['start'] < currentTime and data['end'] > currentTime:
+                                logger.debug("Current time within boundaries, starting match")
+                                await asyncCreateChannel(data['channel_name'],role = data['role'],category = data['category'])
+                                logger.debug("Looking into upcoming matches: ")
+                                for i in data['upcomingMatches']:
+                                    logger.debug(f"Match {i}, flag runningStarted {i.runningStarted}")
+                                    if not i.runningStarted:
+                                        logger.debug(f"Starting task {i}")
+                                        client.loop.create_task(i.runMatchThread())
+                                        logger.debug(f"Waiting for {i} to have started")
+                                        i.lock.wait()
+                                        logger.debug(f"{i} started")
+                                    data['currentMatches'].append(i)
+                                    data['upcomingMatches'].remove(i)
 
-                                if datetime.utcnow() - time > timedelta(seconds=30):
-                                    client.get_all_channels()
-                                    logger.warning("Didnt sleep for 30 seconds, sleeping now")
-                                    await asyncio.sleep(10)
-                                    time = datetime.utcnow()
+                                    if datetime.utcnow() - time > timedelta(seconds=30):
+                                        client.get_all_channels()
+                                        logger.warning("Didnt sleep for 30 seconds, sleeping now")
+                                        await asyncio.sleep(10)
+                                        time = datetime.utcnow()
 
-                            await asyncio.sleep(5)
+                                await asyncio.sleep(5)
 
-                            logger.debug("Looking into currentMatches")
-                            for i in data['currentMatches']:
-                                logger.debug(f"Match {i}, flags runningStarted {i.runningStarted}, passed {i.passed}")
+                                logger.debug("Looking into currentMatches")
+                                for i in data['currentMatches']:
+                                    logger.debug(f"Match {i}, flags runningStarted {i.runningStarted}, passed {i.passed}")
 
-                                if not i.runningStarted:
-                                    logger.debug(f"Starting i, as it is not started but in currentMatches")
-                                    client.loop.create_task(i.runMatchThread())
-                                    logger.debug(f"Watiting for {i} to have started")
-                                    i.lock.wait()
+                                    if not i.runningStarted:
+                                        logger.debug(f"Starting i, as it is not started but in currentMatches")
+                                        client.loop.create_task(i.runMatchThread())
+                                        logger.debug(f"Watiting for {i} to have started")
+                                        i.lock.wait()
 
-                                if i.passed:
-                                    logger.debug(f"{i} has passed, moving it to passedMatches")
-                                    data['passedMatches'].append(i)
-                                    data['currentMatches'].remove(i)
+                                    if i.passed:
+                                        logger.debug(f"{i} has passed, moving it to passedMatches")
+                                        data['passedMatches'].append(i)
+                                        data['currentMatches'].remove(i)
 
-                                if datetime.utcnow() - time > timedelta(seconds=30):
-                                    client.get_all_channels()
-                                    logger.warning("Didnt sleep for 30 seconds, sleeping now")
-                                    await asyncio.sleep(10)
-                                    time = datetime.utcnow()
+                                    if datetime.utcnow() - time > timedelta(seconds=30):
+                                        client.get_all_channels()
+                                        logger.warning("Didnt sleep for 30 seconds, sleeping now")
+                                        await asyncio.sleep(10)
+                                        time = datetime.utcnow()
 
-                            await asyncio.sleep(5)
-                await asyncio.sleep(10)
+                                await asyncio.sleep(5)
+                    await asyncio.sleep(10)
 
-            except RuntimeError:
-                logger.error("Dict size changed!")
-                await asyncio.sleep(5)
-                continue
-            Scheduler.matchSchedulerRunning.clear()
-            await asyncio.sleep(60)
+                except RuntimeError:
+                    logger.error("Dict size changed!")
+                    await asyncio.sleep(5)
+                    continue
+                Scheduler.matchSchedulerRunning.clear()
+                await asyncio.sleep(60)
+        finally:
+            Scheduler.runMatchSchedulerFlag = False
 
     @staticmethod
     def addCompetition(competition : CompetitionWatcher):
