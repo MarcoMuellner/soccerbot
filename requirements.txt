@@ -1,5 +1,5 @@
 https://github.com/Rapptz/discord.py/archive/rewrite.zip#egg=discord.py
-Django==2.1
+Django==3.2.18
 httmock==1.2.6
 pytest==3.7.3
 pytest-asyncio==0.9.0
